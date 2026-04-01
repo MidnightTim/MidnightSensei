@@ -1,0 +1,22 @@
+## Interface: 120001
+## Title: Midnight Sensei
+## Notes: Combat performance coaching — grades your fight A+ through F with actionable feedback. All 13 classes supported.
+## Author: MidnightTim
+## Version: 1.1.0
+## SavedVariables: MidnightSenseiDB
+## IconTexture: Interface/Icons/Achievement_BG_winAV
+
+## Load Order:
+## 1. Utils      — shared helpers, formatting, color math
+## 2. Core       — spec DB, event bus, slash commands
+## 3. CombatLog  — CLEU raw measurement (no scoring)
+## 4. Analytics  — scoring engine (reads from CombatLog)
+## 5. Leaderboard— social leaderboard, addon messaging
+## 6. UI         — all frames (reads from Analytics + Leaderboard)
+
+Utils.lua
+Core.lua
+CombatLog.lua
+Analytics.lua
+Leaderboard.lua
+UI.lua
