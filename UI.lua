@@ -986,7 +986,7 @@ local optionsFrame = nil
 function UI.OpenOptions()
     if not optionsFrame then
         optionsFrame = CreateFrame("Frame", "MidnightSenseiOptions", UIParent, "BackdropTemplate")
-        optionsFrame:SetSize(310, 320)
+        optionsFrame:SetSize(310, 460)   -- taller to fit new sections
         optionsFrame:SetPoint("CENTER")
         optionsFrame:SetFrameStrata("HIGH")
         optionsFrame:SetMovable(true)
@@ -1005,37 +1005,30 @@ function UI.OpenOptions()
             fs:SetText(text)
         end
 
-        -- HUD Visibility: 3 radio buttons
-        SectionLabel("HUD Visibility:", -38)
-        local visOptions = {
-            { label = "Always",       key = "always" },
-            { label = "In Combat",    key = "combat" },
-            { label = "Hide",         key = "hide"   },
-        }
-        optionsFrame.visBtns = {}
-        for i, vo in ipairs(visOptions) do
-            local btn = MakeButton(optionsFrame, 82, 22, vo.label)
-            btn:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14 + (i-1)*88, -54)
-            btn.visKey = vo.key
-            btn:SetScript("OnClick", function()
-                Core.SetSetting("hudVisibility", vo.key)
-                -- Refresh btn appearances
-                for _, vb in ipairs(optionsFrame.visBtns) do
-                    local active = (vb.visKey == vo.key)
-                    ApplyBackdrop(vb, active and {0.12,0.12,0.20,0.95} or C.BG_LIGHT, C.BORDER)
-                    vb.label:SetTextColor(
-                        active and C.ACCENT[1] or C.TEXT[1],
-                        active and C.ACCENT[2] or C.TEXT[2],
-                        active and C.ACCENT[3] or C.TEXT[3], 1)
-                end
-                ApplyHudVisibility("show")
-            end)
-            table.insert(optionsFrame.visBtns, btn)
+        local function RadioGroup(options, settingKey, yOff, width)
+            local btns = {}
+            for i, opt in ipairs(options) do
+                local btn = MakeButton(optionsFrame, width or 82, 22, opt.label)
+                btn:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14 + (i-1)*(width+6 or 88), yOff)
+                btn.optKey = opt.key
+                btn:SetScript("OnClick", function()
+                    Core.SetSetting(settingKey, opt.key)
+                    for _, b in ipairs(btns) do
+                        local active = (b.optKey == opt.key)
+                        ApplyBackdrop(b, active and {0.12,0.12,0.20,0.95} or C.BG_LIGHT, C.BORDER)
+                        b.label:SetTextColor(
+                            active and C.ACCENT[1] or C.TEXT[1],
+                            active and C.ACCENT[2] or C.TEXT[2],
+                            active and C.ACCENT[3] or C.TEXT[3], 1)
+                    end
+                    if settingKey == "hudVisibility" then ApplyHudVisibility("show") end
+                end)
+                table.insert(btns, btn)
+            end
+            return btns
         end
 
-        SectionLabel("Behaviour:", -88)
-
-        local function AddToggle(label, settingKey, yOff)
+        local function AddToggle(label, settingKey, yOff, subLabel)
             local cb = CreateFrame("CheckButton", nil, optionsFrame, "UICheckButtonTemplate")
             cb:SetSize(20, 20)
             cb:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14, yOff)
@@ -1046,24 +1039,72 @@ function UI.OpenOptions()
             local fs = MakeFont(optionsFrame, 11, "LEFT")
             fs:SetPoint("LEFT", cb, "RIGHT", 4, 0)
             fs:SetText(label)
+            if subLabel then
+                local sub = MakeFont(optionsFrame, 9, "LEFT")
+                sub:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 38, yOff - 14)
+                sub:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+                sub:SetText(subLabel)
+            end
+            return cb
         end
 
-        AddToggle("Show post-fight Review button on HUD", "showPostFight",  -104)
-        AddToggle("Lock HUD position",                    "lockWindow",     -128)
-        AddToggle("Encounter condition adjustment",       "encounterAdjust",-152)
-        AddToggle("Debug mode",                           "debugMode",      -176)
+        -- ── HUD Visibility ────────────────────────────────────────────────
+        SectionLabel("HUD Visibility:", -38)
+        optionsFrame.visBtns = RadioGroup({
+            { label = "Always",    key = "always" },
+            { label = "In Combat", key = "combat" },
+            { label = "Hide",      key = "hide"   },
+        }, "hudVisibility", -54, 82)
 
+        -- ── General Behaviour ─────────────────────────────────────────────
+        SectionLabel("Behaviour:", -90)
+        AddToggle("Show post-fight Review button on HUD", "showPostFight",  -106)
+        AddToggle("Lock HUD position",                    "lockWindow",     -130)
+        AddToggle("Encounter condition adjustment",       "encounterAdjust",-154)
+        AddToggle("Debug mode (shows LB rejection msgs)", "debugMode",      -178)
+
+        -- ── Play Style (Issue #5) ─────────────────────────────────────────
+        SectionLabel("Play Style:", -214)
+        local psNote = MakeFont(optionsFrame, 9, "LEFT")
+        psNote:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14, -226)
+        psNote:SetPoint("TOPRIGHT", optionsFrame, "TOPRIGHT", -14, -226)
+        psNote:SetWordWrap(true)
+        psNote:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+        psNote:SetText("Assisted (single-button macro) players get a B+ score ceiling so high grades reflect intentional play. Self-reported only.")
+
+        optionsFrame.styleBtns = RadioGroup({
+            { label = "Manual",   key = "manual"   },
+            { label = "Assisted", key = "assisted" },
+        }, "playStyle", -256, 120)
+
+        -- ── Leaderboard (Issue #6) ────────────────────────────────────────
+        SectionLabel("Leaderboard:", -292)
+        AddToggle("Weekly avg: boss encounters only",
+                  "lbBossOnly", -308,
+                  "Excludes trash pulls and target dummies from weekly ranking score.")
+
+        -- ── Close ─────────────────────────────────────────────────────────
         local closeBtn = MakeButton(optionsFrame, 60, 22, "Close")
         closeBtn:SetPoint("BOTTOM", optionsFrame, "BOTTOM", 0, 10)
         closeBtn:SetScript("OnClick", function() optionsFrame:Hide() end)
     end
 
-    -- Sync vis button state
+    -- Sync all radio group states on open
     local curVis = HudVisibility()
     for _, vb in ipairs(optionsFrame.visBtns or {}) do
-        local active = (vb.visKey == curVis)
+        local active = (vb.optKey == curVis)
         ApplyBackdrop(vb, active and {0.12,0.12,0.20,0.95} or C.BG_LIGHT, C.BORDER)
         vb.label:SetTextColor(
+            active and C.ACCENT[1] or C.TEXT[1],
+            active and C.ACCENT[2] or C.TEXT[2],
+            active and C.ACCENT[3] or C.TEXT[3], 1)
+    end
+
+    local curStyle = Core.GetSetting("playStyle") or "manual"
+    for _, sb in ipairs(optionsFrame.styleBtns or {}) do
+        local active = (sb.optKey == curStyle)
+        ApplyBackdrop(sb, active and {0.12,0.12,0.20,0.95} or C.BG_LIGHT, C.BORDER)
+        sb.label:SetTextColor(
             active and C.ACCENT[1] or C.TEXT[1],
             active and C.ACCENT[2] or C.TEXT[2],
             active and C.ACCENT[3] or C.TEXT[3], 1)
@@ -1165,6 +1206,17 @@ function UI.ShowFAQ()
         "  Always: HUD always visible",
         "  In Combat: HUD only shows while in combat",
         "  Hide: HUD hidden (accessible via /ms)",
+        " ",
+        "|cffFFD700PLAY STYLE SETTING (Options -> Play Style)|r",
+        "Manual: full grade range A+ through F (default).",
+        "Assisted: score capped at B+ (84). Use this if you play with a",
+        "single-button macro or rotation helper. It keeps the leaderboard",
+        "meaningful so A+ reflects real decision-making, not automation.",
+        " ",
+        "|cffFFD700LEADERBOARD SETTINGS (Options -> Leaderboard)|r",
+        "Boss Encounters Only (default ON): weekly average only counts boss",
+        "fights from dungeons, raids, and delves. Trash pulls and target",
+        "dummies are excluded so the ranking reflects real performance.",
         " ",
         "|cffFFD700GRADE HISTORY|r",
         "Type |cffFFFFFF/ms history|r or right-click -> Grade History.",

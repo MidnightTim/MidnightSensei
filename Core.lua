@@ -124,6 +124,8 @@ function Core.InitSavedVariables()
     def("minimumFight",     15)
     def("encounterAdjust",  true)
     def("debugMode",        false)
+    def("lbBossOnly",       true)    -- leaderboard weekly avg: boss encounters only (issue #6)
+    def("playStyle",        "manual") -- "manual" | "assisted" — grade ceiling (issue #5)
 end
 
 function Core.GetSetting(key)

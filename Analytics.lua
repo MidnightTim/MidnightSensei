@@ -425,6 +425,18 @@ function Analytics.CalculateGrade()
     end
 
     local finalScore = math.floor(BuildWeightedScore(scores, weights))
+
+    -- Issue #5: Single-button / macro-assist grading adjustment.
+    -- Players who self-report as "assisted" get a score ceiling applied.
+    -- This prevents automation from trivially reaching A+ while manual players
+    -- who make deliberate decisions can still achieve the full range.
+    -- The ceiling is generous (84 = B+) — it's a nudge, not a punishment.
+    -- Purely self-reported via /ms options; cannot be detected automatically.
+    local playStyle = Core.GetSetting("playStyle") or "manual"
+    if playStyle == "assisted" then
+        finalScore = math.min(finalScore, 84)  -- cap at high B+
+    end
+
     local grade, gradeColor, gradeLabel = Core.GetGrade(finalScore)
 
     local feedback = Analytics.GenerateFeedback(scores, duration)

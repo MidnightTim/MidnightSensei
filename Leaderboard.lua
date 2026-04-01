@@ -77,6 +77,13 @@ local DUNGEON_DIFF = {
     [8]  = "Mythic",   -- Regular Mythic (no key)
 }
 
+-- Known Delve difficultyIDs in Midnight 12.0 (scenario type, tier-based)
+local DELVE_DIFF_IDS = {
+    [167] = true, [168] = true, [169] = true, [170] = true,
+    [171] = true, [172] = true, [173] = true, [174] = true,
+    [175] = true, [176] = true, [177] = true,
+}
+
 local function GetInstanceContext()
     local instName, instType, diffID, diffName,
           maxPlayers, dynDiff, isDynamic, instMapID = GetInstanceInfo()
@@ -91,14 +98,13 @@ local function GetInstanceContext()
 
     elseif instType == "party" then
         ctx.encType = "dungeon"
-        -- Check for active Mythic+ keystone
         local keystoneLevel = nil
         if C_ChallengeMode and C_ChallengeMode.GetSlottedKeystoneInfo then
-            local _, _, ksLevel = C_ChallengeMode.GetSlottedKeystoneInfo()
-            if ksLevel and ksLevel > 0 then
-                keystoneLevel = ksLevel
-                ctx.diffLabel = "M+" .. ksLevel
-                ctx.keystoneLevel = ksLevel
+            local ok, _, _, ksLevel = pcall(C_ChallengeMode.GetSlottedKeystoneInfo)
+            if ok and ksLevel and ksLevel > 0 then
+                keystoneLevel       = ksLevel
+                ctx.diffLabel       = "M+" .. ksLevel
+                ctx.keystoneLevel   = ksLevel
             end
         end
         if not keystoneLevel then
@@ -106,15 +112,16 @@ local function GetInstanceContext()
         end
 
     elseif instType == "scenario" then
-        -- Delves use the scenario instanceType
-        -- diffName from GetInstanceInfo gives tier info like "Delve (8)" or similar
-        -- We also check if the diffName contains "delve" or if isDynamic hints
+        -- Delves are scenarios. Detect via known diffID table first,
+        -- then fall back to name heuristics.
         local lowerDiff = (diffName or ""):lower()
         local lowerName = (instName or ""):lower()
-        if lowerDiff:find("delve") or lowerName:find("delve") or diffID == 167 then
+        if DELVE_DIFF_IDS[diffID]
+        or lowerDiff:find("delve") or lowerName:find("delve") then
             ctx.encType = "delve"
-            -- Extract tier number from diffName if possible
-            local tier = diffName and diffName:match("(%d+)")
+            -- Tier number from diffID offset (167 = Tier 1 … 177 = Tier 11)
+            local tier = DELVE_DIFF_IDS[diffID] and (diffID - 166) or
+                         (diffName and diffName:match("(%d+)"))
             ctx.diffLabel = tier and ("Tier " .. tier) or (diffName or "Delve")
         else
             ctx.encType   = "dungeon"
@@ -123,6 +130,25 @@ local function GetInstanceContext()
     end
 
     return ctx
+end
+
+-- Safe addon message send — silently ignores "not in a party" and similar errors
+-- that occur during LFD transitions or when the channel is briefly unavailable.
+local function SafeSend(prefix, payload, channel)
+    local ok, err = pcall(C_ChatInfo.SendAddonMessage, prefix, payload, channel)
+    if not ok and Core.GetSetting("debugMode") then
+        print("|cff888888Midnight Sensei LB:|r SendAddonMessage failed (" .. channel .. "): " .. tostring(err))
+    end
+end
+
+local function BroadcastToAll(payload)
+    if IsInGuild() then SafeSend(LB_PREFIX, payload, "GUILD") end
+    -- Use LE_PARTY_CATEGORY_INSTANCE for LFD groups; IsInGroup() alone misses them
+    if IsInRaid() then
+        SafeSend(LB_PREFIX, payload, "RAID")
+    elseif IsInGroup() or IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+        SafeSend(LB_PREFIX, payload, "PARTY")
+    end
 end
 
 -- Convenience wrapper called from Analytics
@@ -247,10 +273,26 @@ end
 
 local function IsBNetFriend(fullName)
     local shortName = ShortName(fullName)
-    local numFriends = BNGetNumFriends()
+    -- Modern API (Dragonflight 10.0 / Midnight 12.x)
+    if C_BattleNet and C_BattleNet.GetNumFriendsBySource then
+        local numBNet = C_BattleNet.GetNumFriendsBySource(Enum.FriendType.BNet) or 0
+        for i = 1, numBNet do
+            local info = C_BattleNet.GetFriendAccountInfo(i)
+            if info and info.gameAccountInfo then
+                local toon = info.gameAccountInfo.characterName
+                if toon and toon:match("^([^%-]+)") == shortName then return true end
+            end
+        end
+        return false
+    end
+    -- Fallback: legacy BNGetFriendInfo (may not exist in Midnight)
+    local ok, numFriends = pcall(BNGetNumFriends)
+    if not ok or not numFriends then return false end
     for i = 1, numFriends do
-        local _, _, _, _, toonName = BNGetFriendInfo(i)
-        if toonName and toonName:match("^([^%-]+)") == shortName then return true end
+        local ok2, _, _, _, _, toonName = pcall(BNGetFriendInfo, i)
+        if ok2 and toonName and toonName:match("^([^%-]+)") == shortName then
+            return true
+        end
     end
     return false
 end
@@ -300,6 +342,13 @@ local function MergeEntry(existing, name, className, specName, role,
 
     -- All-time best
     if score > (e.allTimeBest or 0) then e.allTimeBest = score end
+
+    -- Boss-only best (issue #6: leaderboard weekly avg only counts boss fights)
+    local isBossEnc = (encType == "dungeon" or encType == "raid" or encType == "delve")
+    -- We treat all instanced fights as "meaningful" for bossBest;
+    -- the isBoss field on the encounter is the tighter filter
+    -- but we don't have that here — use encType as proxy
+    if isBossEnc and score > (e.bossBest or 0) then e.bossBest = score end
 
     -- Category bests and averages
     if encType == "dungeon" then
@@ -363,9 +412,7 @@ local function BroadcastScore(encounter)
         charName:gsub("|", "_"),    -- included so receiver can verify checksum
     }, "|")
 
-    if IsInGuild()     then C_ChatInfo.SendAddonMessage(LB_PREFIX, payload, "GUILD") end
-    if IsInRaid()      then C_ChatInfo.SendAddonMessage(LB_PREFIX, payload, "RAID")
-    elseif IsInGroup() then C_ChatInfo.SendAddonMessage(LB_PREFIX, payload, "PARTY") end
+    BroadcastToAll(payload)
 end
 
 Core.On(Core.EVENTS.GRADE_CALCULATED, BroadcastScore)
@@ -378,9 +425,7 @@ local function BroadcastHello()
     local payload = table.concat({ "HELLO", Core.VERSION,
         Core.ActiveSpec.className or "?",
         Core.ActiveSpec.name      or "?" }, "|")
-    if IsInGuild()     then C_ChatInfo.SendAddonMessage(LB_PREFIX, payload, "GUILD") end
-    if IsInRaid()      then C_ChatInfo.SendAddonMessage(LB_PREFIX, payload, "RAID")
-    elseif IsInGroup() then C_ChatInfo.SendAddonMessage(LB_PREFIX, payload, "PARTY") end
+    BroadcastToAll(payload)
 end
 
 Core.On(Core.EVENTS.SESSION_READY, function() C_Timer.After(4.0, BroadcastHello) end)
@@ -527,7 +572,7 @@ local function OnAddonMessage(prefix, payload, channel, sender)
                         }, "|")
                         -- Send only to guild (private enough, no need to spam raid)
                         if IsInGuild() then
-                            C_ChatInfo.SendAddonMessage(LB_PREFIX, syncPayload, "GUILD")
+                            SafeSend(LB_PREFIX, syncPayload, "GUILD")
                         end
                     end)
                 end
@@ -601,6 +646,31 @@ local function SyncGuildOnlineStatus()
     LB.RefreshUI()
 end
 
+-- Compute weekly avg from local encounter history.
+-- bossOnly=true (issue #6): only count boss encounters toward weekly avg
+-- so trash pulls and target dummy testing don't inflate the leaderboard score.
+local function ComputeWeeklyAvg(history, weekKey, bossOnly)
+    if not history then return 0, 0 end
+    local scores = {}
+    for _, enc in ipairs(history) do
+        local encWk = enc.weekKey or ""
+        if encWk == weekKey then
+            if not bossOnly or enc.isBoss then
+                table.insert(scores, enc.finalScore or 0)
+            end
+        end
+    end
+    if #scores == 0 then return 0, 0 end
+    local sum = 0
+    for _, s in ipairs(scores) do sum = sum + s end
+    return math.floor(sum / #scores), #scores
+end
+
+-- Whether weekly avg should only count boss encounters (issue #6)
+local function BossOnlyMode()
+    return Core.GetSetting("lbBossOnly") ~= false  -- default true
+end
+
 --------------------------------------------------------------------------------
 -- Public data getters
 --------------------------------------------------------------------------------
@@ -612,19 +682,7 @@ function LB.GetPartyData()
         local history = MidnightSenseiDB and MidnightSenseiDB.encounters
         local lastEnc = history and history[#history]
         local wk      = GetWeekKey()
-        local wScores = {}
-        if history then
-            for _, enc in ipairs(history) do
-                if enc.timestamp and enc.timestamp > 0 then
-                    local encWk = ""  -- old entries may not have weekKey
-                    if enc.weekKey then encWk = enc.weekKey end
-                    if encWk == wk then table.insert(wScores, enc.finalScore or 0) end
-                end
-            end
-        end
-        local wSum = 0
-        for _, s in ipairs(wScores) do wSum = wSum + s end
-        local wAvg = #wScores > 0 and math.floor(wSum / #wScores) or 0
+        local wAvg    = ComputeWeeklyAvg(history, wk, BossOnlyMode())
 
         result[myName] = {
             name        = UnitName("player"),
@@ -637,7 +695,7 @@ function LB.GetPartyData()
             isSelf      = true, online = true,
             weeklyAvg   = wAvg,
             allTimeBest = lastEnc and lastEnc.finalScore or 0,
-            dungeonBest = 0, raidBest = 0, normalBest = 0,
+            dungeonBest = 0, raidBest = 0, delveBest = 0, normalBest = 0,
         }
     end
     for name, entry in pairs(partyData) do result[name] = entry end
@@ -657,18 +715,8 @@ function LB.GetGuildData()
             local lastEnc = history and history[#history]
             local wk      = GetWeekKey()
 
-            -- Compute weekly avg from local history
-            local wScores = {}
-            if history then
-                for _, enc in ipairs(history) do
-                    if enc.weekKey == wk then
-                        table.insert(wScores, enc.finalScore or 0)
-                    end
-                end
-            end
-            local wSum = 0
-            for _, s in ipairs(wScores) do wSum = wSum + s end
-            local wAvg = #wScores > 0 and math.floor(wSum / #wScores) or 0
+            -- Compute weekly avg (boss-only by default per issue #6)
+            local wAvg = ComputeWeeklyAvg(history, wk, BossOnlyMode())
 
             -- Compute category bests from local history
             local dungBest, raidBest, delvBest, normBest = 0, 0, 0, 0
@@ -1108,7 +1156,11 @@ local function CreateLeaderboardFrame()
     local rFs = TF(refreshBtn,10,"CENTER"); rFs:SetPoint("CENTER"); rFs:SetText("Refresh")
     refreshBtn:SetScript("OnClick",function()
         if activeTab=="guild" then SyncGuildOnlineStatus() end
-        RefreshContent()
+        -- Re-broadcast HELLO so online peers resend their latest scores.
+        -- Without this, refresh only redraws from already-received in-memory data.
+        BroadcastHello()
+        -- Wait briefly for peer responses, then redraw
+        C_Timer.After(1.0, RefreshContent)
     end)
 
     -- Week info
