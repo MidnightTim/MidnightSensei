@@ -1,56 +1,46 @@
 ---
 name: Bug Report
-about: Report something that isn’t working correctly
+about: Something isn’t working as expected
 title: "[Bug] "
 labels: bug
 ---
 
-## 🐞 Description
-What happened?
+## 🐞 What happened?
+Briefly describe the issue.
 
 ---
 
-## ✅ Expected Behavior
-What should have happened?
-
----
-
-## 🎮 Character Info
-- Class:
-- Spec:
-- Role:
-
----
-
-## ⚔️ Content Type
+## 🎮 Where did this happen?
 - [ ] Dungeon
 - [ ] Mythic+
 - [ ] Raid
 - [ ] Delve
+- [ ] Target Dummy
 - [ ] World
 
 ---
 
-## ⏱ Fight Details
-- Approx Duration:
-- Boss (if applicable):
-
----
-
-## 📊 What Seems Wrong
-- [ ] Cooldown tracking
+## 🧠 What seems wrong?
+- [ ] Cooldowns
 - [ ] Buff / uptime tracking
 - [ ] Resource management
 - [ ] Score / grade
+- [ ] Leaderboard
 - [ ] UI issue
-- [ ] Other:
+- [ ] Other
 
 ---
 
-## 🧾 Errors (if any)
-Paste any Lua errors here:
+## ⚡ Quick Info (optional)
+- Class / Spec:
+- Approx fight length:
 
 ---
-### 🔁 Steps to Reproduce
 
-[Provide any releveant information to reproduce] 
+## 🧾 Errors (optional)
+Paste Lua errors if you have them.
+
+---
+
+## 💬 Anything else?
+Only if needed.
