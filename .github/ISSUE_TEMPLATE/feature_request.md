@@ -1,36 +1,31 @@
 ---
 name: Enhancement Request
-about: Suggest an idea, improvement, or new feature
+about: Suggest an improvement or new feature
 title: "[Enhancement] "
 labels: enhancement
 ---
 
-## 💡 Enhancement Summary
-What would you like to see added or improved?
+## 💡 What would you like to see?
+Short description.
 
 ---
 
-## 🎯 Why This Would Help
-What problem would this solve, or what would it make better?
-
----
-
-## 🧠 Area of the Addon
+## 🎯 What area?
 - [ ] UI / UX
 - [ ] Combat tracking
 - [ ] Scoring / grading
 - [ ] Leaderboard
 - [ ] History / trends
 - [ ] Class / spec support
-- [ ] Settings / options
+- [ ] Settings
 - [ ] Other
 
 ---
 
-## 🔧 Suggested Approach
-If you have an idea for how it should work, add it here.
+## 👍 Why it matters (optional)
+What problem does this solve?
 
 ---
 
-## 💬 Additional Context
-Anything else that may help explain the request.
+## 💬 Extra details (optional)
+Only if needed.
