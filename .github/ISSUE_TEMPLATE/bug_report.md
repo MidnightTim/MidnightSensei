@@ -52,32 +52,5 @@ Paste any Lua errors here:
 
 ---
 ### 🔁 Steps to Reproduce
-- 1.
-- 2.
-- 3. 
 
-
----
-
-### 4. Scroll down and click:
-
-👉 **Commit new file**
-
----
-
-# ✅ Done 🎉
-
-Now when someone clicks:
-
-👉 **Issues → New Issue**
-
-They’ll get a **clean structured form instead of a blank page**
-
----
-
-# 🔥 Optional (do this next)
-
-Create a second file:
-
-```text
-.github/ISSUE_TEMPLATE/feature_request.md
+[Provide any releveant information to reproduce] 
