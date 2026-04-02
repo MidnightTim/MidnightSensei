@@ -5,6 +5,7 @@
 ![Interface](https://img.shields.io/badge/Interface-120001-blue)
 ![Status](https://img.shields.io/badge/Status-Beta-orange)
 ![Stars](https://img.shields.io/github/stars/midnightstockton/MidnightSensei?style=social)
+[![Report Issue](https://img.shields.io/badge/Report-Issue-red)](https://github.com/midnightstockton/MidnightSensei/issues/new/choose)
 
 # 🧠 Midnight Sensei  
 ### Real-time Performance Coaching for World of Warcraft
