@@ -217,4 +217,20 @@ AddOns/
 - Wowhead  
 - SimulationCraft  
 - Warcraft Logs  
-- WoWAnalyzer  
+- WoWAnalyzer
+
+- ## 🐞 Reporting Issues
+
+If something feels off, you can report it here:
+
+👉 https://github.com/midnightstockton/MidnightSensei/issues
+
+Click **"New Issue"** and choose one of the options:
+
+- 🐞 Bug Report – for things not working correctly  
+- 💡 Enhancement Request – for ideas or improvements  
+- ⚡ Quick Report – for anything that just feels off  
+
+The form is quick, just check a few boxes and add a short description.
+
+Even minimal details are helpful.
