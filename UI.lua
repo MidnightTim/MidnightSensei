@@ -1077,11 +1077,14 @@ function UI.OpenOptions()
             { label = "Assisted", key = "assisted" },
         }, "playStyle", -256, 120)
 
-        -- ── Leaderboard (Issue #6) ────────────────────────────────────────
+        -- ── Leaderboard (boss-only is hardcoded, no toggle needed) ──────────
         SectionLabel("Leaderboard:", -292)
-        AddToggle("Weekly avg: boss encounters only",
-                  "lbBossOnly", -308,
-                  "Excludes trash pulls and target dummies from weekly ranking score.")
+        local lbNote = MakeFont(optionsFrame, 9, "LEFT")
+        lbNote:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14, -306)
+        lbNote:SetPoint("TOPRIGHT", optionsFrame, "TOPRIGHT", -14, -306)
+        lbNote:SetWordWrap(true)
+        lbNote:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+        lbNote:SetText("Weekly average always counts boss encounters only. Trash pulls and target dummies are never included.")
 
         -- ── Close ─────────────────────────────────────────────────────────
         local closeBtn = MakeButton(optionsFrame, 60, 22, "Close")
@@ -1121,7 +1124,7 @@ local creditsFrame = nil
 function UI.ShowCredits()
     if not creditsFrame then
         creditsFrame = CreateFrame("Frame", "MidnightSenseiCredits", UIParent, "BackdropTemplate")
-        creditsFrame:SetSize(420, 380)
+        creditsFrame:SetSize(440, 420)
         creditsFrame:SetPoint("CENTER")
         creditsFrame:SetFrameStrata("HIGH")
         creditsFrame:SetMovable(true)
@@ -1131,47 +1134,161 @@ function UI.ShowCredits()
         creditsFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
         creditsFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
         ApplyBackdrop(creditsFrame, C.BG, C.BORDER_GOLD)
-        MakeTitleBar(creditsFrame, "Midnight Sensei - Credits & Attribution")
+        MakeTitleBar(creditsFrame, "Midnight Sensei - Credits & About")
 
-        local sf = CreateFrame("ScrollFrame", nil, creditsFrame, "UIPanelScrollFrameTemplate")
-        sf:SetPoint("TOPLEFT",     creditsFrame, "TOPLEFT",  10, -34)
-        sf:SetPoint("BOTTOMRIGHT", creditsFrame, "BOTTOMRIGHT", -26, 36)
-        local sc = CreateFrame("Frame", nil, sf)
-        sc:SetWidth(sf:GetWidth()) ; sc:SetHeight(10)
-        sf:SetScrollChild(sc)
+        -- Tab buttons: About | Sources | Changelog
+        local tabs = { "About", "Sources", "Changelog" }
+        local tabBtns = {}
+        local tabPanels = {}
 
-        -- Build content as a single FontString for guaranteed fit
-        local lines = {
-            "Midnight Sensei's rotational guidance is informed by the following",
-            "community resources. We gratefully acknowledge their contributions.",
+        local function ShowPanel(idx)
+            for i, p in ipairs(tabPanels) do p:SetShown(i == idx) end
+            for i, b in ipairs(tabBtns) do
+                ApplyBackdrop(b, i == idx and {0.12,0.12,0.20,0.95} or C.BG_LIGHT, C.BORDER)
+                b.label:SetTextColor(
+                    i == idx and C.ACCENT[1] or C.TEXT_DIM[1],
+                    i == idx and C.ACCENT[2] or C.TEXT_DIM[2],
+                    i == idx and C.ACCENT[3] or C.TEXT_DIM[3], 1)
+            end
+        end
+
+        for i, name in ipairs(tabs) do
+            local btn = MakeButton(creditsFrame, 100, 22, name)
+            btn:SetPoint("TOPLEFT", creditsFrame, "TOPLEFT", 10 + (i-1)*106, -34)
+            local capturedIdx = i
+            btn:SetScript("OnClick", function() ShowPanel(capturedIdx) end)
+            table.insert(tabBtns, btn)
+        end
+
+        -- ── About panel ──────────────────────────────────────────────────
+        local aboutPanel = CreateFrame("Frame", nil, creditsFrame)
+        aboutPanel:SetPoint("TOPLEFT",     creditsFrame, "TOPLEFT",  10, -64)
+        aboutPanel:SetPoint("BOTTOMRIGHT", creditsFrame, "BOTTOMRIGHT", -10, 36)
+        table.insert(tabPanels, aboutPanel)
+
+        local aboutText = MakeFont(aboutPanel, 10, "LEFT")
+        aboutText:SetPoint("TOPLEFT",  aboutPanel, "TOPLEFT",  4, -4)
+        aboutText:SetPoint("TOPRIGHT", aboutPanel, "TOPRIGHT", -4, -4)
+        aboutText:SetWordWrap(true)
+        aboutText:SetSpacing(4)
+        aboutText:SetText(table.concat({
+            "|cff00D1FFMidnight Sensei|r  |cff888888v" .. Core.VERSION .. "|r",
+            " ",
+            "|cffFFD700Author:|r  Midnight - Thrall (US)",
+            " ",
+            "A combat performance coaching addon for World of Warcraft: Midnight.",
+            "Grades your fights A+ through F across all 13 classes and 39 specs,",
+            "with actionable feedback tailored to your role and spec.",
+            " ",
+            "|cffFFD700Features:|r",
+            "  - Per-fight grading: cooldown usage, activity, resource management",
+            "  - Talent-aware: only scores abilities you actually have equipped",
+            "  - Boss detection: tracks ENCOUNTER_START/END for real boss fights",
+            "  - Social leaderboard: guild, party, and BNet friends rankings",
+            "  - Weekly reset: aligned to Blizzard's Tuesday 7am PDT reset",
+            "  - Delve tracking: tier-based scoring for solo content",
+            "  - GRM-style sync: recover your scores after a reinstall",
+            " ",
+            "|cffFFD700Contact:|r  MidnightTim on GitHub (MidnightTim/MidnightSensei)",
+            " ",
+            "|cff666666Midnight Sensei is a community addon, not affiliated with Blizzard.|r",
+        }, "\n"))
+
+        -- ── Sources panel ─────────────────────────────────────────────────
+        local sourcesPanel = CreateFrame("Frame", nil, creditsFrame)
+        sourcesPanel:SetPoint("TOPLEFT",     creditsFrame, "TOPLEFT",  10, -64)
+        sourcesPanel:SetPoint("BOTTOMRIGHT", creditsFrame, "BOTTOMRIGHT", -10, 36)
+        table.insert(tabPanels, sourcesPanel)
+
+        local sf2 = CreateFrame("ScrollFrame", nil, sourcesPanel, "UIPanelScrollFrameTemplate")
+        sf2:SetPoint("TOPLEFT",     sourcesPanel, "TOPLEFT",   0,   0)
+        sf2:SetPoint("BOTTOMRIGHT", sourcesPanel, "BOTTOMRIGHT", -16, 0)
+        local sc2 = CreateFrame("Frame", nil, sf2)
+        sc2:SetWidth(sf2:GetWidth())
+        sc2:SetHeight(10)
+        sf2:SetScrollChild(sc2)
+
+        local srcLines = {
+            "Rotational guidance is informed by the following community resources.",
+            "We gratefully acknowledge their contributions.",
             " ",
         }
-        for _, credit in ipairs(Core.CREDITS) do
-            table.insert(lines, "|cff00D1FF" .. credit.source .. "|r")
-            table.insert(lines, "|cff888888" .. credit.url .. "|r")
-            table.insert(lines, credit.desc)
-            table.insert(lines, " ")
+        if Core.CREDITS then
+            for _, credit in ipairs(Core.CREDITS) do
+                table.insert(srcLines, "|cff00D1FF" .. credit.source .. "|r")
+                table.insert(srcLines, "|cff888888" .. credit.url .. "|r")
+                table.insert(srcLines, credit.desc)
+                table.insert(srcLines, " ")
+            end
         end
-        table.insert(lines, "|cff666666Midnight Sensei is not affiliated with these resources.|r")
+        table.insert(srcLines, "|cff666666Midnight Sensei is not affiliated with these resources.|r")
 
-        local content = MakeFont(sc, 10, "LEFT")
-        content:SetPoint("TOPLEFT",  sc, "TOPLEFT",  4, -4)
-        content:SetPoint("TOPRIGHT", sc, "TOPRIGHT", -4, -4)
-        content:SetWordWrap(true)
-        content:SetSpacing(3)
-        content:SetText(table.concat(lines, "\n"))
-        creditsFrame._sc      = sc
-        creditsFrame._content = content
+        local srcContent = MakeFont(sc2, 10, "LEFT")
+        srcContent:SetPoint("TOPLEFT",  sc2, "TOPLEFT",  4, -4)
+        srcContent:SetPoint("TOPRIGHT", sc2, "TOPRIGHT", -4, -4)
+        srcContent:SetWordWrap(true)
+        srcContent:SetSpacing(3)
+        srcContent:SetText(table.concat(srcLines, "\n"))
+        sourcesPanel._sc = sc2
+        sourcesPanel._content = srcContent
+
+        -- ── Changelog panel ───────────────────────────────────────────────────
+        local changelogPanel = CreateFrame("Frame", nil, creditsFrame)
+        changelogPanel:SetPoint("TOPLEFT",     creditsFrame, "TOPLEFT",  10, -64)
+        changelogPanel:SetPoint("BOTTOMRIGHT", creditsFrame, "BOTTOMRIGHT", -10, 36)
+        table.insert(tabPanels, changelogPanel)
+
+        local sf3 = CreateFrame("ScrollFrame", nil, changelogPanel, "UIPanelScrollFrameTemplate")
+        sf3:SetPoint("TOPLEFT",     changelogPanel, "TOPLEFT",   0,  0)
+        sf3:SetPoint("BOTTOMRIGHT", changelogPanel, "BOTTOMRIGHT", -16, 0)
+        local sc3 = CreateFrame("Frame", nil, sf3)
+        sc3:SetWidth(sf3:GetWidth()) ; sc3:SetHeight(10)
+        sf3:SetScrollChild(sc3)
+
+        local clLines = {}
+        if Core.CHANGELOG then
+            for _, entry in ipairs(Core.CHANGELOG) do
+                table.insert(clLines, "|cffFFD700v" .. entry.version ..
+                    "|r  |cff888888" .. (entry.date or "") ..
+                    " - " .. (entry.tagline or "") .. "|r")
+                for _, change in ipairs(entry.changes or {}) do
+                    table.insert(clLines, "  - " .. change)
+                end
+                table.insert(clLines, " ")
+            end
+        else
+            table.insert(clLines, "No changelog available.")
+        end
+
+        local clContent = MakeFont(sc3, 10, "LEFT")
+        clContent:SetPoint("TOPLEFT",  sc3, "TOPLEFT",  4, -4)
+        clContent:SetPoint("TOPRIGHT", sc3, "TOPRIGHT", -4, -4)
+        clContent:SetWordWrap(true)
+        clContent:SetSpacing(3)
+        clContent:SetText(table.concat(clLines, "\n"))
+        changelogPanel._sc      = sc3
+        changelogPanel._content = clContent
+
+        ShowPanel(1)
 
         local closeBtn = MakeButton(creditsFrame, 60, 22, "Close")
         closeBtn:SetPoint("BOTTOM", creditsFrame, "BOTTOM", 0, 8)
         closeBtn:SetScript("OnClick", function() creditsFrame:Hide() end)
+
+        creditsFrame._tabPanels = tabPanels
+        creditsFrame._tabBtns   = tabBtns
     end
 
     creditsFrame:Show()
+    -- Resize scroll children for Sources and Changelog panels
     C_Timer.After(0.05, function()
-        if creditsFrame._sc and creditsFrame._content then
-            creditsFrame._sc:SetHeight(creditsFrame._content:GetStringHeight() + 20)
+        for idx = 2, 3 do
+            if creditsFrame._tabPanels and creditsFrame._tabPanels[idx] then
+                local p = creditsFrame._tabPanels[idx]
+                if p._sc and p._content then
+                    p._sc:SetHeight(p._content:GetStringHeight() + 20)
+                end
+            end
         end
     end)
 end
@@ -1213,11 +1330,6 @@ function UI.ShowFAQ()
         "single-button macro or rotation helper. It keeps the leaderboard",
         "meaningful so A+ reflects real decision-making, not automation.",
         " ",
-        "|cffFFD700LEADERBOARD SETTINGS (Options -> Leaderboard)|r",
-        "Boss Encounters Only (default ON): weekly average only counts boss",
-        "fights from dungeons, raids, and delves. Trash pulls and target",
-        "dummies are excluded so the ranking reflects real performance.",
-        " ",
         "|cffFFD700GRADE HISTORY|r",
         "Type |cffFFFFFF/ms history|r or right-click -> Grade History.",
         "  - Filter by This Character or All Characters",
@@ -1227,9 +1339,11 @@ function UI.ShowFAQ()
         " ",
         "|cffFFD700LEADERBOARD|r",
         "Type |cffFFFFFF/ms lb|r to open the social leaderboard.",
-        "After each fight your score broadcasts (via addon messages) to",
-        "guild, party, and BNet friends who also have Midnight Sensei.",
-        "Three tabs: Party (session only), Guild (persists), Friends.",
+        "After each boss fight your score broadcasts to guild, party, and",
+        "BNet friends who also have Midnight Sensei installed.",
+        "Tabs: Party (session), Guild (persists), Friends, Delve (personal).",
+        "Weekly average counts boss encounters only - trash pulls and target",
+        "dummies are never included in rankings.",
         " ",
         "|cffFFD700NOTE ON MIDNIGHT 12.0 RESTRICTIONS|r",
         "Blizzard removed CLEU and restricted enemy unit aura reads in 12.0.",
@@ -1391,7 +1505,6 @@ end)
 -- On session ready: populate HUD from last saved encounter (current session or DB)
 Core.On(Core.EVENTS.SESSION_READY, function()
     local f = CreateMainFrame()
-    -- Try current session result first, then last DB entry
     local lastEnc = nil
     if MS.Analytics and MS.Analytics.GetLastEncounter then
         lastEnc = MS.Analytics.GetLastEncounter()
@@ -1399,4 +1512,64 @@ Core.On(Core.EVENTS.SESSION_READY, function()
     PopulateHudFromResult(lastEnc)
     f.specText:SetText(Core.GetSpecInfoString())
     if HudVisibility() == "always" then f:Show() end
+
+    -- Register with WoW's built-in Options / Settings panel.
+    -- The Midnight 12.0 API is Settings.RegisterVerticalLayoutCategory.
+    -- We wrap in pcall so that if the API changes or is unavailable, nothing breaks.
+    C_Timer.After(0.5, function()
+        local ok = pcall(function()
+            if not (Settings and Settings.RegisterVerticalLayoutCategory) then return end
+
+            local category = Settings.RegisterVerticalLayoutCategory("Midnight Sensei")
+            if not category then return end
+
+            -- Each "initializer" adds a row to the Settings panel for this addon
+            local layout = category:GetLayout()
+            if layout and layout.AddInitializer then
+                layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(
+                    "Midnight Sensei v" .. Core.VERSION ..
+                    "  |cff888888Created by Midnight - Thrall (US)|r"))
+                layout:AddInitializer(CreateSettingsButtonInitializer(
+                    "Open Options", "Configure HUD, play style, and more",
+                    function() UI.OpenOptions() end))
+                layout:AddInitializer(CreateSettingsButtonInitializer(
+                    "Grade History", "View fight history and trends",
+                    function() UI.ShowHistory() end))
+                layout:AddInitializer(CreateSettingsButtonInitializer(
+                    "Leaderboard", "Guild / Party / Friends / Delve rankings",
+                    function()
+                        if MS.Leaderboard and MS.Leaderboard.Toggle then
+                            MS.Leaderboard.Toggle()
+                        end
+                    end))
+                layout:AddInitializer(CreateSettingsButtonInitializer(
+                    "Help & FAQ", "How scoring and grading works",
+                    function() UI.ShowFAQ() end))
+                layout:AddInitializer(CreateSettingsButtonInitializer(
+                    "Credits & About", "Author info and sources",
+                    function() UI.ShowCredits() end))
+            end
+
+            Settings.RegisterAddOnCategory(category)
+        end)
+
+        -- Fallback: if the new Settings API isn't available (very old client),
+        -- try the legacy InterfaceOptions approach
+        if not ok then
+            pcall(function()
+                if InterfaceOptions_AddCategory then
+                    local panel = CreateFrame("Frame")
+                    panel.name = "Midnight Sensei"
+                    local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+                    title:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -16)
+                    title:SetText("Midnight Sensei v" .. Core.VERSION)
+                    local sub = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+                    sub:SetTextColor(0.7, 0.7, 0.7, 1)
+                    sub:SetText("Created by Midnight - Thrall (US)  |  /ms for commands")
+                    InterfaceOptions_AddCategory(panel)
+                end
+            end)
+        end
+    end)
 end)

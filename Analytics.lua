@@ -461,6 +461,7 @@ function Analytics.CalculateGrade()
         startTime    = fightStartTime,
         endTime      = fightEndTime,
         duration     = duration,
+        weekKey      = (MS.Leaderboard and MS.Leaderboard.GetWeekKey and MS.Leaderboard.GetWeekKey()) or "",
         -- Scores
         componentScores = scores,
         finalScore   = finalScore,

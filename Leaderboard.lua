@@ -132,28 +132,43 @@ local function GetInstanceContext()
     return ctx
 end
 
--- Safe addon message send — silently ignores "not in a party" and similar errors
--- that occur during LFD transitions or when the channel is briefly unavailable.
+-- Safe addon message send — wraps in pcall to suppress Lua errors.
+-- In Midnight 12.0, SendAddonMessage("PARTY") from inside an instance generates
+-- a protected-call error that the game prints to chat. We avoid it entirely
+-- by never sending to PARTY when inside an instance; GUILD covers guild members
+-- and the HELLO/SYNC flow handles the rest.
 local function SafeSend(prefix, payload, channel)
     local ok, err = pcall(C_ChatInfo.SendAddonMessage, prefix, payload, channel)
     if not ok and Core.GetSetting("debugMode") then
-        print("|cff888888Midnight Sensei LB:|r SendAddonMessage failed (" .. channel .. "): " .. tostring(err))
+        print("|cff888888MS LB:|r send failed (" .. channel .. "): " .. tostring(err))
     end
 end
 
 local function BroadcastToAll(payload)
+    -- Always try guild channel
     if IsInGuild() then SafeSend(LB_PREFIX, payload, "GUILD") end
-    -- Use LE_PARTY_CATEGORY_INSTANCE for LFD groups; IsInGroup() alone misses them
+
+    -- For group channels: in an instance group (LFD/LFR) the PARTY channel is
+    -- restricted and causes "not in a party" spam. Only send PARTY when we are
+    -- in a regular (non-instance) group. Raid channel is always safe.
     if IsInRaid() then
         SafeSend(LB_PREFIX, payload, "RAID")
-    elseif IsInGroup() or IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+    elseif IsInGroup() and not IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+        -- Regular party (not LFD/instance) — PARTY channel is valid here
         SafeSend(LB_PREFIX, payload, "PARTY")
     end
+    -- If IsInGroup(LE_PARTY_CATEGORY_INSTANCE): we are in an LFD instance group.
+    -- PARTY channel is restricted here. Guild channel already covers guild members.
+    -- Non-guild LFD members won't see the score this fight, which is acceptable.
 end
 
--- Convenience wrapper called from Analytics
+-- Convenience wrappers called from other modules
 function LB.GetInstanceContext()
     return GetInstanceContext()
+end
+
+function LB.GetWeekKey()
+    return GetWeekKey()
 end
 
 --------------------------------------------------------------------------------
@@ -168,42 +183,26 @@ end
 --           attacker also needs to fake consistently.
 --
 -- Checksum formula:
---   Components: score, duration, encType, charName
---   Each component is mixed with prime multipliers and summed mod 251.
---   Changing score without also changing charName and duration consistently
---   will produce a mismatched checksum that receivers silently reject.
---   The charName component ties the checksum to the character identity,
---   so you cannot reuse another player's valid broadcast for yourself.
---
--- Additional receiver-side checks:
---   - Score must be 0-100
---   - Duration bounds: score >= 90 requires duration >= 45s
---                      score >= 80 requires duration >= 20s
---   - Rate limit: max 20 SCORE messages per sender per session
---   - Implausibility: score > 95 in < 30s is rejected regardless
---------------------------------------------------------------------------------
-local function NameHash(name)
-    -- Simple djb2-style fold of character name bytes
-    local h = 5381
-    for i = 1, #(name or "") do
-        h = ((h * 33) + string.byte(name, i)) % 251
-    end
-    return h
-end
+--   Components: score, duration, encType
+--   Changing any value without updating the checksum produces a mismatch.
+--   charName is sent in the message for display purposes only — it is NOT
+--   included in the checksum because scores can be re-broadcast by peers
+--   (REQ handler) and the re-broadcaster's charName would differ.
 
-local function MakeChecksum(score, duration, encType, charName)
-    -- Mix four independent components with distinct primes
-    local a = (score         * 7)   % 251
-    local b = (math.floor(duration) * 11)  % 251
-    local c = (#(encType  or "") * 17)  % 251
-    local d = NameHash(charName)
-    local raw = (a + b + c + d) % 251
+local function MakeChecksum(score, duration, encType)
+    -- Ties score+duration+encType together so changing one without the others
+    -- produces a mismatch. charName is NOT included — it's informational only
+    -- and caused cross-player validation failures when scores were re-broadcast.
+    local a = (score               * 7)  % 251
+    local b = (math.floor(duration) * 11) % 251
+    local c = (#(encType or "")    * 17) % 251
+    local raw = (a + b + c) % 251
     return string.format("%03d", raw)
 end
 
-local function ValidateChecksum(score, duration, encType, charName, checksum)
+local function ValidateChecksum(score, duration, encType, checksum)
     if not checksum then return false end
-    return MakeChecksum(score, duration, encType, charName) == checksum
+    return MakeChecksum(score, duration, encType) == checksum
 end
 
 -- Per-sender rate limiter: max 20 SCORE messages per session
@@ -273,33 +272,82 @@ end
 
 local function IsBNetFriend(fullName)
     local shortName = ShortName(fullName)
-    -- Modern API (Dragonflight 10.0 / Midnight 12.x)
-    if C_BattleNet and C_BattleNet.GetNumFriendsBySource then
-        local numBNet = C_BattleNet.GetNumFriendsBySource(Enum.FriendType.BNet) or 0
-        for i = 1, numBNet do
-            local info = C_BattleNet.GetFriendAccountInfo(i)
-            if info and info.gameAccountInfo then
-                local toon = info.gameAccountInfo.characterName
-                if toon and toon:match("^([^%-]+)") == shortName then return true end
+
+    -- Primary: use the BN global functions which are always available in WoW retail
+    local ok, numFriends = pcall(BNGetNumFriends)
+    if ok and type(numFriends) == "number" and numFriends > 0 then
+        for i = 1, numFriends do
+            -- Get numGameAccounts as the last return value of BNGetFriendInfo.
+            -- Use select('#',...) to count returns safely across WoW versions.
+            local results = {pcall(BNGetFriendInfo, i)}
+            if results[1] then  -- pcall ok
+                local numAccounts = results[#results]  -- last return = numGameAccounts
+                if type(numAccounts) == "number" and numAccounts > 0 then
+                    for j = 1, numAccounts do
+                        local r2 = {pcall(BNGetFriendGameAccountInfo, i, j)}
+                        if r2[1] then
+                            -- charName is the last string return; isOnline is second-to-last bool
+                            -- Iterate returns to find the character name (non-empty string)
+                            local charName, realmName
+                            for k = #r2, 2, -1 do
+                                if type(r2[k]) == "string" and r2[k] ~= "" then
+                                    if not charName then
+                                        charName = r2[k]
+                                    elseif not realmName then
+                                        realmName = r2[k]
+                                        break
+                                    end
+                                end
+                            end
+                            if charName and charName:match("^([^%-]+)") == shortName then
+                                return true
+                            end
+                        end
+                    end
+                end
             end
         end
         return false
     end
-    -- Fallback: legacy BNGetFriendInfo (may not exist in Midnight)
-    local ok, numFriends = pcall(BNGetNumFriends)
-    if not ok or not numFriends then return false end
-    for i = 1, numFriends do
-        local ok2, _, _, _, _, toonName = pcall(BNGetFriendInfo, i)
-        if ok2 and toonName and toonName:match("^([^%-]+)") == shortName then
-            return true
+
+    -- Fallback: C_BattleNet API (Dragonflight+)
+    if C_BattleNet and C_BattleNet.GetFriendAccountInfo then
+        local numBNet = 0
+        if C_BattleNet.GetNumFriendsBySource and Enum and Enum.FriendType then
+            local ok2, n = pcall(C_BattleNet.GetNumFriendsBySource, Enum.FriendType.BNet)
+            if ok2 then numBNet = n or 0 end
+        end
+        if numBNet == 0 and C_BattleNet.GetNumFriends then
+            local ok2, n = pcall(C_BattleNet.GetNumFriends)
+            if ok2 then numBNet = n or 0 end
+        end
+        for i = 1, numBNet do
+            local info = C_BattleNet.GetFriendAccountInfo(i)
+            if info then
+                if info.gameAccountInfo and info.gameAccountInfo.characterName then
+                    if info.gameAccountInfo.characterName:match("^([^%-]+)") == shortName then
+                        return true
+                    end
+                end
+                if info.gameAccounts then
+                    for _, acct in ipairs(info.gameAccounts) do
+                        if acct.characterName and acct.characterName:match("^([^%-]+)") == shortName then
+                            return true
+                        end
+                    end
+                end
+            end
         end
     end
+
     return false
 end
 
--- Update or create an entry, maintaining weekly avg and all-time best
+-- Update or create an entry, maintaining weekly avg and all-time best.
+-- isBoss=true means this was an actual boss encounter; only boss fights
+-- count toward weeklyAvg (hardcoded, not optional).
 local function MergeEntry(existing, name, className, specName, role,
-                           grade, score, duration, encType, weekKey)
+                           grade, score, duration, encType, weekKey, isBoss)
     local e = existing or {
         name         = name,
         className    = className or "?",
@@ -312,7 +360,7 @@ local function MergeEntry(existing, name, className, specName, role,
         online       = true,
         weekKey      = weekKey,
         weekScores   = {},
-        weeklyAvg    = score,
+        weeklyAvg    = 0,
         allTimeBest  = score,
         dungeonBest  = 0,
         raidBest     = 0,
@@ -324,31 +372,24 @@ local function MergeEntry(existing, name, className, specName, role,
         raidCount    = 0,
     }
 
-    -- If new week, reset weekly data
+    -- If new WoW week, reset weekly data
     if e.weekKey ~= weekKey then
         e.weekKey    = weekKey
         e.weekScores = {}
         e.weeklyAvg  = 0
     end
 
-    -- Add score to weekly list (cap at 50 per week)
-    table.insert(e.weekScores, score)
-    if #e.weekScores > 50 then table.remove(e.weekScores, 1) end
+    -- Only boss fights count toward weekly avg
+    if isBoss then
+        table.insert(e.weekScores, score)
+        if #e.weekScores > 50 then table.remove(e.weekScores, 1) end
+        local sum = 0
+        for _, s in ipairs(e.weekScores) do sum = sum + s end
+        e.weeklyAvg = math.floor(sum / #e.weekScores)
+    end
 
-    -- Recalculate weekly avg
-    local sum = 0
-    for _, s in ipairs(e.weekScores) do sum = sum + s end
-    e.weeklyAvg = math.floor(sum / #e.weekScores)
-
-    -- All-time best
+    -- All-time best (all fights)
     if score > (e.allTimeBest or 0) then e.allTimeBest = score end
-
-    -- Boss-only best (issue #6: leaderboard weekly avg only counts boss fights)
-    local isBossEnc = (encType == "dungeon" or encType == "raid" or encType == "delve")
-    -- We treat all instanced fights as "meaningful" for bossBest;
-    -- the isBoss field on the encounter is the tighter filter
-    -- but we don't have that here — use encType as proxy
-    if isBossEnc and score > (e.bossBest or 0) then e.bossBest = score end
 
     -- Category bests and averages
     if encType == "dungeon" then
@@ -373,7 +414,7 @@ local function MergeEntry(existing, name, className, specName, role,
     e.specName  = specName  or e.specName
     e.role      = role      or e.role
     e.grade     = grade
-    e.score     = score     -- most recent
+    e.score     = score
     e.duration  = duration
     e.timestamp = time()
     e.online    = true
@@ -384,15 +425,91 @@ end
 --------------------------------------------------------------------------------
 -- Broadcast own score
 --------------------------------------------------------------------------------
+
+-- Send to all online BNet friends via whisper (since they may not share guild/group)
+local function WhisperFriends(payload)
+    local sent = {}
+
+    local function TrySend(toon, realm)
+        if not toon or toon == "" then return end
+        local target = (realm and realm ~= "") and (toon .. "-" .. realm) or toon
+        if not sent[target] then
+            sent[target] = true
+            pcall(C_ChatInfo.SendAddonMessage, LB_PREFIX, payload, "WHISPER", target)
+        end
+    end
+
+    -- Primary: BN global functions (these work in Midnight 12.0)
+    local ok, numFriends = pcall(BNGetNumFriends)
+    if ok and type(numFriends) == "number" and numFriends > 0 then
+        for i = 1, numFriends do
+            local r1 = {pcall(BNGetFriendInfo, i)}
+            if r1[1] then
+                local numAccounts = r1[#r1]
+                if type(numAccounts) == "number" and numAccounts > 0 then
+                    for j = 1, numAccounts do
+                        local r2 = {pcall(BNGetFriendGameAccountInfo, i, j)}
+                        if r2[1] then
+                            -- Find isOnline (bool) and charName/realmName (strings)
+                            local isOnline, charName, realmName
+                            for k = 2, #r2 do
+                                if type(r2[k]) == "boolean" and isOnline == nil then
+                                    isOnline = r2[k]
+                                end
+                            end
+                            -- charName: last non-empty string; realmName: second-to-last
+                            for k = #r2, 2, -1 do
+                                if type(r2[k]) == "string" and r2[k] ~= "" then
+                                    if not charName then charName = r2[k]
+                                    elseif not realmName then realmName = r2[k] ; break end
+                                end
+                            end
+                            if isOnline and charName then
+                                TrySend(charName, realmName)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        return
+    end
+
+    -- Fallback: C_BattleNet API
+    if not C_BattleNet then return end
+    local numBNet = 0
+    if C_BattleNet.GetNumFriendsBySource and Enum and Enum.FriendType then
+        local ok2, n = pcall(C_BattleNet.GetNumFriendsBySource, Enum.FriendType.BNet)
+        if ok2 then numBNet = n or 0 end
+    end
+    if numBNet == 0 and C_BattleNet.GetNumFriends then
+        local ok2, n = pcall(C_BattleNet.GetNumFriends)
+        if ok2 then numBNet = n or 0 end
+    end
+    for i = 1, numBNet do
+        local info = C_BattleNet.GetFriendAccountInfo(i)
+        if info then
+            if info.gameAccountInfo and info.gameAccountInfo.isOnline then
+                TrySend(info.gameAccountInfo.characterName, info.gameAccountInfo.realmName)
+            end
+            if info.gameAccounts then
+                for _, acct in ipairs(info.gameAccounts) do
+                    if acct.isOnline then TrySend(acct.characterName, acct.realmName) end
+                end
+            end
+        end
+    end
+end
+
 local function BroadcastScore(encounter)
     if not encounter or not encounter.finalScore then return end
     local charName  = UnitName("player") or "?"
     local encType   = encounter.encType  or "normal"
     local diffLabel = encounter.diffLabel or ""
     local ks        = encounter.keystoneLevel and tostring(encounter.keystoneLevel) or "0"
-    local cs        = MakeChecksum(encounter.finalScore,
-                                   math.floor(encounter.duration or 0),
-                                   encType, charName)
+    local cs = MakeChecksum(encounter.finalScore,
+                            math.floor(encounter.duration or 0),
+                            encType)
 
     local payload = table.concat({
         "SCORE",
@@ -409,13 +526,22 @@ local function BroadcastScore(encounter)
         cs,
         diffLabel:gsub("|", "_"),
         ks,
-        charName:gsub("|", "_"),    -- included so receiver can verify checksum
+        charName:gsub("|", "_"),
     }, "|")
 
     BroadcastToAll(payload)
+    -- Also whisper BNet friends directly — they may not share guild or group
+    WhisperFriends(payload)
 end
 
 Core.On(Core.EVENTS.GRADE_CALCULATED, BroadcastScore)
+
+-- Auto-refresh leaderboard after each fight if it's open
+Core.On(Core.EVENTS.GRADE_CALCULATED, function()
+    C_Timer.After(0.5, function()
+        LB.RefreshUI()
+    end)
+end)
 
 --------------------------------------------------------------------------------
 -- HELLO broadcast
@@ -426,9 +552,47 @@ local function BroadcastHello()
         Core.ActiveSpec.className or "?",
         Core.ActiveSpec.name      or "?" }, "|")
     BroadcastToAll(payload)
+    WhisperFriends(payload)
+end
+
+-- Seed partyData with current group members on login/reload and when leaderboard opens.
+-- partyData is session-only so it empties on reload; we refill from group unit tokens.
+local function SeedPartyFromGroup()
+    local n = GetNumGroupMembers()
+    if n == 0 then return end
+    for i = 1, n do
+        local unit = (IsInRaid() and "raid" or "party") .. i
+        local name  = UnitName(unit)
+        local realm = select(2, UnitFullName(unit))
+        if name then
+            local fullName = (realm and realm ~= "") and (name .. "-" .. realm) or name
+            if not partyData[fullName] then
+                local class = UnitClass(unit) or "?"
+                local spec  = ""  -- unknown until they broadcast
+                partyData[fullName] = {
+                    name        = name,
+                    className   = class,
+                    specName    = spec,
+                    grade       = "--",
+                    score       = 0,
+                    online      = true,
+                    timestamp   = 0,
+                    weekKey     = GetWeekKey(),
+                    weeklyAvg   = 0, allTimeBest = 0,
+                    dungeonBest = 0, raidBest = 0, delveBest = 0, normalBest = 0,
+                }
+            end
+        end
+    end
 end
 
 Core.On(Core.EVENTS.SESSION_READY, function() C_Timer.After(4.0, BroadcastHello) end)
+Core.On(Core.EVENTS.SESSION_READY, function()
+    C_Timer.After(2.0, function()
+        SeedPartyFromGroup()
+        LB.RefreshUI()
+    end)
+end)
 Core.On(Core.EVENTS.SPEC_CHANGED,  function() C_Timer.After(1.0, BroadcastHello) end)
 
 --------------------------------------------------------------------------------
@@ -446,8 +610,9 @@ local function OnAddonMessage(prefix, payload, channel, sender)
     local msgType = parts[1]
 
     if msgType == "SCORE" then
-        -- Format: SCORE|ver|class|spec|role|grade|score|dur|isBoss|bossName|encType|cs|diffLabel|ks|charName
-        if #parts < 15 then return end
+        -- Accept 12+ parts for backward compatibility with older clients.
+        -- New format is 15 parts; older format was 12.
+        if #parts < 12 then return end
 
         local className = parts[3]
         local specName  = parts[4]
@@ -456,8 +621,8 @@ local function OnAddonMessage(prefix, payload, channel, sender)
         local score     = tonumber(parts[7]) or 0
         local duration  = tonumber(parts[8]) or 0
         local isBoss    = (parts[9] == "1")
-        local bossName  = parts[10]
-        local encType   = parts[11]
+        local bossName  = parts[10] or ""
+        local encType   = parts[11] or "normal"
         local checksum  = parts[12]
         local diffLabel = parts[13] or ""
         local ks        = tonumber(parts[14]) or 0
@@ -466,13 +631,18 @@ local function OnAddonMessage(prefix, payload, channel, sender)
         -- 1. Score range
         if score < 0 or score > 100 then return end
 
-        -- 2. Checksum — ties score+duration+encType to the sender's character name
-        if not ValidateChecksum(score, duration, encType, charName, checksum) then
-            if Core.GetSetting("debugMode") then
-                print("|cffFF4444Midnight Sensei:|r Rejected score from " ..
-                      ShortName(sender) .. " (checksum mismatch)")
+        -- 2. Checksum validation — skip for WHISPER channel.
+        -- Whispers come from BNet friends who may run a different addon version
+        -- with a different checksum formula. The plausibility check below is
+        -- sufficient protection for direct friend messages.
+        if channel ~= "WHISPER" then
+            if not ValidateChecksum(score, duration, encType, checksum) then
+                if Core.GetSetting("debugMode") then
+                    print("|cffFF4444Midnight Sensei:|r Rejected score from " ..
+                          ShortName(sender) .. " (checksum mismatch)")
+                end
+                return
             end
-            return
         end
 
         -- 3. Plausibility (score too high for fight length)
@@ -490,43 +660,61 @@ local function OnAddonMessage(prefix, payload, channel, sender)
 
         local weekKey = GetWeekKey()
 
-        local inParty = IsInGroup() or IsInRaid()
-        if inParty then
-            for i = 1, GetNumGroupMembers() do
-                local unit = (IsInRaid() and "raid" or "party") .. i
-                if UnitName(unit) and ShortName(sender) == UnitName(unit) then
-                    partyData[sender] = MergeEntry(partyData[sender], sender,
-                        className, specName, role, grade, score, duration,
-                        encType, weekKey)
-                    partyData[sender].diffLabel     = diffLabel
-                    partyData[sender].keystoneLevel = ks > 0 and ks or nil
-                    break
-                end
+        -- Route to party: check if sender is currently in our group,
+        -- regardless of which channel the message arrived on.
+        -- IsInGroup() fails for LFD groups, so check unit names directly.
+        local addedToParty = false
+        for i = 1, GetNumGroupMembers() do
+            local unit = (IsInRaid() and "raid" or "party") .. i
+            local unitName = UnitName(unit)
+            if unitName and ShortName(sender) == unitName then
+                partyData[sender] = MergeEntry(partyData[sender], sender,
+                    className, specName, role, grade, score, duration,
+                    encType, weekKey, isBoss)
+                partyData[sender].diffLabel     = diffLabel
+                partyData[sender].keystoneLevel = ks > 0 and ks or nil
+                addedToParty = true
+                break
             end
         end
+
+        -- Route to guild if applicable
         if IsInGuild() and IsGuildMember(sender) then
             local db = GetDB()
             if db then
                 db.guild[sender] = MergeEntry(db.guild[sender], sender,
                     className, specName, role, grade, score, duration,
-                    encType, weekKey)
+                    encType, weekKey, isBoss)
                 db.guild[sender].diffLabel     = diffLabel
                 db.guild[sender].keystoneLevel = ks > 0 and ks or nil
             end
         end
-        if IsBNetFriend(sender) then
+
+        -- Route to friends: check IsBNetFriend, or if message came via WHISPER channel
+        -- (friends who aren't in same guild/group send via whisper)
+        if IsBNetFriend(sender) or channel == "WHISPER" then
             friendsData[sender] = MergeEntry(friendsData[sender], sender,
                 className, specName, role, grade, score, duration,
-                encType, weekKey)
+                encType, weekKey, isBoss)
             friendsData[sender].diffLabel     = diffLabel
             friendsData[sender].keystoneLevel = ks > 0 and ks or nil
         end
 
         LB.RefreshUI()
 
+    elseif msgType == "REQ" then
+        -- A peer is asking everyone to resend their last score (triggered by Refresh).
+        -- Re-emit GRADE_CALCULATED with our last recorded encounter so it gets broadcast.
+        C_Timer.After(0.5 + math.random() * 1.5, function()
+            local lastEnc = MS.Analytics and MS.Analytics.GetLastEncounter
+                            and MS.Analytics.GetLastEncounter()
+            if lastEnc and lastEnc.finalScore then
+                Core.Emit(Core.EVENTS.GRADE_CALCULATED, lastEnc)
+            end
+        end)
+
     elseif msgType == "HELLO" then
-        -- Sender just logged in. If we have their guild data, send it back
-        -- so they can recover scores they lost from a reinstall or clear.
+        -- Guild: create a no-score placeholder so they appear in the guild tab
         if IsInGuild() and IsGuildMember(sender) then
             local db = GetDB()
             if db then
@@ -552,17 +740,12 @@ local function OnAddonMessage(prefix, payload, channel, sender)
                     db.guild[sender].online = true
                 end
 
-                -- GRM-style sync: send their stored best back to them
-                -- so they can recover scores after a reinstall.
-                -- Only send if we have meaningful data (allTimeBest > 0).
+                -- GRM-style sync back
                 local entry = db.guild[sender]
                 if entry and (entry.allTimeBest or 0) > 0 then
                     C_Timer.After(2.0 + math.random() * 3.0, function()
-                        -- SYNC|target|allTimeBest|weeklyAvg|dungeonBest|raidBest|delveBest
-                        local senderShort = ShortName(sender)
                         local syncPayload = table.concat({
-                            "SYNC",
-                            senderShort,
+                            "SYNC", ShortName(sender),
                             tostring(entry.allTimeBest  or 0),
                             tostring(entry.weeklyAvg    or 0),
                             tostring(entry.dungeonBest  or 0),
@@ -570,14 +753,79 @@ local function OnAddonMessage(prefix, payload, channel, sender)
                             tostring(entry.delveBest    or 0),
                             entry.weekKey or GetWeekKey(),
                         }, "|")
-                        -- Send only to guild (private enough, no need to spam raid)
-                        if IsInGuild() then
-                            SafeSend(LB_PREFIX, syncPayload, "GUILD")
-                        end
+                        if IsInGuild() then SafeSend(LB_PREFIX, syncPayload, "GUILD") end
                     end)
                 end
             end
         end
+
+        -- Party: add a no-score placeholder if sender is in our group
+        for i = 1, GetNumGroupMembers() do
+            local unit = (IsInRaid() and "raid" or "party") .. i
+            local unitName = UnitName(unit)
+            if unitName and ShortName(sender) == unitName then
+                if not partyData[sender] then
+                    partyData[sender] = {
+                        name      = sender,
+                        className = parts[3] or "?",
+                        specName  = parts[4] or "?",
+                        grade     = "--",
+                        score     = 0,
+                        online    = true,
+                        timestamp = 0,
+                        weekKey   = GetWeekKey(),
+                        weeklyAvg = 0, allTimeBest = 0,
+                        dungeonBest = 0, raidBest = 0, delveBest = 0, normalBest = 0,
+                    }
+                else
+                    partyData[sender].online = true
+                end
+                break
+            end
+        end
+
+        -- Friends: add a no-score placeholder if sender is a BNet friend
+        -- or if this HELLO arrived via whisper (direct BNet friend path)
+        if IsBNetFriend(sender) or channel == "WHISPER" then
+            if not friendsData[sender] then
+                friendsData[sender] = {
+                    name      = sender,
+                    className = parts[3] or "?",
+                    specName  = parts[4] or "?",
+                    grade     = "--",
+                    score     = 0,
+                    online    = true,
+                    timestamp = 0,
+                    weekKey   = GetWeekKey(),
+                    weeklyAvg = 0, allTimeBest = 0,
+                    dungeonBest = 0, raidBest = 0, delveBest = 0, normalBest = 0,
+                }
+            else
+                friendsData[sender].online = true
+            end
+
+            -- If this arrived via whisper, whisper back our HELLO so they also
+            -- get our entry (mutual handshake — otherwise only one side registers).
+            if channel == "WHISPER" and Core.ActiveSpec then
+                local replyPayload = table.concat({
+                    "HELLO", Core.VERSION,
+                    Core.ActiveSpec.className or "?",
+                    Core.ActiveSpec.name      or "?",
+                }, "|")
+                -- Whisper back to the exact sender (Name-Realm format is fine for WHISPER)
+                pcall(C_ChatInfo.SendAddonMessage, LB_PREFIX, replyPayload, "WHISPER", sender)
+
+                -- Also resend our last score directly to them so their Friends tab populates
+                C_Timer.After(0.5, function()
+                    local lastEnc = MS.Analytics and MS.Analytics.GetLastEncounter
+                                    and MS.Analytics.GetLastEncounter()
+                    if lastEnc and lastEnc.finalScore then
+                        Core.Emit(Core.EVENTS.GRADE_CALCULATED, lastEnc)
+                    end
+                end)
+            end
+        end
+
         LB.RefreshUI()
 
     elseif msgType == "SYNC" then
@@ -646,29 +894,70 @@ local function SyncGuildOnlineStatus()
     LB.RefreshUI()
 end
 
--- Compute weekly avg from local encounter history.
--- bossOnly=true (issue #6): only count boss encounters toward weekly avg
--- so trash pulls and target dummy testing don't inflate the leaderboard score.
-local function ComputeWeeklyAvg(history, weekKey, bossOnly)
-    if not history then return 0, 0 end
-    local scores = {}
+-- Weekly avg is always boss-only. Not optional.
+-- For encounters without weekKey (older history), falls back to timestamp comparison.
+local function ComputeWeeklyAvg(history, weekKey)
+    if not history then return 0 end
+
+    -- Derive the UTC epoch for the start of this WoW week so we can bucket
+    -- old encounters that predate the weekKey field.
+    -- WoW's time() returns UTC epoch. We use GetWeekKey's own logic in reverse:
+    -- The weekKey is YYYYMMDD of the Tuesday at 14:00 UTC that started the week.
+    -- We find it by scanning backwards from now until we hit that Tuesday.
+    -- Simple approach: current time() minus the offset we already computed in GetWeekKey.
+    local weekStart = 0
+    local weekEnd   = 0
+    if #weekKey == 8 then
+        -- Walk back from now to find the epoch that matches this weekKey.
+        -- Each WoW week is exactly 7 days. GetWeekKey returns the current week's key,
+        -- so if weekKey == GetWeekKey() we can compute weekStart directly from now.
+        local utcNow   = time()
+        local shifted  = utcNow - (14 * 3600)
+        local t        = date("!*t", shifted)
+        local wday     = t.wday
+        local daysSinceTue = (wday - 3 + 7) % 7
+        -- weekStart = epoch of this week's Tuesday 14:00 UTC
+        local thisWeekStart = utcNow - daysSinceTue * 86400
+                            - (t.hour * 3600 + t.min * 60 + t.sec)
+                            + (14 * 3600)  -- add 14h to get 14:00 UTC
+
+        -- Find how many weeks ago this weekKey was
+        local curKey = GetWeekKey()
+        if weekKey == curKey then
+            weekStart = thisWeekStart
+        elseif weekKey < curKey then
+            -- Walk back in 7-day steps until we find the right key
+            local probe = thisWeekStart
+            for _ = 1, 52 do  -- max 1 year lookback
+                probe = probe - 7 * 86400
+                local probeShifted = probe - (14 * 3600)
+                local pTue = date("!*t", probeShifted)
+                local pKey = string.format("%04d%02d%02d", pTue.year, pTue.month, pTue.mday)
+                if pKey == weekKey then
+                    weekStart = probe
+                    break
+                end
+            end
+        end
+        weekEnd = weekStart + 7 * 86400
+    end
+
+    local sum, count = 0, 0
     for _, enc in ipairs(history) do
-        local encWk = enc.weekKey or ""
-        if encWk == weekKey then
-            if not bossOnly or enc.isBoss then
-                table.insert(scores, enc.finalScore or 0)
+        if enc.isBoss then
+            local inWeek = false
+            if enc.weekKey and enc.weekKey ~= "" then
+                inWeek = (enc.weekKey == weekKey)
+            elseif enc.timestamp and weekStart > 0 then
+                inWeek = (enc.timestamp >= weekStart and enc.timestamp < weekEnd)
+            end
+            if inWeek then
+                sum   = sum   + (enc.finalScore or 0)
+                count = count + 1
             end
         end
     end
-    if #scores == 0 then return 0, 0 end
-    local sum = 0
-    for _, s in ipairs(scores) do sum = sum + s end
-    return math.floor(sum / #scores), #scores
-end
-
--- Whether weekly avg should only count boss encounters (issue #6)
-local function BossOnlyMode()
-    return Core.GetSetting("lbBossOnly") ~= false  -- default true
+    return count > 0 and math.floor(sum / count) or 0
 end
 
 --------------------------------------------------------------------------------
@@ -682,20 +971,38 @@ function LB.GetPartyData()
         local history = MidnightSenseiDB and MidnightSenseiDB.encounters
         local lastEnc = history and history[#history]
         local wk      = GetWeekKey()
-        local wAvg    = ComputeWeeklyAvg(history, wk, BossOnlyMode())
+        local wAvg    = ComputeWeeklyAvg(history, wk)
+
+        -- Compute all-time and category bests from full history
+        local allBest, dungBest, raidBest, delvBest = 0, 0, 0, 0
+        if history then
+            for _, enc in ipairs(history) do
+                local s = enc.finalScore or 0
+                allBest = math.max(allBest, s)
+                if     enc.encType == "dungeon" then dungBest = math.max(dungBest, s)
+                elseif enc.encType == "raid"    then raidBest = math.max(raidBest, s)
+                elseif enc.encType == "delve"   then delvBest = math.max(delvBest, s)
+                end
+            end
+        end
 
         result[myName] = {
             name        = UnitName("player"),
             className   = spec.className or "?",
             specName    = spec.name      or "?",
             role        = spec.role      or "?",
-            grade       = lastEnc and lastEnc.grade     or "--",
-            score       = lastEnc and lastEnc.finalScore or 0,
-            timestamp   = lastEnc and lastEnc.timestamp  or 0,
-            isSelf      = true, online = true,
+            grade       = lastEnc and (lastEnc.finalGrade or lastEnc.grade) or "--",
+            score       = lastEnc and lastEnc.finalScore  or 0,
+            timestamp   = lastEnc and lastEnc.timestamp   or 0,
+            isSelf      = true,
+            online      = true,
+            weekKey     = wk,
             weeklyAvg   = wAvg,
-            allTimeBest = lastEnc and lastEnc.finalScore or 0,
-            dungeonBest = 0, raidBest = 0, delveBest = 0, normalBest = 0,
+            allTimeBest = allBest,
+            dungeonBest = dungBest,
+            raidBest    = raidBest,
+            delveBest   = delvBest,
+            normalBest  = 0,
         }
     end
     for name, entry in pairs(partyData) do result[name] = entry end
@@ -715,14 +1022,15 @@ function LB.GetGuildData()
             local lastEnc = history and history[#history]
             local wk      = GetWeekKey()
 
-            -- Compute weekly avg (boss-only by default per issue #6)
-            local wAvg = ComputeWeeklyAvg(history, wk, BossOnlyMode())
+            -- Boss-only weekly avg (always hardcoded)
+            local wAvg = ComputeWeeklyAvg(history, wk)
 
-            -- Compute category bests from local history
-            local dungBest, raidBest, delvBest, normBest = 0, 0, 0, 0
+            -- Category bests from full history
+            local allBest, dungBest, raidBest, delvBest, normBest = 0, 0, 0, 0, 0
             if history then
                 for _, enc in ipairs(history) do
                     local s = enc.finalScore or 0
+                    allBest = math.max(allBest, s)
                     if     enc.encType == "dungeon" then dungBest = math.max(dungBest, s)
                     elseif enc.encType == "raid"    then raidBest = math.max(raidBest, s)
                     elseif enc.encType == "delve"   then delvBest = math.max(delvBest, s)
@@ -730,42 +1038,38 @@ function LB.GetGuildData()
                 end
             end
 
-            -- Build or update the self entry in guild data
-            -- We write it into a local copy so we don't permanently pollute db.guild
-            -- with computed data that the DB doesn't need to persist
             local existing = guildData[myName]
             local selfEntry = {
-                name         = UnitName("player"),
-                className    = spec.className or "?",
-                specName     = spec.name      or "?",
-                role         = spec.role      or "?",
-                grade        = lastEnc and (lastEnc.finalGrade or lastEnc.grade) or "--",
-                score        = lastEnc and lastEnc.finalScore or 0,
-                timestamp    = lastEnc and lastEnc.timestamp  or 0,
-                isSelf       = true,
-                online       = true,
-                weekKey      = wk,
-                weekScores   = wScores,
-                weeklyAvg    = wAvg,
-                allTimeBest  = lastEnc and lastEnc.finalScore or 0,
-                dungeonBest  = dungBest,
-                raidBest     = raidBest,
-                delveBest    = delvBest,
-                normalBest   = normBest,
-                diffLabel    = lastEnc and lastEnc.diffLabel or "",
+                name          = UnitName("player"),
+                className     = spec.className or "?",
+                specName      = spec.name      or "?",
+                role          = spec.role      or "?",
+                grade         = lastEnc and (lastEnc.finalGrade or lastEnc.grade) or "--",
+                score         = lastEnc and lastEnc.finalScore  or 0,
+                timestamp     = lastEnc and lastEnc.timestamp   or 0,
+                isSelf        = true,
+                online        = true,
+                weekKey       = wk,
+                weeklyAvg     = wAvg,
+                allTimeBest   = allBest,
+                dungeonBest   = dungBest,
+                raidBest      = raidBest,
+                delveBest     = delvBest,
+                normalBest    = normBest,
+                diffLabel     = lastEnc and lastEnc.diffLabel    or "",
                 keystoneLevel = lastEnc and lastEnc.keystoneLevel or nil,
             }
-            -- Merge with persisted data and any peer-recovered bests
+
+            -- Merge with persisted data and peer-recovered bests
             if existing then
                 selfEntry.allTimeBest = math.max(selfEntry.allTimeBest, existing.allTimeBest or 0)
                 selfEntry.dungeonBest = math.max(selfEntry.dungeonBest, existing.dungeonBest or 0)
                 selfEntry.raidBest    = math.max(selfEntry.raidBest,    existing.raidBest    or 0)
                 selfEntry.delveBest   = math.max(selfEntry.delveBest,   existing.delveBest   or 0)
             end
-            -- Also incorporate scores recovered via SYNC from peers (reinstall recovery)
-            local rb = MidnightSenseiDB and
-                       MidnightSenseiDB.leaderboard and
-                       MidnightSenseiDB.leaderboard.recoveredBests
+            local rb = MidnightSenseiDB
+                       and MidnightSenseiDB.leaderboard
+                       and MidnightSenseiDB.leaderboard.recoveredBests
             if rb then
                 selfEntry.allTimeBest = math.max(selfEntry.allTimeBest, rb.allTimeBest or 0)
                 selfEntry.dungeonBest = math.max(selfEntry.dungeonBest, rb.dungeonBest or 0)
@@ -773,7 +1077,6 @@ function LB.GetGuildData()
                 selfEntry.delveBest   = math.max(selfEntry.delveBest,   rb.delveBest   or 0)
             end
 
-            -- Return a copy of guildData with self injected (don't modify db.guild directly)
             local result = {}
             for k, v in pairs(guildData) do result[k] = v end
             result[myName] = selfEntry
@@ -788,28 +1091,73 @@ function LB.GetFriendsData()
     return friendsData
 end
 
+-- Delve tab: shows the player's own delve encounter history sorted by score,
+-- plus any delve data received from guild/party peers.
+-- Unlike the social tabs which track one entry per person, this shows
+-- individual delve runs so you can see tier progression over time.
+function LB.GetDelveData()
+    local result = {}
+
+    -- First: inject own delve encounters from local history
+    local history = MidnightSenseiDB and MidnightSenseiDB.encounters
+    if history then
+        local myName = GetPlayerName()
+        local spec   = Core.ActiveSpec
+        for i, enc in ipairs(history) do
+            if enc.encType == "delve" then
+                local key = myName .. "_delve_" .. i
+                result[key] = {
+                    name         = UnitName("player"),
+                    className    = spec and spec.className or enc.className or "?",
+                    specName     = spec and spec.name or enc.specName or "?",
+                    role         = spec and spec.role or enc.role or "?",
+                    grade        = enc.finalGrade or enc.grade or "?",
+                    score        = enc.finalScore or 0,
+                    weeklyAvg    = enc.finalScore or 0,   -- sort key
+                    allTimeBest  = enc.finalScore or 0,
+                    delveBest    = enc.finalScore or 0,
+                    dungeonBest  = 0, raidBest = 0, normalBest = 0,
+                    diffLabel    = enc.diffLabel or "Delve",
+                    keystoneLevel = enc.keystoneLevel,
+                    timestamp    = enc.timestamp or 0,
+                    isSelf       = true,
+                    online       = true,
+                    isDelveRun   = true,  -- flag for row display
+                }
+            end
+        end
+    end
+
+    -- Also include delve-best data received from guild peers (single entry per person)
+    local guildData = LB.GetGuildData()
+    for name, entry in pairs(guildData) do
+        if (entry.delveBest or 0) > 0 and not entry.isSelf then
+            result[name .. "_best"] = {
+                name        = entry.name,
+                className   = entry.className,
+                specName    = entry.specName,
+                role        = entry.role,
+                grade       = entry.grade,
+                score       = entry.delveBest,
+                weeklyAvg   = entry.delveBest,
+                allTimeBest = entry.allTimeBest or 0,
+                delveBest   = entry.delveBest,
+                dungeonBest = 0, raidBest = 0, normalBest = 0,
+                diffLabel   = "Best",
+                timestamp   = entry.timestamp or 0,
+                isSelf      = false,
+                online      = entry.online,
+            }
+        end
+    end
+
+    return result
+end
+
 function LB.ClearGuildData()
     local db = GetDB()
     if db then db.guild = {} end
     LB.RefreshUI()
-end
-
---------------------------------------------------------------------------------
--- Sorting — weekly avg first, then all-time best, then alpha
---------------------------------------------------------------------------------
-local SORT_MODES = { "weeklyAvg", "allTimeBest", "dungeonBest", "raidBest" }
-local sortMode   = "weeklyAvg"
-
-local function SortedEntries(dataTable)
-    local list = {}
-    for _, entry in pairs(dataTable) do table.insert(list, entry) end
-    table.sort(list, function(a, b)
-        local av = a[sortMode] or a.score or 0
-        local bv = b[sortMode] or b.score or 0
-        if av ~= bv then return av > bv end
-        return (a.name or "") < (b.name or "")
-    end)
-    return list
 end
 
 --------------------------------------------------------------------------------
@@ -844,9 +1192,10 @@ local COLOR = {
 --------------------------------------------------------------------------------
 -- UI helpers
 --------------------------------------------------------------------------------
-local lbFrame   = nil
-local activeTab = "party"
-local rowFrames = {}
+local lbFrame       = nil
+local activeTab     = "party"   -- social tab: party | guild | friends
+local contentFilter = "weekly"  -- content row: weekly | alltime | delve | dungeon | raid
+local rowFrames     = {}
 
 local function BD(f, bg, border)
     if not f.SetBackdrop then Mixin(f, BackdropTemplateMixin) end
@@ -927,47 +1276,69 @@ local function PopulateRows(scrollChild, entries)
         row.nameText:SetText(nm); row.nameText:SetTextColor(cc[1],cc[2],cc[3],1)
         row.specText:SetText((entry.specName or "?").." "..(entry.className or ""))
 
-        -- Category stats column: show diffLabel if available, else D/R/N bests
+        -- Category stats column (left of right pair)
         local catStr = ""
-        local dl = entry.diffLabel
-        if dl and dl ~= "" and dl ~= "World" then
+        if contentFilter == "delve" then
+            local dl = entry.diffLabel or "Delve"
             catStr = dl
-            -- Append best score for that category
-            local encT = entry.score -- most recent
-            if encT and encT > 0 then
-                catStr = catStr .. " |cff" .. GHex(entry.score) .. entry.score .. "|r"
+            if entry.isDelveRun and entry.timestamp and entry.timestamp > 0 then
+                catStr = dl .. " |cff888888" .. TAgo(entry.timestamp) .. "|r"
             end
-        else
-            local db = entry.dungeonBest or 0
-            local rb = entry.raidBest    or 0
-            local eb = entry.delveBest   or 0
-            if db > 0 then catStr = catStr .. "D:"..db.." " end
-            if rb > 0 then catStr = catStr .. "R:"..rb.." " end
-            if eb > 0 then catStr = catStr .. "Dv:"..eb      end
-            if catStr == "" then
-                local nb = entry.normalBest or entry.score or 0
-                catStr = nb > 0 and ("N:"..nb) or "--"
+        elseif contentFilter == "dungeon" or contentFilter == "raid" then
+            -- Show difficulty first, then boss/location name
+            local diff = (entry.diffLabel and entry.diffLabel ~= "" and entry.diffLabel ~= "World")
+                         and entry.diffLabel or ""
+            local loc  = (entry.bossName and entry.bossName ~= "") and entry.bossName or ""
+            if diff ~= "" and loc ~= "" then
+                catStr = diff .. " - " .. loc
+            elseif diff ~= "" then
+                catStr = diff
+            elseif loc ~= "" then
+                catStr = loc
+            else
+                catStr = "--"
             end
+        elseif contentFilter == "alltime" then
+            -- Show difficulty label
+            local dl = entry.diffLabel
+            catStr = (dl and dl ~= "" and dl ~= "World") and dl or "--"
+        else  -- weekly
+            local dl = entry.diffLabel
+            catStr = (dl and dl ~= "" and dl ~= "World") and dl or "--"
         end
         row.catText:SetText(catStr)
 
-        -- Weekly avg column
-        local wAvg = entry.weeklyAvg or entry.score or 0
-        local wk   = GetWeekKey()
-        local weekStr = ""
-        if wAvg and wAvg > 0 then
-            weekStr = "|cff"..GHex(wAvg)..wAvg.."|r"
-            if entry.weekKey and entry.weekKey ~= wk then
-                weekStr = weekStr .. " |cff888888(prev)|r"
+        -- Right column (grade/score value)
+        local rightStr
+        if contentFilter == "delve" then
+            local v = entry.score or 0
+            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+        elseif contentFilter == "dungeon" then
+            local v = entry.dungeonBest or 0
+            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+        elseif contentFilter == "raid" then
+            local v = entry.raidBest or 0
+            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+        elseif contentFilter == "alltime" then
+            local v = entry.allTimeBest or entry.score or 0
+            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+        else  -- weekly
+            local wAvg = entry.weeklyAvg or 0
+            local wk   = GetWeekKey()
+            if wAvg > 0 then
+                rightStr = "|cff"..GHex(wAvg)..wAvg.."|r"
+                if entry.weekKey and entry.weekKey ~= wk then
+                    rightStr = rightStr .. " |cff888888(prev)|r"
+                end
+            else
+                rightStr = "|cff888888--this week--|r"
             end
-        else
-            weekStr = "|cff888888--this week--|r"
         end
-        row.weekText:SetText(weekStr)
+        row.weekText:SetText(rightStr)
 
         -- Online dot
         local isOnline = (entry.online ~= false)
-        if activeTab == "party" then isOnline = true end
+        if activeTab == "party" or contentFilter == "delve" then isOnline = true end
         local dc = isOnline and COLOR.ONLINE or COLOR.OFFLINE
         row.onlineDot:SetColorTexture(dc[1],dc[2],dc[3],1)
         row.onlineDot:Show()
@@ -978,51 +1349,121 @@ local function PopulateRows(scrollChild, entries)
 end
 
 --------------------------------------------------------------------------------
--- Sort buttons
+-- Sorting
 --------------------------------------------------------------------------------
-local SORT_LABELS = {
-    weeklyAvg   = "Week Avg",
-    allTimeBest = "All-Time",
-    dungeonBest = "Dungeon",
-    raidBest    = "Raid",
-}
+local function SortedEntries(dataTable)
+    local list = {}
+    for _, entry in pairs(dataTable) do table.insert(list, entry) end
+    -- Sort key depends on contentFilter
+    local key
+    if     contentFilter == "alltime"  then key = "allTimeBest"
+    elseif contentFilter == "dungeon"  then key = "dungeonBest"
+    elseif contentFilter == "raid"     then key = "raidBest"
+    elseif contentFilter == "delve"    then key = "score"       -- delve runs sort by score
+    else                                    key = "weeklyAvg"   -- default: weekly
+    end
+    table.sort(list, function(a, b)
+        local av = a[key] or a.score or 0
+        local bv = b[key] or b.score or 0
+        if av ~= bv then return av > bv end
+        return (a.name or "") < (b.name or "")
+    end)
+    return list
+end
+
+local function GetSocialData()
+    if     activeTab == "guild"   then return LB.GetGuildData()
+    elseif activeTab == "friends" then return LB.GetFriendsData()
+    else                               return LB.GetPartyData() end
+end
 
 local function RefreshContent()
     if not lbFrame or not lbFrame.scrollChild then return end
 
+    -- Delve is a separate data source; other filters show social data
     local rawData
-    if     activeTab == "party"   then rawData = LB.GetPartyData()
-    elseif activeTab == "guild"   then rawData = LB.GetGuildData()
-    else                               rawData = LB.GetFriendsData() end
+    if contentFilter == "delve" then
+        rawData = LB.GetDelveData()
+    else
+        rawData = GetSocialData()
+    end
 
     PopulateRows(lbFrame.scrollChild, SortedEntries(rawData))
 
-    -- Tab counts
-    local counts = {
-        party   = 0, guild = 0, friends = 0
-    }
+    -- Update social tab counts
+    local counts = { party=0, guild=0, friends=0 }
     for _ in pairs(LB.GetPartyData())   do counts.party   = counts.party   + 1 end
     for _ in pairs(LB.GetGuildData())   do counts.guild   = counts.guild   + 1 end
     for _ in pairs(LB.GetFriendsData()) do counts.friends = counts.friends + 1 end
 
-    if lbFrame.tabs then
-        for _, tab in ipairs(lbFrame.tabs) do
+    if lbFrame.socialTabs then
+        for _, tab in ipairs(lbFrame.socialTabs) do
             local c = counts[tab.key] or 0
-            tab.label:SetText(tab.name.." ("..c..")")
+            tab.label:SetText(tab.name .. " (" .. c .. ")")
         end
     end
 
-    -- Highlight active sort btn
+    -- Delve count for content row
+    local delveCount = 0
+    for _ in pairs(LB.GetDelveData()) do delveCount = delveCount + 1 end
+
+    -- Update content row button labels and highlight
+    if lbFrame.contentBtns then
+        for _, cb in ipairs(lbFrame.contentBtns) do
+            local active = (cb.filterKey == contentFilter)
+            BD(cb, active and COLOR.TAB_ACTIVE or COLOR.TAB_IDLE, COLOR.BORDER)
+            cb.label:SetTextColor(
+                active and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1],
+                active and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2],
+                active and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3], 1)
+            -- Update Delve count in button label
+            if cb.filterKey == "delve" then
+                cb.label:SetText("Delves (" .. delveCount .. ")")
+            end
+        end
+    end
+
+    -- Update sort row highlight
     if lbFrame.sortBtns then
         for _, sb in ipairs(lbFrame.sortBtns) do
-            local active = (sb.sortKey == sortMode)
-            if active then
-                sb:SetBackdropColor(0.20,0.18,0.28,1)
-                sb.label:SetTextColor(COLOR.ACCENT[1],COLOR.ACCENT[2],COLOR.ACCENT[3],1)
-            else
-                sb:SetBackdropColor(COLOR.TAB_IDLE[1],COLOR.TAB_IDLE[2],COLOR.TAB_IDLE[3],1)
-                sb.label:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-            end
+            local active = (sb.filterKey == contentFilter)
+            BD(sb, active and COLOR.TAB_ACTIVE or COLOR.TAB_IDLE, COLOR.BORDER)
+            sb.label:SetTextColor(
+                active and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1],
+                active and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2],
+                active and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3], 1)
+        end
+    end
+
+    -- Column headers — reflect what each right-side column actually shows
+    local catHdr, weekHdr
+    if contentFilter == "delve" then
+        catHdr = "TIER"
+        weekHdr = "SCORE"
+    elseif contentFilter == "dungeon" then
+        catHdr = "DIFF / BOSS"
+        weekHdr = "GRADE"
+    elseif contentFilter == "raid" then
+        catHdr = "DIFF / BOSS"
+        weekHdr = "GRADE"
+    elseif contentFilter == "alltime" then
+        catHdr = "DIFFICULTY"
+        weekHdr = "BEST"
+    else  -- weekly
+        catHdr = "DIFFICULTY"
+        weekHdr = "WK AVG"
+    end
+    if lbFrame.hdrCat  then lbFrame.hdrCat:SetText(catHdr)   end
+    if lbFrame.hdrWeek then lbFrame.hdrWeek:SetText(weekHdr) end
+
+    -- Grey out social tabs when Delve is active (they don't apply)
+    if lbFrame.socialTabs then
+        for _, tab in ipairs(lbFrame.socialTabs) do
+            local dim = isDelve
+            tab.label:SetTextColor(
+                dim and 0.35 or (tab.key == activeTab and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1]),
+                dim and 0.33 or (tab.key == activeTab and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2]),
+                dim and 0.30 or (tab.key == activeTab and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3]), 1)
         end
     end
 end
@@ -1033,16 +1474,17 @@ end
 
 local function SetActiveTab(key)
     activeTab = key
-    if lbFrame and lbFrame.tabs then
-        for _, tab in ipairs(lbFrame.tabs) do
+    if lbFrame and lbFrame.socialTabs then
+        for _, tab in ipairs(lbFrame.socialTabs) do
             local isActive = (tab.key == key)
             BD(tab, isActive and COLOR.TAB_ACTIVE or COLOR.TAB_IDLE, COLOR.BORDER)
-            tab.label:SetTextColor(
-                isActive and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1],
-                isActive and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2],
-                isActive and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3], 1)
         end
     end
+    RefreshContent()
+end
+
+local function SetContentFilter(key)
+    contentFilter = key
     RefreshContent()
 end
 
@@ -1079,88 +1521,139 @@ local function CreateLeaderboardFrame()
     xFs:SetTextColor(1,0.4,0.4,1)
     xBtn:SetScript("OnClick",function() lbFrame:Hide() end)
 
-    -- Tab row
-    local tabDefs = {
+    -- ── Row 1: Social tabs (y = -26) — Party | Guild | Friends ─────────────
+    local socialDefs = {
         {key="party",   name="Party"},
         {key="guild",   name="Guild"},
         {key="friends", name="Friends"},
     }
-    local tabW = math.floor(FW / #tabDefs)
-    lbFrame.tabs = {}
-    for i,td in ipairs(tabDefs) do
-        local tab = CreateFrame("Button",nil,lbFrame,"BackdropTemplate")
-        tab:SetSize(tabW,26)
-        tab:SetPoint("TOPLEFT",lbFrame,"TOPLEFT",(i-1)*tabW,-26)
+    local socialW = math.floor(FW / #socialDefs)
+    lbFrame.socialTabs = {}
+    for i, td in ipairs(socialDefs) do
+        local tab = CreateFrame("Button", nil, lbFrame, "BackdropTemplate")
+        tab:SetSize(socialW, 26)
+        tab:SetPoint("TOPLEFT", lbFrame, "TOPLEFT", (i-1)*socialW, -26)
         BD(tab, COLOR.TAB_IDLE, COLOR.BORDER)
-        tab.key=td.key; tab.name=td.name
-        tab.label = TF(tab,11,"CENTER"); tab.label:SetPoint("CENTER")
-        tab.label:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
+        tab.key  = td.key ; tab.name = td.name
+        tab.label = TF(tab, 11, "CENTER") ; tab.label:SetPoint("CENTER")
+        tab.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
         tab.label:SetText(td.name)
-        tab:SetScript("OnClick",function() SetActiveTab(td.key) end)
-        table.insert(lbFrame.tabs, tab)
+        tab:SetScript("OnClick", function()
+            -- Selecting a social tab exits Delve mode
+            if contentFilter == "delve" then contentFilter = "weekly" end
+            SetActiveTab(td.key)
+        end)
+        table.insert(lbFrame.socialTabs, tab)
     end
 
-    -- Sort buttons row
-    local sortDefs = { "weeklyAvg", "allTimeBest", "dungeonBest", "raidBest" }
-    local sortBtnW = math.floor(FW / #sortDefs)
+    -- ── Row 2: Content filter (y = -52) — Delves | Dungeons | Raids ────────
+    local contentDefs = {
+        {key="delve",   name="Delves"},
+        {key="dungeon", name="Dungeons"},
+        {key="raid",    name="Raids"},
+    }
+    local contentW = math.floor(FW / #contentDefs)
+    lbFrame.contentBtns = {}
+    for i, cd in ipairs(contentDefs) do
+        local btn = CreateFrame("Button", nil, lbFrame, "BackdropTemplate")
+        btn:SetSize(contentW, 22)
+        btn:SetPoint("TOPLEFT", lbFrame, "TOPLEFT", (i-1)*contentW, -52)
+        BD(btn, COLOR.TAB_IDLE, COLOR.BORDER)
+        btn.filterKey = cd.key
+        btn.label = TF(btn, 10, "CENTER") ; btn.label:SetPoint("CENTER")
+        btn.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+        btn.label:SetText(cd.name)
+        btn:SetScript("OnClick", function() SetContentFilter(cd.key) end)
+        table.insert(lbFrame.contentBtns, btn)
+    end
+
+    -- ── Row 3: Sort buttons (y = -74) — Week Avg | All-Time ─────────────────
+    local sortDefs = {
+        {key="weekly",  label="Week Avg"},
+        {key="alltime", label="All-Time"},
+    }
+    local sortW = math.floor(FW / #sortDefs)
     lbFrame.sortBtns = {}
-    for i,sk in ipairs(sortDefs) do
-        local sb = CreateFrame("Button",nil,lbFrame,"BackdropTemplate")
-        sb:SetSize(sortBtnW, 20)
-        sb:SetPoint("TOPLEFT",lbFrame,"TOPLEFT",(i-1)*sortBtnW,-52)
+    for i, sd in ipairs(sortDefs) do
+        local sb = CreateFrame("Button", nil, lbFrame, "BackdropTemplate")
+        sb:SetSize(sortW, 20)
+        sb:SetPoint("TOPLEFT", lbFrame, "TOPLEFT", (i-1)*sortW, -74)
         BD(sb, COLOR.TAB_IDLE, COLOR.BORDER)
-        sb.sortKey = sk
-        sb.label = TF(sb,9,"CENTER"); sb.label:SetPoint("CENTER")
-        sb.label:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-        sb.label:SetText(SORT_LABELS[sk])
-        sb:SetScript("OnClick",function()
-            sortMode = sk
-            RefreshContent()
+        sb.filterKey = sd.key
+        sb.label = TF(sb, 9, "CENTER") ; sb.label:SetPoint("CENTER")
+        sb.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+        sb.label:SetText(sd.label)
+        sb:SetScript("OnClick", function()
+            -- Sort buttons only apply to social tabs (not Delve)
+            if contentFilter ~= "delve" then
+                contentFilter = sd.key
+                RefreshContent()
+            end
         end)
         table.insert(lbFrame.sortBtns, sb)
     end
 
-    -- Column headers
-    local hdr = CreateFrame("Frame",nil,lbFrame)
-    hdr:SetPoint("TOPLEFT", lbFrame,"TOPLEFT",4,-74)
-    hdr:SetPoint("TOPRIGHT",lbFrame,"TOPRIGHT",-20,-74)
+    -- ── Column headers (y = -96) ─────────────────────────────────────────────
+    local hdr = CreateFrame("Frame", nil, lbFrame)
+    hdr:SetPoint("TOPLEFT",  lbFrame, "TOPLEFT",   4, -96)
+    hdr:SetPoint("TOPRIGHT", lbFrame, "TOPRIGHT", -20, -96)
     hdr:SetHeight(16)
-    local function Hdr(t,anchor,x,w)
-        local fs=TF(hdr,9,anchor)
-        fs:SetPoint(anchor,hdr,anchor,x,0); fs:SetWidth(w)
-        fs:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
+    local function Hdr(t, anchor, x, w)
+        local fs = TF(hdr, 9, anchor)
+        fs:SetPoint(anchor, hdr, anchor, x, 0) ; fs:SetWidth(w)
+        fs:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
         fs:SetText(t)
+        return fs
     end
-    Hdr("#",     "LEFT",  4,   20)
-    Hdr("PLAYER","LEFT",  36, 110)
-    Hdr("SPEC",  "LEFT", 150,  90)
-    Hdr("D/R/N", "RIGHT",-70,  70)
-    Hdr("WK AVG","RIGHT", -2,  66)
+    Hdr("#",      "LEFT",   4,  20)
+    Hdr("PLAYER", "LEFT",  36, 110)
+    Hdr("SPEC",   "LEFT", 150,  90)
+    lbFrame.hdrCat  = Hdr("D/R/N",  "RIGHT", -70, 70)
+    lbFrame.hdrWeek = Hdr("WK AVG", "RIGHT",  -2, 66)
 
-    -- Scroll
-    local sf = CreateFrame("ScrollFrame","MidnightSenseiLBScroll",lbFrame,"UIPanelScrollFrameTemplate")
-    sf:SetPoint("TOPLEFT", lbFrame,"TOPLEFT",4,-92)
-    sf:SetPoint("BOTTOMRIGHT",lbFrame,"BOTTOMRIGHT",-22,36)
-    local sc = CreateFrame("Frame",nil,sf)
-    sc:SetWidth(sf:GetWidth()); sc:SetHeight(200); sf:SetScrollChild(sc)
+    -- ── Scroll (starts at y = -114) ──────────────────────────────────────────
+    local sf = CreateFrame("ScrollFrame", "MidnightSenseiLBScroll", lbFrame, "UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT",     lbFrame, "TOPLEFT",   4, -114)
+    sf:SetPoint("BOTTOMRIGHT", lbFrame, "BOTTOMRIGHT", -22, 36)
+    local sc = CreateFrame("Frame", nil, sf)
+    sc:SetWidth(sf:GetWidth()) ; sc:SetHeight(200) ; sf:SetScrollChild(sc)
     lbFrame.scrollChild = sc
 
     -- Footer
     local footerText = TF(lbFrame,9,"LEFT")
     footerText:SetPoint("BOTTOMLEFT",lbFrame,"BOTTOMLEFT",8,12)
     footerText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    footerText:SetText("Week Avg resets each week  *  D=Dungeon  R=Raid  N=Normal  *  /ms leaderboard")
+    footerText:SetText("Week Avg = boss kills only  *  D=Dungeon  R=Raid  *  /ms lb")
 
-    local refreshBtn = CreateFrame("Button",nil,lbFrame)
-    refreshBtn:SetSize(60,18); refreshBtn:SetPoint("BOTTOMRIGHT",lbFrame,"BOTTOMRIGHT",-8,10)
-    local rFs = TF(refreshBtn,10,"CENTER"); rFs:SetPoint("CENTER"); rFs:SetText("Refresh")
-    refreshBtn:SetScript("OnClick",function()
-        if activeTab=="guild" then SyncGuildOnlineStatus() end
-        -- Re-broadcast HELLO so online peers resend their latest scores.
-        -- Without this, refresh only redraws from already-received in-memory data.
+    -- Refresh button — must use CreateFrame with BackdropTemplate AND EnableMouse
+    -- so it has a proper hit region and receives clicks
+    local refreshBtn = CreateFrame("Button", nil, lbFrame, "BackdropTemplate")
+    refreshBtn:SetSize(68, 20)
+    refreshBtn:SetPoint("BOTTOMRIGHT", lbFrame, "BOTTOMRIGHT", -6, 8)
+    refreshBtn:EnableMouse(true)
+    refreshBtn:RegisterForClicks("LeftButtonUp")
+    BD(refreshBtn, COLOR.TAB_IDLE, COLOR.BORDER)
+    local rFs = TF(refreshBtn, 10, "CENTER")
+    rFs:SetPoint("CENTER")
+    rFs:SetText("Refresh")
+    refreshBtn:SetScript("OnEnter", function()
+        BD(refreshBtn, COLOR.TAB_ACTIVE, COLOR.BORDER)
+        rFs:SetTextColor(COLOR.ACCENT[1], COLOR.ACCENT[2], COLOR.ACCENT[3], 1)
+    end)
+    refreshBtn:SetScript("OnLeave", function()
+        BD(refreshBtn, COLOR.TAB_IDLE, COLOR.BORDER)
+        rFs:SetTextColor(COLOR.TEXT_MAIN[1], COLOR.TEXT_MAIN[2], COLOR.TEXT_MAIN[3], 1)
+    end)
+    refreshBtn:SetScript("OnClick", function()
+        rFs:SetText("...")
+        if activeTab == "guild" then SyncGuildOnlineStatus() end
         BroadcastHello()
-        -- Wait briefly for peer responses, then redraw
-        C_Timer.After(1.0, RefreshContent)
+        local reqPayload = "REQ|" .. Core.VERSION
+        BroadcastToAll(reqPayload)
+        C_Timer.After(1.5, function()
+            RefreshContent()
+            rFs:SetText("Refresh")
+        end)
     end)
 
     -- Week info
@@ -1175,6 +1668,7 @@ end
 
 function LB.Show()
     local frame = CreateLeaderboardFrame()
+    SeedPartyFromGroup()   -- ensure current group is always shown when opening
     SetActiveTab(activeTab)
     frame:Show()
     RefreshContent()

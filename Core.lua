@@ -16,8 +16,9 @@ MidnightSensei.Leaderboard = MidnightSensei.Leaderboard or {}
 local MS   = MidnightSensei
 local Core = MS.Core
 
-Core.VERSION      = "1.1.0"
+Core.VERSION      = "1.2.0"
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
+Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
 
 --------------------------------------------------------------------------------
 -- Nil-safe cross-module calls
@@ -124,7 +125,6 @@ function Core.InitSavedVariables()
     def("minimumFight",     15)
     def("encounterAdjust",  true)
     def("debugMode",        false)
-    def("lbBossOnly",       true)    -- leaderboard weekly avg: boss encounters only (issue #6)
     def("playStyle",        "manual") -- "manual" | "assisted" — grade ceiling (issue #5)
 end
 
@@ -181,6 +181,56 @@ Core.CREDITS = {
     { source = "Warcraft Logs",   url = "https://www.warcraftlogs.com",    desc = "Community performance benchmarks"          },
 }
 
+Core.CHANGELOG = {
+    {
+        version = "1.2.0",
+        tagline = "Leaderboard Overhaul & Delve Support",
+        date    = "April 2026",
+        changes = {
+            "Leaderboard redesigned with three independent rows: Social (Party/Guild/Friends), Content (Delves/Dungeons/Raids), and Sort (Week Avg/All-Time)",
+            "Delve tab shows personal delve run history with tier labels and timestamps",
+            "Weekly average is now boss-encounters-only; trash pulls and dummies excluded",
+            "Weekly average fixed -- was silently failing to persist across reloads",
+            "Weekly reset correctly aligned to Tuesday 7am PDT (Blizzard weekly reset)",
+            "BNet friends now receive score broadcasts via direct whisper",
+            "Party channel spam fixed for LFD and instance groups",
+            "Play Style setting added: Manual (full A+ range) or Assisted (B+ ceiling)",
+            "Registered in WoW Game Options -> AddOns panel",
+            "Credits panel split into About and Sources tabs",
+            "os.time() crash fixed (Blizzard does not expose the os library)",
+            "Backward-compatible SCORE message parsing (12-part legacy format supported)",
+        },
+    },
+    {
+        version = "1.1.0",
+        tagline = "Social Leaderboard & Boss Tracking",
+        date    = "April 2026",
+        changes = {
+            "Social leaderboard with Party, Guild, and Friends tabs",
+            "Boss fight detection via ENCOUNTER_START/END WoW events",
+            "Difficulty labels for all content: LFR/Normal/Heroic/Mythic for raids, Normal/Heroic/Mythic/M+N for dungeons, Tier N for delves",
+            "Checksum-based integrity system on all leaderboard broadcasts",
+            "GRM-style peer sync -- recover your scores after a reinstall via guild members",
+            "Player appears in their own Guild tab immediately (self-entry injection)",
+            "Review Fight button works on login/reload (DB fallback fixed)",
+        },
+    },
+    {
+        version = "1.0.0",
+        tagline = "Initial Release",
+        date    = "March 2026",
+        changes = {
+            "Fight grading A+ through F for all 13 classes and 39 specs",
+            "Talent-aware cooldown scoring: only scores abilities you have equipped",
+            "Per-role scoring weights: DPS activity, healer efficiency, tank mitigation",
+            "Grade history panel with trend sparkline and per-encounter detail view",
+            "HUD with post-fight review button and right-click context menu",
+            "Midnight 12.0 compatible: UNIT_AURA replaces the restricted CLEU API",
+            "Actionable coaching feedback with spec-specific language",
+        },
+    },
+}
+
 --------------------------------------------------------------------------------
 -- SPEC_DATABASE
 -- All 13 classes / 39 specs.
@@ -234,7 +284,7 @@ Core.SPEC_DATABASE = {
                 { id = 184362, label = "Enrage", targetUptime = 60 },
             },
             priorityNotes = {
-                "Keep Enrage active — Bloodthirst procs it on CD",
+                "Keep Enrage active  -  Bloodthirst procs it on CD",
                 "Rampage to refresh Enrage and spend rage",
                 "Onslaught during Enrage for maximum damage",
                 "Recklessness to align with Enrage and trinkets",
@@ -289,11 +339,11 @@ Core.SPEC_DATABASE = {
             },
             healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
             priorityNotes = {
-                "Beacon of Light on the tank — never let it drop",
-                "Holy Shock on cooldown — reduces Holy Word CDs",
+                "Beacon of Light on the tank  -  never let it drop",
+                "Holy Shock on cooldown  -  reduces Holy Word CDs",
                 "Use Holy Words as they come off cooldown",
                 "Divine Toll for burst AoE on cooldown",
-                "Infusion of Light procs: free Flash of Light — use immediately",
+                "Infusion of Light procs: free Flash of Light  -  use immediately",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
             sourceNote = "Adapted from Icy Veins Holy Paladin guide",
@@ -314,7 +364,7 @@ Core.SPEC_DATABASE = {
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
                 "Spend Holy Power on Shield of the Righteous for mitigation",
-                "Avenger's Shield on cooldown — primary threat tool",
+                "Avenger's Shield on cooldown  -  primary threat tool",
                 "Hammer of the Righteous for Holy Power generation",
                 "Ardent Defender for sustained dangerous phases",
             },
@@ -336,7 +386,7 @@ Core.SPEC_DATABASE = {
                 "Build to 5 Holy Power before spending",
                 "Templar's Verdict (single) / Divine Storm (AoE) as spenders",
                 "Wake of Ashes: 3 Holy Power on CD",
-                "Judgment debuff amplifies damage — reapply on CD",
+                "Judgment debuff amplifies damage  -  reapply on CD",
                 "Align Crusade / Avenging Wrath with trinkets",
             },
             scoreWeights = { cooldownUsage = 35, activity = 30, resourceMgmt = 25, procUsage = 10 },
@@ -365,11 +415,11 @@ Core.SPEC_DATABASE = {
                 { id = 246152, label = "Thrill of the Hunt", maxStackTime = 12 },  -- VERIFY
             },
             priorityNotes = {
-                "Keep Barbed Shot rolling — maintains Frenzy on your pet",
+                "Keep Barbed Shot rolling  -  maintains Frenzy on your pet",
                 "Bestial Wrath on cooldown",
                 "Call of the Wild for coordinated burst",
                 "Kill Command on cooldown for Focus generation",
-                "Never overcap Focus — spender always ready",
+                "Never overcap Focus  -  spender always ready",
             },
             scoreWeights = { cooldownUsage = 30, debuffUptime = 25, activity = 25, resourceMgmt = 20 },
             sourceNote = "Adapted from Icy Veins Beast Mastery Hunter guide",
@@ -388,10 +438,10 @@ Core.SPEC_DATABASE = {
                 { id = 342776, label = "Precise Shots", maxStackTime = 15 },  -- VERIFY
             },
             priorityNotes = {
-                "Aimed Shot on cooldown — primary spender",
-                "Rapid Fire on cooldown — free cast",
+                "Aimed Shot on cooldown  -  primary spender",
+                "Rapid Fire on cooldown  -  free cast",
                 "Precise Shots procs: free Arcane/Multi-Shot immediately",
-                "Trueshot for burst — align with trinkets and lust",
+                "Trueshot for burst  -  align with trinkets and lust",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 30, activity = 25, resourceMgmt = 15 },
             sourceNote = "Adapted from Icy Veins Marksmanship Hunter guide",
@@ -442,7 +492,7 @@ Core.SPEC_DATABASE = {
                 "Maintain Rupture and Garrote on all targets",
                 "Keep Envenom up for the amplify buff",
                 "Spend at 4-5 combo points",
-                "Deathmark doubles bleeds — use with other CDs",
+                "Deathmark doubles bleeds  -  use with other CDs",
             },
             scoreWeights = { cooldownUsage = 25, debuffUptime = 35, activity = 25, resourceMgmt = 15 },
             sourceNote = "Adapted from Icy Veins Assassination Rogue guide",
@@ -461,7 +511,7 @@ Core.SPEC_DATABASE = {
                 { id = 315508, label = "Roll the Bones Buff", maxStackTime = 30 },
             },
             priorityNotes = {
-                "Keep Roll the Bones active — reroll bad buffs",
+                "Keep Roll the Bones active  -  reroll bad buffs",
                 "Between the Eyes on cooldown during Adrenaline Rush",
                 "Sinister Strike to build combo points",
                 "Eviscerate at 5+ combo points",
@@ -540,7 +590,7 @@ Core.SPEC_DATABASE = {
             healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
             priorityNotes = {
                 "Keep Prayer of Mending bouncing at all times",
-                "Holy Words on cooldown — they reduce each other's CD",
+                "Holy Words on cooldown  -  they reduce each other's CD",
                 "Divine Hymn for raid-wide burst damage",
                 "Circle of Healing on cooldown for efficiency",
             },
@@ -565,9 +615,9 @@ Core.SPEC_DATABASE = {
             priorityNotes = {
                 "Maintain SW:Pain and Vampiric Touch on all targets",
                 "Enter Voidform / Dark Ascension on cooldown",
-                "Devouring Plague to spend Insanity — never overcap",
+                "Devouring Plague to spend Insanity  -  never overcap",
                 "Mind Blast on cooldown for Insanity gen",
-                "Void Torrent on CD — strong channel",
+                "Void Torrent on CD  -  strong channel",
             },
             scoreWeights = { cooldownUsage = 25, debuffUptime = 30, activity = 25, resourceMgmt = 20 },
             sourceNote = "Adapted from Icy Veins Shadow Priest guide",
@@ -595,7 +645,7 @@ Core.SPEC_DATABASE = {
             },
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
-                "Death Strike is your healing — use on incoming damage",
+                "Death Strike is your healing  -  use on incoming damage",
                 "Dancing Rune Weapon on cooldown for parry and runes",
                 "Vampiric Blood for sustained dangerous phases",
                 "Crimson Scourge procs = free Death and Decay",
@@ -621,7 +671,7 @@ Core.SPEC_DATABASE = {
             priorityNotes = {
                 "Spend Killing Machine procs with Obliterate immediately",
                 "Spend Rime procs with Howling Blast",
-                "Pillar of Frost for burst — align with trinkets",
+                "Pillar of Frost for burst  -  align with trinkets",
                 "Obliterate on cooldown, Frost Strike to dump Runic Power",
                 "Empower Rune Weapon to reset runes mid-Pillar",
             },
@@ -645,8 +695,8 @@ Core.SPEC_DATABASE = {
             priorityNotes = {
                 "Apply Festering Wounds with Festering Strike",
                 "Pop wounds with Scourge Strike in batches",
-                "Apocalypse requires 8 wounds — build before using",
-                "Dark Transformation on cooldown — empowers ghoul",
+                "Apocalypse requires 8 wounds  -  build before using",
+                "Dark Transformation on cooldown  -  empowers ghoul",
                 "Death Coil to dump Runic Power",
             },
             scoreWeights = { cooldownUsage = 25, debuffUptime = 30, activity = 25, resourceMgmt = 20 },
@@ -674,10 +724,10 @@ Core.SPEC_DATABASE = {
             },
             priorityNotes = {
                 "Maintain Flame Shock for Lava Surge procs",
-                "Lava Burst on cooldown — always instant with Lava Surge",
+                "Lava Burst on cooldown  -  always instant with Lava Surge",
                 "Stormkeeper before Lightning Bolt for empowered hits",
                 "Earth Shock / Earthquake to spend Maelstrom",
-                "Fire Elemental is your major CD — align with lust",
+                "Fire Elemental is your major CD  -  align with lust",
             },
             scoreWeights = { cooldownUsage = 30, debuffUptime = 25, activity = 25, resourceMgmt = 20 },
             sourceNote = "Adapted from Icy Veins Elemental Shaman guide",
@@ -722,7 +772,7 @@ Core.SPEC_DATABASE = {
             healerMetrics = { targetOverheal = 30, targetActivity = 80, targetManaEnd = 15 },
             priorityNotes = {
                 "Keep Riptide rolling on injured targets (2-3 active)",
-                "Healing Rain on stacked groups — high efficiency",
+                "Healing Rain on stacked groups  -  high efficiency",
                 "Chain Heal for group damage",
                 "Spirit Link to equalize dangerous health imbalances",
             },
@@ -754,7 +804,7 @@ Core.SPEC_DATABASE = {
                 "Arcane Surge at 4 charges for maximum damage",
                 "Touch of the Magi to detonate damage window",
                 "Spend Clearcasting procs on Arcane Missiles",
-                "Evocation when low on mana — don't hold it",
+                "Evocation when low on mana  -  don't hold it",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 25, activity = 25, resourceMgmt = 20 },
             sourceNote = "Adapted from Icy Veins Arcane Mage guide",
@@ -778,7 +828,7 @@ Core.SPEC_DATABASE = {
             priorityNotes = {
                 "Build Hot Streak with Fireball + Fire Blast crits",
                 "Spend Hot Streak procs on Pyroblast immediately",
-                "Combustion for burst — align with trinkets and lust",
+                "Combustion for burst  -  align with trinkets and lust",
                 "Phoenix Flames to ensure crits during Combustion",
                 "Keep Ignite rolling for passive damage",
             },
@@ -832,7 +882,7 @@ Core.SPEC_DATABASE = {
             },
             priorityNotes = {
                 "Maintain Agony, Corruption, UA on all targets",
-                "Malefic Rapture to spend Soul Shards — don't overcap",
+                "Malefic Rapture to spend Soul Shards  -  don't overcap",
                 "Summon Darkglare when DoTs are fully applied",
                 "Phantom Singularity + Vile Taint on cooldown",
             },
@@ -854,10 +904,10 @@ Core.SPEC_DATABASE = {
             },
             priorityNotes = {
                 "Build and bank imps before Demonic Tyrant",
-                "Call Dreadstalkers on cooldown — core damage",
+                "Call Dreadstalkers on cooldown  -  core damage",
                 "Spend Demonic Core procs on Demonbolt",
                 "Hand of Gul'dan to summon imps",
-                "Tyrant extends all pet duration — build a full army first",
+                "Tyrant extends all pet duration  -  build a full army first",
             },
             scoreWeights = { cooldownUsage = 35, procUsage = 25, activity = 25, resourceMgmt = 15 },
             sourceNote = "Adapted from Icy Veins Demonology Warlock guide",
@@ -876,9 +926,9 @@ Core.SPEC_DATABASE = {
             },
             priorityNotes = {
                 "Maintain Immolate on target for shard generation",
-                "Chaos Bolt as shard spender — line up with cooldowns",
+                "Chaos Bolt as shard spender  -  line up with cooldowns",
                 "Havoc for Chaos Bolt cleave on two targets",
-                "Rain of Fire for AoE — efficient at 3+ targets",
+                "Rain of Fire for AoE  -  efficient at 3+ targets",
                 "Summon Infernal on cooldown",
             },
             scoreWeights = { cooldownUsage = 30, debuffUptime = 25, activity = 25, resourceMgmt = 20 },
@@ -908,7 +958,7 @@ Core.SPEC_DATABASE = {
             priorityNotes = {
                 "Maintain Ironskin Brew for stagger reduction (60%+)",
                 "Purifying Brew to clear Heavy/Severe Stagger",
-                "Keg Smash on cooldown — generates Brews",
+                "Keg Smash on cooldown  -  generates Brews",
                 "Celestial Brew for absorb shield before big hits",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
@@ -929,7 +979,7 @@ Core.SPEC_DATABASE = {
                 "Keep Renewing Mist rolling on as many targets as possible",
                 "Rising Sun Kick on cooldown for damage amp",
                 "Vivify to proc Renewing Mist bouncing",
-                "Thunder Focus Tea on CD — empowered heals",
+                "Thunder Focus Tea on CD  -  empowered heals",
                 "Revival for emergency full-group healing",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
@@ -949,11 +999,11 @@ Core.SPEC_DATABASE = {
                 { id = 116768, label = "Combo Breaker: BoK", maxStackTime = 15 },
             },
             priorityNotes = {
-                "Fists of Fury on cooldown — highest damage ability",
+                "Fists of Fury on cooldown  -  highest damage ability",
                 "Rising Sun Kick on cooldown",
                 "SEF charges on cooldown for sustained uptime",
                 "Blackout Kick to generate Chi and deal damage",
-                "Serenity / Xuen for burst — align with trinkets",
+                "Serenity / Xuen for burst  -  align with trinkets",
             },
             scoreWeights = { cooldownUsage = 35, procUsage = 20, activity = 30, resourceMgmt = 15 },
             sourceNote = "Adapted from Icy Veins Windwalker Monk guide",
@@ -1008,8 +1058,8 @@ Core.SPEC_DATABASE = {
             },
             priorityNotes = {
                 "Maintain Rip and Rake on all targets",
-                "Tiger's Fury on cooldown — energy + damage buff",
-                "Berserk for burst — combo point gen spikes",
+                "Tiger's Fury on cooldown  -  energy + damage buff",
+                "Berserk for burst  -  combo point gen spikes",
                 "Shred to build combo points, Ferocious Bite to spend",
             },
             scoreWeights = { cooldownUsage = 25, debuffUptime = 35, activity = 25, resourceMgmt = 15 },
@@ -1052,7 +1102,7 @@ Core.SPEC_DATABASE = {
             },
             healerMetrics = { targetOverheal = 35, targetActivity = 75, targetManaEnd = 15 },
             priorityNotes = {
-                "Keep Rejuvenation on injured targets — HoT foundation",
+                "Keep Rejuvenation on injured targets  -  HoT foundation",
                 "Wild Growth on cooldown for group AoE healing",
                 "Flourish to extend all active HoTs mid-damage",
                 "Swiftmend for emergency instant heal",
@@ -1085,10 +1135,10 @@ Core.SPEC_DATABASE = {
             },
             priorityNotes = {
                 "Immolation Aura on cooldown for Fury generation",
-                "Eye Beam on cooldown — core damage and Fury",
+                "Eye Beam on cooldown  -  core damage and Fury",
                 "Blade Dance / Death Sweep on cooldown",
-                "Chaos Strike to spend Fury — don't overcap",
-                "Metamorphosis for burst — align with trinkets",
+                "Chaos Strike to spend Fury  -  don't overcap",
+                "Metamorphosis for burst  -  align with trinkets",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 20, activity = 30, resourceMgmt = 20 },
             sourceNote = "Adapted from Icy Veins Havoc Demon Hunter guide",
@@ -1138,8 +1188,8 @@ Core.SPEC_DATABASE = {
             },
             priorityNotes = {
                 "Fire Breath and Eternity Surge on cooldown",
-                "Dragonrage for burst — maximize empowered cast rate",
-                "Living Flame as filler — don't cap Essence",
+                "Dragonrage for burst  -  maximize empowered cast rate",
+                "Living Flame as filler  -  don't cap Essence",
                 "Disintegrate as strong filler channel",
                 "Deep Breath for AoE on stacked targets",
             },
@@ -1163,7 +1213,7 @@ Core.SPEC_DATABASE = {
                 "Dream Breath on cooldown for AoE healing",
                 "Emerald Blossom for group-wide healing efficiency",
                 "Echo to amplify upcoming high-throughput spells",
-                "Rewind is a true emergency — save for near-wipes",
+                "Rewind is a true emergency  -  save for near-wipes",
             },
             scoreWeights = { cooldownUsage = 30, efficiency = 30, activity = 25, responsiveness = 15 },
             sourceNote = "Adapted from Icy Veins Preservation Evoker guide",
@@ -1182,10 +1232,10 @@ Core.SPEC_DATABASE = {
                 { id = 395152, label = "Ebon Might", targetUptime = 70 },
             },
             priorityNotes = {
-                "Ebon Might on cooldown — core party buff",
+                "Ebon Might on cooldown  -  core party buff",
                 "Prescience before burst cooldowns to amplify allies",
                 "Upheaval and Eruption for personal damage",
-                "Breath of Eons for peak burst — aligns with lust",
+                "Breath of Eons for peak burst  -  aligns with lust",
                 "Maintain Ebon Might uptime at 70%+ for max support",
             },
             scoreWeights = { cooldownUsage = 35, debuffUptime = 30, activity = 25, resourceMgmt = 10 },
@@ -1372,7 +1422,10 @@ SLASH_MIDNIGHTSENSEI2 = "/midnightsensei"
 
 SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
     msg = (msg or ""):lower():trim()
-    if     msg == "" or msg == "show" then Call(MS.UI, "ToggleMainFrame")
+    if msg == "" or msg == "show" then
+        Call(MS.UI, "ToggleMainFrame")
+        -- Print a quick tip so players know other commands exist
+        print("|cff00D1FFMidnight Sensei:|r Type |cffFFFFFF/ms help|r for all commands.")
     elseif msg == "options" or msg == "config" then Call(MS.UI, "OpenOptions")
     elseif msg == "help"    or msg == "?"      then Call(MS.UI, "ShowFAQ")
     elseif msg == "credits"                    then Call(MS.UI, "ShowCredits")
@@ -1385,13 +1438,41 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
             print("|cff00D1FFMidnight Sensei:|r Encounter history cleared.")
         end
     elseif msg == "update" then
-        print("|cff00D1FFMidnight Sensei v" .. Core.VERSION .. " — What's new:|r")
-        print("  · Full CLEU tracking: debuff uptime, proc usage, healer overhealing")
-        print("  · All 13 classes / 39 specs in spec database")
-        print("  · Grade history & trending panel (/ms history)")
-        print("  · Social leaderboard: Party / Guild / Friends (/ms lb)")
-        print("  · Right-click context menus on history entries")
-        print("  · Display name fixed: Midnight Sensei (with space)")
+        local v = Core.VERSION
+        print("|cff00D1FFMidnight Sensei v" .. v .. "|r   -  " .. Core.TAGLINE)
+        print(" ")
+        print("|cffFFD700v1.2.0|r  |cff888888 -  Leaderboard Overhaul & Delve Support|r")
+        print("  + Leaderboard redesigned: Social row (Party/Guild/Friends),")
+        print("    Content row (Delves/Dungeons/Raids), Sort row (Week Avg/All-Time)")
+        print("  + Delve tab shows personal delve run history with tier labels")
+        print("  + Weekly average is now boss-encounters-only (hardcoded, not optional)")
+        print("  + Weekly average fixed  -  was not persisting across reloads")
+        print("  + Weekly reset now aligned to Tuesday 7am PDT (Blizzard reset)")
+        print("  + BNet friends now receive scores via whisper, not just guild channel")
+        print("  + Party channel spam fix for LFD/instance groups")
+        print("  + Play Style setting: Manual (full range) or Assisted (B+ ceiling)")
+        print("  + Registered in WoW Options -> AddOns panel")
+        print("  + Credits panel now has About and Sources tabs")
+        print("  + os.time() crash fixed (not available in WoW Lua environment)")
+        print(" ")
+        print("|cffFFD700v1.1.0|r  |cff888888 -  Leaderboard & Boss Tracking|r")
+        print("  + Social leaderboard: Party, Guild, Friends tabs")
+        print("  + Boss fight detection via ENCOUNTER_START/END events")
+        print("  + Difficulty labels: LFR/Normal/Heroic/Mythic for raids,")
+        print("    Normal/Heroic/Mythic/M+N for dungeons, Tier N for delves")
+        print("  + Integrity checksums on leaderboard score broadcasts")
+        print("  + GRM-style peer sync for score recovery after reinstall")
+        print("  + Leaderboard weekly avg aligned to WoW weekly reset")
+        print(" ")
+        print("|cffFFD700v1.0.0|r  |cff888888 -  Initial Release|r")
+        print("  + Fight grading A+ through F for all 13 classes / 39 specs")
+        print("  + Talent-aware cooldown scoring (IsPlayerSpell check at fight start)")
+        print("  + Per-role scoring: DPS activity, healer efficiency, tank mitigation")
+        print("  + Grade history panel with trend sparkline and encounter detail")
+        print("  + HUD with post-fight review button and right-click context menu")
+        print("  + Midnight 12.0 compatible: UNIT_AURA replaces blocked CLEU")
+    elseif msg == "about" then
+        Call(MS.UI, "ShowCredits")
     elseif msg == "debug" then
         if Core.ActiveSpec then
             print("|cff00D1FFMidnight Sensei Debug:|r")
@@ -1403,20 +1484,53 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         else
             print("|cff00D1FFMidnight Sensei:|r No spec loaded for current specialization.")
         end
+    elseif msg == "debug friends" then
+        print("|cff00D1FFMidnight Sensei - Friend Detection Debug:|r")
+        local ok, numFriends = pcall(BNGetNumFriends)
+        print("  BNGetNumFriends: ok=" .. tostring(ok) .. " n=" .. tostring(numFriends))
+        if ok and type(numFriends) == "number" and numFriends > 0 then
+            -- Print first 3 friends' raw return values to diagnose API shape
+            for i = 1, math.min(3, numFriends) do
+                local r1 = {pcall(BNGetFriendInfo, i)}
+                local numAccounts = r1[#r1]
+                print("  Friend[" .. i .. "] numAccounts=" .. tostring(numAccounts) ..
+                      " numReturns=" .. (#r1 - 1))
+                if type(numAccounts) == "number" and numAccounts > 0 then
+                    for j = 1, numAccounts do
+                        local r2 = {pcall(BNGetFriendGameAccountInfo, i, j)}
+                        local vals = {}
+                        for k = 2, math.min(#r2, 10) do
+                            vals[#vals+1] = tostring(r2[k])
+                        end
+                        print("    Account[" .. j .. "]: " .. table.concat(vals, ", "))
+                    end
+                end
+            end
+        end
+        print("  C_BattleNet exists: " .. tostring(C_BattleNet ~= nil))
+        print("  friendsData entries:")
+        local fd = MS.Leaderboard and MS.Leaderboard.GetFriendsData and MS.Leaderboard.GetFriendsData()
+        if fd then
+            local count = 0
+            for k in pairs(fd) do count = count + 1 ; print("    " .. k) end
+            if count == 0 then print("    (empty)") end
+        end
     else
         print("|cff00D1FFMidnight Sensei Commands:|r")
-        print("  /ms               Toggle main window")
-        print("  /ms history       Grade history & trending")
-        print("  /ms leaderboard   Social leaderboard (lb also works)")
-        print("  /ms options       Settings")
-        print("  /ms credits       Attribution")
-        print("  /ms reset         Clear encounter history")
+        print("  /ms               Toggle main HUD")
+        print("  /ms history       Grade history & trends")
+        print("  /ms lb            Social leaderboard")
+        print("  /ms options       Settings panel")
+        print("  /ms help          Help & FAQ")
+        print("  /ms credits       Credits & about")
+        print("  /ms about         Same as /ms credits")
+        print("  /ms reset         Clear fight history")
         print("  /ms update        Show changelog")
-        print("  /ms debug         Current spec info")
+        print("  /ms debug         Current spec / class IDs")
     end
 end
 
 function Core.GetSpecInfoString()
     if not Core.ActiveSpec then return "No spec loaded" end
-    return Core.ActiveSpec.className .. " — " .. Core.ActiveSpec.name
+    return Core.ActiveSpec.className .. "  -  " .. Core.ActiveSpec.name
 end
