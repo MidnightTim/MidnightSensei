@@ -1074,20 +1074,6 @@ function UI.OpenOptions()
         AddToggle("Encounter condition adjustment",       "encounterAdjust",-154)
         AddToggle("Debug mode (shows LB rejection msgs)", "debugMode",      -178)
 
-        -- ── Play Style (Issue #5) ─────────────────────────────────────────
-        SectionLabel("Play Style:", -214)
-        local psNote = MakeFont(optionsFrame, 9, "LEFT")
-        psNote:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14, -226)
-        psNote:SetPoint("TOPRIGHT", optionsFrame, "TOPRIGHT", -14, -226)
-        psNote:SetWordWrap(true)
-        psNote:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-        psNote:SetText("Assisted (single-button macro) players get a B+ score ceiling so high grades reflect intentional play. Self-reported only.")
-
-        optionsFrame.styleBtns = RadioGroup({
-            { label = "Manual",   key = "manual"   },
-            { label = "Assisted", key = "assisted" },
-        }, "playStyle", -256, 120)
-
         -- ── Leaderboard (boss-only is hardcoded, no toggle needed) ──────────
         SectionLabel("Leaderboard:", -292)
         local lbNote = MakeFont(optionsFrame, 9, "LEFT")
@@ -1097,10 +1083,14 @@ function UI.OpenOptions()
         lbNote:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
         lbNote:SetText("Weekly average always counts boss encounters only. Trash pulls and target dummies are never included.")
 
-        -- ── Close ─────────────────────────────────────────────────────────
+        -- ── Close + Report ────────────────────────────────────────────────
         local closeBtn = MakeButton(optionsFrame, 60, 22, "Close")
-        closeBtn:SetPoint("BOTTOM", optionsFrame, "BOTTOM", 0, 10)
+        closeBtn:SetPoint("BOTTOMRIGHT", optionsFrame, "BOTTOM", -4, 10)
         closeBtn:SetScript("OnClick", function() optionsFrame:Hide() end)
+
+        local reportBtn = MakeButton(optionsFrame, 110, 22, "Report Issues")
+        reportBtn:SetPoint("BOTTOMLEFT", optionsFrame, "BOTTOM", 4, 10)
+        reportBtn:SetScript("OnClick", function() UI.ShowReportPopup() end)
     end
 
     -- Sync all radio group states on open
@@ -1114,17 +1104,53 @@ function UI.OpenOptions()
             active and C.ACCENT[3] or C.TEXT[3], 1)
     end
 
-    local curStyle = Core.GetSetting("playStyle") or "manual"
-    for _, sb in ipairs(optionsFrame.styleBtns or {}) do
-        local active = (sb.optKey == curStyle)
-        ApplyBackdrop(sb, active and {0.12,0.12,0.20,0.95} or C.BG_LIGHT, C.BORDER)
-        sb.label:SetTextColor(
-            active and C.ACCENT[1] or C.TEXT[1],
-            active and C.ACCENT[2] or C.TEXT[2],
-            active and C.ACCENT[3] or C.TEXT[3], 1)
-    end
-
     optionsFrame:Show()
+end
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Bug Report popup
+-- Shows a selectable URL box pointing to the GitHub issues page.
+-- WoW addons cannot open browsers directly; the standard pattern is a
+-- pre-filled EditBox so the player can Ctrl+A / Ctrl+C and paste into a browser.
+--------------------------------------------------------------------------------
+local REPORT_URL = "https://github.com/MidnightTim/MidnightSensei/issues"
+
+-- Register a StaticPopup so the editbox is a native WoW UI element that
+-- automatically handles focus, selection, and copy correctly.
+StaticPopupDialogs["MIDNIGHT_SENSEI_REPORT"] = {
+    text          = "|cff00D1FFMidnight Sensei|r — Report a Bug\n\n" ..
+                    "Copy the link below and paste it into your browser.\n" ..
+                    "|cff888888Ctrl+A to select all, then Ctrl+C to copy.|r",
+    button1       = "Close",
+    hasEditBox    = true,
+    editBoxWidth  = 320,
+    maxLetters    = 0,
+    timeout       = 0,
+    whileDead     = true,
+    hideOnEscape  = true,
+    preferredIndex = 3,
+    OnShow = function(self)
+        self.EditBox:SetText(REPORT_URL)
+        self.EditBox:SetFocus()
+        self.EditBox:HighlightText()
+        self.EditBox:SetScript("OnTextChanged", function(eb)
+            if eb:GetText() ~= REPORT_URL then
+                eb:SetText(REPORT_URL)
+                eb:HighlightText()
+            end
+        end)
+    end,
+    OnAccept = function(self)
+        self:Hide()
+    end,
+    EditBoxOnEnterPressed = function(self)
+        self:GetParent():Hide()
+    end,
+}
+
+function UI.ShowReportPopup()
+    StaticPopup_Show("MIDNIGHT_SENSEI_REPORT")
 end
 
 --------------------------------------------------------------------------------
@@ -1334,12 +1360,6 @@ function UI.ShowFAQ()
         "  Always: HUD always visible",
         "  In Combat: HUD only shows while in combat",
         "  Hide: HUD hidden (accessible via /ms)",
-        " ",
-        "|cffFFD700PLAY STYLE SETTING (Options -> Play Style)|r",
-        "Manual: full grade range A+ through F (default).",
-        "Assisted: score capped at B (75). Use this if you play with a",
-        "single-button macro or rotation helper. It keeps the leaderboard",
-        "meaningful so A+ reflects real decision-making, not automation.",
         " ",
         "|cffFFD700GRADE HISTORY|r",
         "Type |cffFFFFFF/ms history|r or right-click -> Grade History.",

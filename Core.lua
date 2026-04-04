@@ -16,7 +16,24 @@ MidnightSensei.Leaderboard = MidnightSensei.Leaderboard or {}
 local MS   = MidnightSensei
 local Core = MS.Core
 
-Core.VERSION      = "1.2.0"
+-- Read version from TOC at runtime. GetAddOnInfo(name) returns:
+-- name, title, notes, enabled, loadable, reason, security, newVersion
+-- The TOC ## Version: field is returned by C_AddOns.GetAddOnMetadata.
+-- GetAddOnInfo does NOT return version; we try both known APIs safely.
+do
+    local ver = nil
+    -- Midnight 12.0+
+    if C_AddOns and C_AddOns.GetAddOnMetadata then
+        local ok, v = pcall(C_AddOns.GetAddOnMetadata, "MidnightSensei", "Version")
+        if ok and v and v ~= "" then ver = v end
+    end
+    -- Legacy / fallback
+    if not ver and GetAddOnMetadata then
+        local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
+        if ok and v and v ~= "" then ver = v end
+    end
+    Core.VERSION = ver or "1.2.6"
+end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
 
@@ -125,7 +142,7 @@ function Core.InitSavedVariables()
     def("minimumFight",     15)
     def("encounterAdjust",  true)
     def("debugMode",        false)
-    def("playStyle",        "manual") -- "manual" | "assisted" — grade ceiling (issue #5)
+    -- playStyle removed: grading is now behavior-driven only (no user selection)
 end
 
 function Core.GetSetting(key)
@@ -233,7 +250,7 @@ Core.CHANGELOG = {
             "Weekly reset correctly aligned to Tuesday 7am PDT (Blizzard weekly reset)",
             "BNet friends now receive score broadcasts via direct whisper",
             "Party channel spam fixed for LFD and instance groups",
-            "Play Style setting added: Manual (full A+ range) or Assisted (B ceiling at 75)",
+            "Play Style setting removed: grading is now fully behavior-driven",
             "Registered in WoW Game Options -> AddOns panel",
             "Credits panel split into About and Sources tabs",
             "os.time() crash fixed (Blizzard does not expose the os library)",
@@ -1426,9 +1443,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         if sname == UnitName("player") then return end
         if IsNewer(theirVer, Core.VERSION) then
             notifiedThisSession = true
-            print("|cff00D1FFMidnight Sensei:|r " .. sname ..
-                  " has v" .. theirVer .. " (you have " .. Core.VERSION ..
-                  "). Type /ms update.")
+            print("|cff00D1FFMidnight Sensei:|r A new version is available. Check Github for latest update.")
             Call(MS.UI, "ShowUpdateToast", sname, theirVer)
         end
     end
@@ -1468,6 +1483,7 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
     elseif msg == "options" or msg == "config" then Call(MS.UI, "OpenOptions")
     elseif msg == "help"    or msg == "?"      then Call(MS.UI, "ShowFAQ")
     elseif msg == "credits"                    then Call(MS.UI, "ShowCredits")
+    elseif msg == "report"                     then Call(MS.UI, "ShowReportPopup")
     elseif msg == "history"                    then Call(MS.UI, "ShowHistory")
     elseif msg == "leaderboard" or msg == "lb" then Call(MS.Leaderboard, "Toggle")
     elseif msg == "lb fix" then
@@ -1568,7 +1584,7 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         print("  + Weekly reset now aligned to Tuesday 7am PDT (Blizzard reset)")
         print("  + BNet friends now receive scores via whisper, not just guild channel")
         print("  + Party channel spam fix for LFD/instance groups")
-        print("  + Play Style setting: Manual (full range) or Assisted (B ceiling at 75)")
+        print("  + Grading is now fully behavior-driven — Play Style setting removed")
         print("  + Registered in WoW Options -> AddOns panel")
         print("  + Credits panel now has About and Sources tabs")
         print("  + os.time() crash fixed (not available in WoW Lua environment)")
@@ -1600,6 +1616,21 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
     elseif msg == "debuglog clear" then
         if MidnightSenseiDB then MidnightSenseiDB.debugLog = {} end
         print("|cff00D1FFMidnight Sensei:|r Debug log cleared.")
+    elseif msg == "debug version" then
+        print("|cff00D1FFMidnight Sensei Version Debug:|r")
+        print("  Core.VERSION = " .. tostring(Core.VERSION))
+        if C_AddOns and C_AddOns.GetAddOnMetadata then
+            local ok, v = pcall(C_AddOns.GetAddOnMetadata, "MidnightSensei", "Version")
+            print("  C_AddOns.GetAddOnMetadata: ok=" .. tostring(ok) .. " v=" .. tostring(v))
+        else
+            print("  C_AddOns.GetAddOnMetadata: unavailable")
+        end
+        if GetAddOnMetadata then
+            local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
+            print("  GetAddOnMetadata: ok=" .. tostring(ok) .. " v=" .. tostring(v))
+        else
+            print("  GetAddOnMetadata: unavailable")
+        end
     elseif msg == "debug delve" then
         local instName, instType, diffID, diffName,
               maxPlayers, dynDiff, isDynamic, instMapID = GetInstanceInfo()
@@ -1673,6 +1704,7 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         print("  /ms help          Help & FAQ")
         print("  /ms credits       Credits & about")
         print("  /ms about         Same as /ms credits")
+        print("  /ms report        Report a bug on GitHub")
         print("  /ms reset         Clear fight history")
         print("  /ms update        Show changelog")
         print("  /ms debug         Current spec / class IDs")
