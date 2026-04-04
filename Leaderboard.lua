@@ -1021,7 +1021,7 @@ function LB.GetDelveData()
             if enc.encType == "delve" and enc.isBoss then
                 -- Weekly filter: only include runs from the current WoW week
                 local inWeek = (enc.weekKey and enc.weekKey == wk)
-                if contentFilter == "weekly" and not inWeek then
+                if sortOrder == "weekly" and not inWeek then
                     -- skip this run in weekly view
                 else
                     local key = myName .. "_delve_" .. i
@@ -1116,8 +1116,9 @@ local COLOR = {
 -- UI helpers
 --------------------------------------------------------------------------------
 local lbFrame       = nil
-local activeTab     = "party"   -- social tab: party | guild | friends
-local contentFilter = "weekly"  -- content row: weekly | alltime | delve | dungeon | raid
+local activeTab     = "guild"    -- social tab: party | guild | friends
+local contentType   = "dungeon"  -- content row: delve | dungeon | raid
+local sortOrder     = "weekly"   -- sort row:    weekly | alltime
 local rowFrames     = {}
 
 local function BD(f, bg, border)
@@ -1215,57 +1216,75 @@ local function PopulateRows(scrollChild, entries)
         local inst  = (entry.instanceName and entry.instanceName ~= "") and entry.instanceName or nil
         local boss  = (entry.bossName and entry.bossName ~= "") and entry.bossName or nil
 
-        if contentFilter == "delve" then
-            -- "Tier 8 - The Sinkhole - Zo'shurion"
+        if contentType == "delve" then
             catStr = JoinLabel(diff, inst, boss)
             if entry.isDelveRun and entry.timestamp and entry.timestamp > 0 then
                 catStr = catStr .. " |cff888888" .. TAgo(entry.timestamp) .. "|r"
             end
-        elseif contentFilter == "dungeon" then
-            -- "M+12 - Halls of Infusion - Khajin"  or  "Heroic - The Stonevault - Void Seamstress"
-            catStr = JoinLabel(diff, inst, boss)
-        elseif contentFilter == "raid" then
-            -- "Mythic - Nerub-ar Palace - Queen Ansurek"
-            catStr = JoinLabel(diff, inst, boss)
-        elseif contentFilter == "alltime" or contentFilter == "weekly" then
-            -- Show best available context
-            catStr = JoinLabel(diff, inst, boss)
         else
-            catStr = "--"
+            catStr = JoinLabel(diff, inst, boss)
         end
         row.catText:SetText(catStr)
 
-        -- Right column (grade/score value)
+        -- Right column — contentType picks the category; sortOrder picks weekly vs best
         local rightStr
-        if contentFilter == "delve" then
-            local v = entry.score or 0
-            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
-        elseif contentFilter == "dungeon" then
-            local v = entry.dungeonBest or 0
-            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
-        elseif contentFilter == "raid" then
-            local v = entry.raidBest or 0
-            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
-        elseif contentFilter == "alltime" then
+        if contentType == "delve" then
+            if sortOrder == "alltime" then
+                local v = entry.score or 0
+                rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+            else
+                local wAvg = entry.weeklyAvg or 0
+                local wk   = GetWeekKey()
+                if wAvg > 0 then
+                    rightStr = "|cff"..GHex(wAvg)..wAvg.."|r"
+                    if entry.weekKey and entry.weekKey ~= wk then
+                        rightStr = rightStr .. " |cff888888(prev)|r"
+                    end
+                else
+                    rightStr = "|cff888888--this week--|r"
+                end
+            end
+        elseif contentType == "dungeon" then
+            if sortOrder == "alltime" then
+                local v = entry.dungeonBest or 0
+                rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+            else
+                local wAvg = entry.weeklyAvg or 0
+                local wk   = GetWeekKey()
+                if wAvg > 0 then
+                    rightStr = "|cff"..GHex(wAvg)..wAvg.."|r"
+                    if entry.weekKey and entry.weekKey ~= wk then
+                        rightStr = rightStr .. " |cff888888(prev)|r"
+                    end
+                else
+                    rightStr = "|cff888888--this week--|r"
+                end
+            end
+        elseif contentType == "raid" then
+            if sortOrder == "alltime" then
+                local v = entry.raidBest or 0
+                rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+            else
+                local wAvg = entry.weeklyAvg or 0
+                local wk   = GetWeekKey()
+                if wAvg > 0 then
+                    rightStr = "|cff"..GHex(wAvg)..wAvg.."|r"
+                    if entry.weekKey and entry.weekKey ~= wk then
+                        rightStr = rightStr .. " |cff888888(prev)|r"
+                    end
+                else
+                    rightStr = "|cff888888--this week--|r"
+                end
+            end
+        else  -- fallback
             local v = entry.allTimeBest or entry.score or 0
             rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
-        else  -- weekly
-            local wAvg = entry.weeklyAvg or 0
-            local wk   = GetWeekKey()
-            if wAvg > 0 then
-                rightStr = "|cff"..GHex(wAvg)..wAvg.."|r"
-                if entry.weekKey and entry.weekKey ~= wk then
-                    rightStr = rightStr .. " |cff888888(prev)|r"
-                end
-            else
-                rightStr = "|cff888888--this week--|r"
-            end
         end
         row.weekText:SetText(rightStr)
 
         -- Online dot
         local isOnline = (entry.online ~= false)
-        if activeTab == "party" or contentFilter == "delve" then isOnline = true end
+        if activeTab == "party" or contentType == "delve" then isOnline = true end
         local dc = isOnline and COLOR.ONLINE or COLOR.OFFLINE
         row.onlineDot:SetColorTexture(dc[1],dc[2],dc[3],1)
         row.onlineDot:Show()
@@ -1281,13 +1300,14 @@ end
 local function SortedEntries(dataTable)
     local list = {}
     for _, entry in pairs(dataTable) do table.insert(list, entry) end
-    -- Sort key depends on contentFilter
+    -- Sort by content category best, with sortOrder as tiebreaker priority
     local key
-    if     contentFilter == "alltime"  then key = "allTimeBest"
-    elseif contentFilter == "dungeon"  then key = "dungeonBest"
-    elseif contentFilter == "raid"     then key = "raidBest"
-    elseif contentFilter == "delve"    then key = "score"       -- delve runs sort by score
-    else                                    key = "weeklyAvg"   -- default: weekly
+    if     contentType == "delve"   then
+        key = sortOrder == "alltime" and "allTimeBest" or "weeklyAvg"
+    elseif contentType == "dungeon" then key = "dungeonBest"
+    elseif contentType == "raid"    then key = "raidBest"
+    elseif sortOrder   == "alltime" then key = "allTimeBest"
+    else                                 key = "weeklyAvg"
     end
     table.sort(list, function(a, b)
         local av = a[key] or a.score or 0
@@ -1309,7 +1329,7 @@ local function RefreshContent()
 
     -- Delve is a separate data source; other filters show social data
     local rawData
-    if contentFilter == "delve" then
+    if contentType == "delve" then
         rawData = LB.GetDelveData()
     else
         rawData = GetSocialData()
@@ -1335,26 +1355,25 @@ local function RefreshContent()
     local delveCount = 0
     for _ in pairs(LB.GetDelveData()) do delveCount = delveCount + 1 end
 
-    -- Update content row button labels and highlight
+    -- Highlight active content type button
     if lbFrame.contentBtns then
         for _, cb in ipairs(lbFrame.contentBtns) do
-            local active = (cb.filterKey == contentFilter)
+            local active = (cb.filterKey == contentType)
             BD(cb, active and COLOR.TAB_ACTIVE or COLOR.TAB_IDLE, COLOR.BORDER)
             cb.label:SetTextColor(
                 active and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1],
                 active and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2],
                 active and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3], 1)
-            -- Update Delve count in button label
             if cb.filterKey == "delve" then
                 cb.label:SetText("Delves (" .. delveCount .. ")")
             end
         end
     end
 
-    -- Update sort row highlight
+    -- Highlight active sort button (hidden when Delves active — sort by score always)
     if lbFrame.sortBtns then
         for _, sb in ipairs(lbFrame.sortBtns) do
-            local active = (sb.filterKey == contentFilter)
+            local active = (sb.filterKey == sortOrder)
             BD(sb, active and COLOR.TAB_ACTIVE or COLOR.TAB_IDLE, COLOR.BORDER)
             sb.label:SetTextColor(
                 active and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1],
@@ -1363,35 +1382,32 @@ local function RefreshContent()
         end
     end
 
-    -- Column headers — reflect what each right-side column actually shows
+    -- Column headers
     local catHdr, weekHdr
-    if contentFilter == "delve" then
-        catHdr = "TIER"
-        weekHdr = "SCORE"
-    elseif contentFilter == "dungeon" then
-        catHdr = "DIFF / BOSS"
-        weekHdr = "GRADE"
-    elseif contentFilter == "raid" then
-        catHdr = "DIFF / BOSS"
-        weekHdr = "GRADE"
-    elseif contentFilter == "alltime" then
-        catHdr = "DIFFICULTY"
-        weekHdr = "BEST"
-    else  -- weekly
-        catHdr = "DIFFICULTY"
-        weekHdr = "WK AVG"
+    if contentType == "delve" then
+        catHdr  = "TIER"
+        weekHdr = sortOrder == "alltime" and "SCORE" or "WK AVG"
+    elseif contentType == "dungeon" then
+        catHdr  = "DIFF / BOSS"
+        weekHdr = sortOrder == "alltime" and "BEST" or "WK AVG"
+    elseif contentType == "raid" then
+        catHdr  = "DIFF / BOSS"
+        weekHdr = sortOrder == "alltime" and "BEST" or "WK AVG"
+    else
+        catHdr  = "DIFFICULTY"
+        weekHdr = sortOrder == "alltime" and "BEST" or "WK AVG"
     end
     if lbFrame.hdrCat  then lbFrame.hdrCat:SetText(catHdr)   end
     if lbFrame.hdrWeek then lbFrame.hdrWeek:SetText(weekHdr) end
 
-    -- Grey out social tabs when Delve is active (they don't apply)
+    -- Grey out social tabs when Delve is active
+    local isDelve = (contentType == "delve")
     if lbFrame.socialTabs then
         for _, tab in ipairs(lbFrame.socialTabs) do
-            local dim = isDelve
             tab.label:SetTextColor(
-                dim and 0.35 or (tab.key == activeTab and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1]),
-                dim and 0.33 or (tab.key == activeTab and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2]),
-                dim and 0.30 or (tab.key == activeTab and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3]), 1)
+                isDelve and 0.35 or (tab.key == activeTab and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1]),
+                isDelve and 0.33 or (tab.key == activeTab and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2]),
+                isDelve and 0.30 or (tab.key == activeTab and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3]), 1)
         end
     end
 end
@@ -1412,7 +1428,7 @@ local function SetActiveTab(key)
 end
 
 local function SetContentFilter(key)
-    contentFilter = key
+    contentType = key
     RefreshContent()
 end
 
@@ -1488,7 +1504,7 @@ local function CreateLeaderboardFrame()
             tab.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
             tab.label:SetText(td.name)
             tab:SetScript("OnClick", function()
-                if contentFilter == "delve" then contentFilter = "weekly" end
+                if contentType == "delve" then contentType = "dungeon" end
                 SetActiveTab(td.key)
             end)
         end
@@ -1533,7 +1549,7 @@ local function CreateLeaderboardFrame()
         sb.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
         sb.label:SetText(sd.label)
         sb:SetScript("OnClick", function()
-            contentFilter = sd.key
+            sortOrder = sd.key
             RefreshContent()
         end)
         table.insert(lbFrame.sortBtns, sb)
