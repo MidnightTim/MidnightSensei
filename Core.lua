@@ -173,8 +173,47 @@ end
 --------------------------------------------------------------------------------
 -- Attribution
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- RACIAL_COOLDOWNS
+-- Active combat racials tracked in fight scoring.
+-- Only racials with a meaningful combat window (offensive/defensive/heal).
+-- All go through IsPlayerSpell() at fight start — wrong-race entries ignored.
+--------------------------------------------------------------------------------
+Core.RACIAL_COOLDOWNS = {
+    { id = 33702,  label = "Blood Fury",       race = "Orc",                 category = "offensive" },
+    { id = 26297,  label = "Berserking",        race = "Troll",               category = "offensive" },
+    { id = 265221, label = "Fireblood",         race = "Dark Iron Dwarf",     category = "offensive" },
+    { id = 255647, label = "Light's Judgment",  race = "Lightforged Draenei", category = "offensive" },
+    { id = 274738, label = "Ancestral Call",    race = "Mag'har Orc",         category = "offensive" },
+    { id = 312411, label = "Bag of Tricks",     race = "Vulpera",             category = "offensive" },
+    { id = 69041,  label = "Rocket Barrage",    race = "Goblin",              category = "offensive" },
+    { id = 20594,  label = "Stoneform",         race = "Dwarf",               category = "defensive" },
+    { id = 7744,   label = "Will of Forsaken",  race = "Undead",              category = "defensive" },
+    { id = 59752,  label = "Will to Survive",   race = "Human",               category = "defensive" },
+    { id = 59542,  label = "Gift of the Naaru", race = "Draenei",             category = "heal"      },
+    { id = 291944, label = "Regeneratin'",      race = "Zandalari Troll",     category = "heal"      },
+    { id = 312924, label = "Hyper Organic",     race = "Mechagnome",          category = "heal"      },
+}
+
+-- Returns racial cooldowns relevant to the current player's role.
+-- Offensive always included; defensive for tanks+healers; heal for healers.
+function Core.GetRacialCooldowns()
+    local spec = Core.ActiveSpec
+    if not spec then return {} end
+    local result = {}
+    for _, r in ipairs(Core.RACIAL_COOLDOWNS) do
+        local include = (r.category == "offensive")
+            or (r.category == "defensive" and (spec.role == Core.ROLE.TANK or spec.role == Core.ROLE.HEALER))
+            or (r.category == "heal" and spec.role == Core.ROLE.HEALER)
+        if include then
+            table.insert(result, { id = r.id, label = r.label .. " (racial)", expectedUses = "on CD" })
+        end
+    end
+    return result
+end
+
 Core.CREDITS = {
-    { source = "Icy Veins",       url = "https://www.icy-veins.com",       desc = "Class guides and rotational priorities"    },
     { source = "Wowhead",         url = "https://www.wowhead.com",         desc = "Spell data and talent information"         },
     { source = "SimulationCraft", url = "https://www.simulationcraft.org", desc = "DPS baseline methodology and APL concepts" },
     { source = "WoWAnalyzer",     url = "https://wowanalyzer.com",         desc = "Performance analysis patterns and metrics" },
@@ -194,7 +233,7 @@ Core.CHANGELOG = {
             "Weekly reset correctly aligned to Tuesday 7am PDT (Blizzard weekly reset)",
             "BNet friends now receive score broadcasts via direct whisper",
             "Party channel spam fixed for LFD and instance groups",
-            "Play Style setting added: Manual (full A+ range) or Assisted (B+ ceiling)",
+            "Play Style setting added: Manual (full A+ range) or Assisted (B ceiling at 75)",
             "Registered in WoW Game Options -> AddOns panel",
             "Credits panel split into About and Sources tabs",
             "os.time() crash fixed (Blizzard does not expose the os library)",
@@ -1431,7 +1470,86 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
     elseif msg == "credits"                    then Call(MS.UI, "ShowCredits")
     elseif msg == "history"                    then Call(MS.UI, "ShowHistory")
     elseif msg == "leaderboard" or msg == "lb" then Call(MS.Leaderboard, "Toggle")
-    elseif msg == "reset" then
+    elseif msg == "lb fix" then
+        -- ── Beta maintenance: scan and repair leaderboard data issues ─────────
+        -- Removes entries with no meaningful score data, deduplicates guild
+        -- entries with score=0 and no allTimeBest, and prints a summary.
+        -- Remove this command before shipping out of beta.
+        local db = MidnightSenseiDB
+        if not db then
+            print("|cff00D1FFMidnight Sensei:|r No saved data found.")
+        else
+            local fixed = 0
+
+            -- 1. Purge guild entries with zero allTimeBest and zero score
+            --    (ghost entries from HELLO before any fight was completed)
+            if db.guild then
+                local toRemove = {}
+                for name, entry in pairs(db.guild) do
+                    local hasMeaningfulData = (entry.allTimeBest or 0) > 0
+                        or (entry.score or 0) > 0
+                        or (entry.weeklyAvg or 0) > 0
+                    if not hasMeaningfulData then
+                        table.insert(toRemove, name)
+                    end
+                end
+                for _, name in ipairs(toRemove) do
+                    db.guild[name] = nil
+                    fixed = fixed + 1
+                    print("|cff888888  Removed ghost guild entry:|r " .. name)
+                end
+            end
+
+            -- 2. Scan encounter history for entries missing class/spec fields
+            --    and back-fill from charName if possible (best-effort).
+            if db.encounters then
+                local patched = 0
+                for i, enc in ipairs(db.encounters) do
+                    if not enc.className or enc.className == "?" then
+                        -- Can't recover class from here; just flag it
+                        patched = patched + 1
+                    end
+                    -- Ensure encType is never nil (older saves may lack it)
+                    if not enc.encType then
+                        enc.encType = "normal"
+                        patched = patched + 1
+                    end
+                end
+                if patched > 0 then
+                    print("|cff888888  Patched " .. patched .. " encounter record(s) with missing fields.|r")
+                    fixed = fixed + patched
+                end
+            end
+
+            -- 3. Report duplicates in encounter history (same timestamp within 1s)
+            if db.encounters then
+                local seen = {}
+                local dupes = 0
+                for i = #db.encounters, 1, -1 do
+                    local enc = db.encounters[i]
+                    local key = (enc.timestamp or 0) .. "_" .. (enc.finalScore or 0)
+                    if seen[key] then
+                        table.remove(db.encounters, i)
+                        dupes = dupes + 1
+                    else
+                        seen[key] = true
+                    end
+                end
+                if dupes > 0 then
+                    print("|cff888888  Removed " .. dupes .. " duplicate encounter(s).|r")
+                    fixed = fixed + dupes
+                end
+            end
+
+            if fixed == 0 then
+                print("|cff00D1FFMidnight Sensei:|r Leaderboard data looks clean — nothing to fix.")
+            else
+                print("|cff00D1FFMidnight Sensei:|r Fixed " .. fixed .. " issue(s). Reopen the leaderboard to see changes.")
+                if MS.Leaderboard and MS.Leaderboard.RefreshUI then
+                    MS.Leaderboard.RefreshUI()
+                end
+            end
+        end
         if MidnightSenseiDB then
             MidnightSenseiDB.encounters = {}
             MidnightSenseiDB.stats = {}
@@ -1450,7 +1568,7 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         print("  + Weekly reset now aligned to Tuesday 7am PDT (Blizzard reset)")
         print("  + BNet friends now receive scores via whisper, not just guild channel")
         print("  + Party channel spam fix for LFD/instance groups")
-        print("  + Play Style setting: Manual (full range) or Assisted (B+ ceiling)")
+        print("  + Play Style setting: Manual (full range) or Assisted (B ceiling at 75)")
         print("  + Registered in WoW Options -> AddOns panel")
         print("  + Credits panel now has About and Sources tabs")
         print("  + os.time() crash fixed (not available in WoW Lua environment)")
@@ -1471,9 +1589,43 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         print("  + Grade history panel with trend sparkline and encounter detail")
         print("  + HUD with post-fight review button and right-click context menu")
         print("  + Midnight 12.0 compatible: UNIT_AURA replaces blocked CLEU")
-    elseif msg == "about" then
-        Call(MS.UI, "ShowCredits")
-    elseif msg == "debug" then
+    elseif msg == "debuglog" then
+        local buf = MidnightSenseiDB and MidnightSenseiDB.debugLog
+        if not buf or #buf == 0 then
+            print("|cff00D1FFMidnight Sensei:|r Debug log is empty. Enable Debug Mode in /ms options then fight.")
+        else
+            print("|cff00D1FFMidnight Sensei Debug Log (" .. #buf .. " entries):|r")
+            for _, line in ipairs(buf) do print("  " .. line) end
+        end
+    elseif msg == "debuglog clear" then
+        if MidnightSenseiDB then MidnightSenseiDB.debugLog = {} end
+        print("|cff00D1FFMidnight Sensei:|r Debug log cleared.")
+    elseif msg == "debug delve" then
+        local instName, instType, diffID, diffName,
+              maxPlayers, dynDiff, isDynamic, instMapID = GetInstanceInfo()
+        print("|cff00D1FFMidnight Sensei - Instance Debug:|r")
+        print("  instName: " .. tostring(instName))
+        print("  instType: " .. tostring(instType))
+        print("  diffID:   " .. tostring(diffID))
+        print("  diffName: " .. tostring(diffName))
+        print("  mapID:    " .. tostring(instMapID))
+        -- Check if our DELVE_DIFF_IDS table covers this diffID
+        local ctx = MS.Leaderboard and MS.Leaderboard.GetInstanceContext
+                    and MS.Leaderboard.GetInstanceContext()
+        if ctx then
+            print("  encType:   " .. tostring(ctx.encType))
+            print("  diffLabel: " .. tostring(ctx.diffLabel))
+            print("  instLabel: " .. tostring(ctx.instanceName))
+        end
+        print("  Note: C_Delves is nil in Midnight 12.0 — tier level not available via API.")
+        -- Also print the last saved encounter for comparison
+        local db = MidnightSenseiDB
+        local last = db and db.encounters and db.encounters[#db.encounters]
+        if last then
+            print("  Last enc encType:   " .. tostring(last.encType))
+            print("  Last enc diffLabel: " .. tostring(last.diffLabel))
+            print("  Last enc isBoss:    " .. tostring(last.isBoss))
+        end
         if Core.ActiveSpec then
             print("|cff00D1FFMidnight Sensei Debug:|r")
             print("  Class:   " .. (Core.ActiveSpec.className or "?"))
@@ -1486,28 +1638,25 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         end
     elseif msg == "debug friends" then
         print("|cff00D1FFMidnight Sensei - Friend Detection Debug:|r")
-        local ok, numFriends = pcall(BNGetNumFriends)
-        print("  BNGetNumFriends: ok=" .. tostring(ok) .. " n=" .. tostring(numFriends))
-        if ok and type(numFriends) == "number" and numFriends > 0 then
-            -- Print first 3 friends' raw return values to diagnose API shape
-            for i = 1, math.min(3, numFriends) do
-                local r1 = {pcall(BNGetFriendInfo, i)}
-                local numAccounts = r1[#r1]
-                print("  Friend[" .. i .. "] numAccounts=" .. tostring(numAccounts) ..
-                      " numReturns=" .. (#r1 - 1))
-                if type(numAccounts) == "number" and numAccounts > 0 then
-                    for j = 1, numAccounts do
-                        local r2 = {pcall(BNGetFriendGameAccountInfo, i, j)}
-                        local vals = {}
-                        for k = 2, math.min(#r2, 10) do
-                            vals[#vals+1] = tostring(r2[k])
-                        end
-                        print("    Account[" .. j .. "]: " .. table.concat(vals, ", "))
+        local ok, num = pcall(BNGetNumFriends)
+        print("  BNGetNumFriends: ok=" .. tostring(ok) .. " n=" .. tostring(num))
+        if ok and type(num) == "number" and num > 0 then
+            for i = 1, math.min(5, num) do
+                local okN, n = pcall(BNGetFriendNumGameAccounts, i)
+                print("  Friend[" .. i .. "] numAccounts=" .. tostring(n) ..
+                      " (ok=" .. tostring(okN) .. ")")
+                if okN and type(n) == "number" and n > 0 then
+                    for j = 1, n do
+                        local ok2, _, _, _, _, _, _, _, _, _, _,
+                              realmName, _, _, isOnline, charName =
+                            pcall(BNGetFriendGameAccountInfo, i, j)
+                        print("    [" .. j .. "] charName=" .. tostring(charName) ..
+                              " realm=" .. tostring(realmName) ..
+                              " online=" .. tostring(isOnline))
                     end
                 end
             end
         end
-        print("  C_BattleNet exists: " .. tostring(C_BattleNet ~= nil))
         print("  friendsData entries:")
         local fd = MS.Leaderboard and MS.Leaderboard.GetFriendsData and MS.Leaderboard.GetFriendsData()
         if fd then
@@ -1527,6 +1676,9 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         print("  /ms reset         Clear fight history")
         print("  /ms update        Show changelog")
         print("  /ms debug         Current spec / class IDs")
+        print("  /ms debug friends  BNet friend detection diagnostic")
+        print("  /ms lb fix        [BETA] Scan and repair leaderboard data issues")
+        print("  /ms debuglog clear  Clear the debug log")
     end
 end
 

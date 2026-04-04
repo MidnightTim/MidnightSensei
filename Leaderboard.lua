@@ -77,27 +77,36 @@ local DUNGEON_DIFF = {
     [8]  = "Mythic",   -- Regular Mythic (no key)
 }
 
--- Known Delve difficultyIDs in Midnight 12.0 (scenario type, tier-based)
+-- Known Delve difficultyIDs.
+-- Legacy (pre-Midnight): 167–177 = Tier 1–11 (offset from 166)
+-- Midnight 12.0: single diffID 208 with diffName="Delves"; tier from C_Delves API
 local DELVE_DIFF_IDS = {
     [167] = true, [168] = true, [169] = true, [170] = true,
     [171] = true, [172] = true, [173] = true, [174] = true,
     [175] = true, [176] = true, [177] = true,
+    [208] = true,   -- Midnight 12.0 unified delve difficultyID
 }
+
+-- Tier level API (C_Delves) is nil in Midnight 12.0 — Blizzard does not expose it.
+-- Returns nil; callers fall back to instance name for display.
+local function GetDelveTier() return nil end
 
 local function GetInstanceContext()
     local instName, instType, diffID, diffName,
           maxPlayers, dynDiff, isDynamic, instMapID = GetInstanceInfo()
 
-    local ctx = { encType = "normal", diffLabel = "World", keystoneLevel = nil }
+    local ctx = { encType = "normal", diffLabel = "World", keystoneLevel = nil, instanceName = "" }
 
     if not instType or instType == "none" then return ctx end
 
     if instType == "raid" then
-        ctx.encType   = "raid"
-        ctx.diffLabel = RAID_DIFF[diffID] or diffName or "Raid"
+        ctx.encType      = "raid"
+        ctx.diffLabel    = RAID_DIFF[diffID] or diffName or "Raid"
+        ctx.instanceName = instName or ""
 
     elseif instType == "party" then
-        ctx.encType = "dungeon"
+        ctx.encType      = "dungeon"
+        ctx.instanceName = instName or ""
         local keystoneLevel = nil
         if C_ChallengeMode and C_ChallengeMode.GetSlottedKeystoneInfo then
             local ok, _, _, ksLevel = pcall(C_ChallengeMode.GetSlottedKeystoneInfo)
@@ -112,20 +121,23 @@ local function GetInstanceContext()
         end
 
     elseif instType == "scenario" then
-        -- Delves are scenarios. Detect via known diffID table first,
-        -- then fall back to name heuristics.
         local lowerDiff = (diffName or ""):lower()
         local lowerName = (instName or ""):lower()
         if DELVE_DIFF_IDS[diffID]
         or lowerDiff:find("delve") or lowerName:find("delve") then
-            ctx.encType = "delve"
-            -- Tier number from diffID offset (167 = Tier 1 … 177 = Tier 11)
-            local tier = DELVE_DIFF_IDS[diffID] and (diffID - 166) or
-                         (diffName and diffName:match("(%d+)"))
-            ctx.diffLabel = tier and ("Tier " .. tier) or (diffName or "Delve")
+            ctx.encType      = "delve"
+            ctx.instanceName = instName or ""
+            -- Try live Delve API first (Midnight 12.0 uses unified diffID 208)
+            local tier = GetDelveTier()
+            -- Legacy fallback: diffID 167-177 encode tier directly via offset
+            if not tier and diffID >= 167 and diffID <= 177 then
+                tier = diffID - 166
+            end
+            ctx.diffLabel = tier and ("Tier " .. tier) or (instName or diffName or "Delve")
         else
-            ctx.encType   = "dungeon"
-            ctx.diffLabel = diffName or "Scenario"
+            ctx.encType      = "dungeon"
+            ctx.instanceName = instName or ""
+            ctx.diffLabel    = diffName or "Scenario"
         end
     end
 
@@ -190,9 +202,6 @@ end
 --   (REQ handler) and the re-broadcaster's charName would differ.
 
 local function MakeChecksum(score, duration, encType)
-    -- Ties score+duration+encType together so changing one without the others
-    -- produces a mismatch. charName is NOT included — it's informational only
-    -- and caused cross-player validation failures when scores were re-broadcast.
     local a = (score               * 7)  % 251
     local b = (math.floor(duration) * 11) % 251
     local c = (#(encType or "")    * 17) % 251
@@ -202,7 +211,19 @@ end
 
 local function ValidateChecksum(score, duration, encType, checksum)
     if not checksum then return false end
-    return MakeChecksum(score, duration, encType) == checksum
+    local expected = MakeChecksum(score, duration, encType)
+    local ok = (expected == checksum)
+    if not ok and Core.GetSetting("debugMode") then
+        -- Log to Analytics debug buffer if available
+        if MS.Analytics and MS.Analytics.DebugLog then
+            MS.Analytics.DebugLog("[CS] FAIL score=" .. score ..
+                " dur=" .. math.floor(duration) ..
+                " enc=" .. (encType or "?") ..
+                " got=" .. (checksum or "nil") ..
+                " exp=" .. expected)
+        end
+    end
+    return ok
 end
 
 -- Per-sender rate limiter: max 20 SCORE messages per session
@@ -270,78 +291,13 @@ local function IsGuildMember(fullName)
     return false
 end
 
-local function IsBNetFriend(fullName)
-    local shortName = ShortName(fullName)
-
-    -- Primary: use the BN global functions which are always available in WoW retail
-    local ok, numFriends = pcall(BNGetNumFriends)
-    if ok and type(numFriends) == "number" and numFriends > 0 then
-        for i = 1, numFriends do
-            -- Get numGameAccounts as the last return value of BNGetFriendInfo.
-            -- Use select('#',...) to count returns safely across WoW versions.
-            local results = {pcall(BNGetFriendInfo, i)}
-            if results[1] then  -- pcall ok
-                local numAccounts = results[#results]  -- last return = numGameAccounts
-                if type(numAccounts) == "number" and numAccounts > 0 then
-                    for j = 1, numAccounts do
-                        local r2 = {pcall(BNGetFriendGameAccountInfo, i, j)}
-                        if r2[1] then
-                            -- charName is the last string return; isOnline is second-to-last bool
-                            -- Iterate returns to find the character name (non-empty string)
-                            local charName, realmName
-                            for k = #r2, 2, -1 do
-                                if type(r2[k]) == "string" and r2[k] ~= "" then
-                                    if not charName then
-                                        charName = r2[k]
-                                    elseif not realmName then
-                                        realmName = r2[k]
-                                        break
-                                    end
-                                end
-                            end
-                            if charName and charName:match("^([^%-]+)") == shortName then
-                                return true
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        return false
-    end
-
-    -- Fallback: C_BattleNet API (Dragonflight+)
-    if C_BattleNet and C_BattleNet.GetFriendAccountInfo then
-        local numBNet = 0
-        if C_BattleNet.GetNumFriendsBySource and Enum and Enum.FriendType then
-            local ok2, n = pcall(C_BattleNet.GetNumFriendsBySource, Enum.FriendType.BNet)
-            if ok2 then numBNet = n or 0 end
-        end
-        if numBNet == 0 and C_BattleNet.GetNumFriends then
-            local ok2, n = pcall(C_BattleNet.GetNumFriends)
-            if ok2 then numBNet = n or 0 end
-        end
-        for i = 1, numBNet do
-            local info = C_BattleNet.GetFriendAccountInfo(i)
-            if info then
-                if info.gameAccountInfo and info.gameAccountInfo.characterName then
-                    if info.gameAccountInfo.characterName:match("^([^%-]+)") == shortName then
-                        return true
-                    end
-                end
-                if info.gameAccounts then
-                    for _, acct in ipairs(info.gameAccounts) do
-                        if acct.characterName and acct.characterName:match("^([^%-]+)") == shortName then
-                            return true
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    return false
-end
+-- Friends tab: BNet friend enumeration (BNGetFriendNumGameAccounts) returns 0
+-- in Midnight 12.0 — Blizzard restricted this API. WhisperFriends is a no-op
+-- until the API is restored. friendsData still populates if a friend sends via
+-- a shared guild or party channel, or if Blizzard restores the whisper path.
+local function BuildFriendsList() return {} end
+local function IsBNetFriend(_) return false end
+local function WhisperFriends(_) end  -- no-op: cannot enumerate friend characters
 
 -- Update or create an entry, maintaining weekly avg and all-time best.
 -- isBoss=true means this was an actual boss encounter; only boss fights
@@ -371,6 +327,9 @@ local function MergeEntry(existing, name, className, specName, role,
         dungeonCount = 0,
         raidCount    = 0,
     }
+
+    -- Ensure weekScores exists — seed/HELLO entries are created without it
+    if not e.weekScores then e.weekScores = {} end
 
     -- If new WoW week, reset weekly data
     if e.weekKey ~= weekKey then
@@ -425,81 +384,6 @@ end
 --------------------------------------------------------------------------------
 -- Broadcast own score
 --------------------------------------------------------------------------------
-
--- Send to all online BNet friends via whisper (since they may not share guild/group)
-local function WhisperFriends(payload)
-    local sent = {}
-
-    local function TrySend(toon, realm)
-        if not toon or toon == "" then return end
-        local target = (realm and realm ~= "") and (toon .. "-" .. realm) or toon
-        if not sent[target] then
-            sent[target] = true
-            pcall(C_ChatInfo.SendAddonMessage, LB_PREFIX, payload, "WHISPER", target)
-        end
-    end
-
-    -- Primary: BN global functions (these work in Midnight 12.0)
-    local ok, numFriends = pcall(BNGetNumFriends)
-    if ok and type(numFriends) == "number" and numFriends > 0 then
-        for i = 1, numFriends do
-            local r1 = {pcall(BNGetFriendInfo, i)}
-            if r1[1] then
-                local numAccounts = r1[#r1]
-                if type(numAccounts) == "number" and numAccounts > 0 then
-                    for j = 1, numAccounts do
-                        local r2 = {pcall(BNGetFriendGameAccountInfo, i, j)}
-                        if r2[1] then
-                            -- Find isOnline (bool) and charName/realmName (strings)
-                            local isOnline, charName, realmName
-                            for k = 2, #r2 do
-                                if type(r2[k]) == "boolean" and isOnline == nil then
-                                    isOnline = r2[k]
-                                end
-                            end
-                            -- charName: last non-empty string; realmName: second-to-last
-                            for k = #r2, 2, -1 do
-                                if type(r2[k]) == "string" and r2[k] ~= "" then
-                                    if not charName then charName = r2[k]
-                                    elseif not realmName then realmName = r2[k] ; break end
-                                end
-                            end
-                            if isOnline and charName then
-                                TrySend(charName, realmName)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        return
-    end
-
-    -- Fallback: C_BattleNet API
-    if not C_BattleNet then return end
-    local numBNet = 0
-    if C_BattleNet.GetNumFriendsBySource and Enum and Enum.FriendType then
-        local ok2, n = pcall(C_BattleNet.GetNumFriendsBySource, Enum.FriendType.BNet)
-        if ok2 then numBNet = n or 0 end
-    end
-    if numBNet == 0 and C_BattleNet.GetNumFriends then
-        local ok2, n = pcall(C_BattleNet.GetNumFriends)
-        if ok2 then numBNet = n or 0 end
-    end
-    for i = 1, numBNet do
-        local info = C_BattleNet.GetFriendAccountInfo(i)
-        if info then
-            if info.gameAccountInfo and info.gameAccountInfo.isOnline then
-                TrySend(info.gameAccountInfo.characterName, info.gameAccountInfo.realmName)
-            end
-            if info.gameAccounts then
-                for _, acct in ipairs(info.gameAccounts) do
-                    if acct.isOnline then TrySend(acct.characterName, acct.realmName) end
-                end
-            end
-        end
-    end
-end
 
 local function BroadcastScore(encounter)
     if not encounter or not encounter.finalScore then return end
@@ -560,19 +444,19 @@ end
 local function SeedPartyFromGroup()
     local n = GetNumGroupMembers()
     if n == 0 then return end
+    local myShort = UnitName("player") or ""
     for i = 1, n do
         local unit = (IsInRaid() and "raid" or "party") .. i
-        local name  = UnitName(unit)
-        local realm = select(2, UnitFullName(unit))
-        if name then
-            local fullName = (realm and realm ~= "") and (name .. "-" .. realm) or name
-            if not partyData[fullName] then
-                local class = UnitClass(unit) or "?"
-                local spec  = ""  -- unknown until they broadcast
-                partyData[fullName] = {
+        local name = UnitName(unit)
+        -- Skip self — GetPartyData injects the self-entry separately
+        if name and name ~= myShort then
+            -- Key by short name to match how SCORE/HELLO sender arrives
+            local key = name
+            if not partyData[key] then
+                partyData[key] = {
                     name        = name,
-                    className   = class,
-                    specName    = spec,
+                    className   = UnitClass(unit) or "?",
+                    specName    = "",
                     grade       = "--",
                     score       = 0,
                     online      = true,
@@ -632,14 +516,24 @@ local function OnAddonMessage(prefix, payload, channel, sender)
         if score < 0 or score > 100 then return end
 
         -- 2. Checksum validation — skip for WHISPER channel.
-        -- Whispers come from BNet friends who may run a different addon version
-        -- with a different checksum formula. The plausibility check below is
-        -- sufficient protection for direct friend messages.
         if channel ~= "WHISPER" then
             if not ValidateChecksum(score, duration, encType, checksum) then
+                -- Always log to persistent buffer regardless of debugMode
+                -- so failures are diagnosable after the fact via /ms debuglog
+                if MidnightSenseiDB then
+                    MidnightSenseiDB.debugLog = MidnightSenseiDB.debugLog or {}
+                    local buf = MidnightSenseiDB.debugLog
+                    table.insert(buf, date("%H:%M:%S") ..
+                        " [CS] FAIL from=" .. ShortName(sender) ..
+                        " score=" .. score ..
+                        " dur=" .. math.floor(duration) ..
+                        " enc=" .. (encType or "?") ..
+                        " cs=" .. (checksum or "nil"))
+                    while #buf > 50 do table.remove(buf, 1) end
+                end
                 if Core.GetSetting("debugMode") then
-                    print("|cffFF4444Midnight Sensei:|r Rejected score from " ..
-                          ShortName(sender) .. " (checksum mismatch)")
+                    print("|cffFF4444MS:|r checksum fail from " .. ShortName(sender) ..
+                          " — check /ms debuglog")
                 end
                 return
             end
@@ -664,17 +558,21 @@ local function OnAddonMessage(prefix, payload, channel, sender)
         -- regardless of which channel the message arrived on.
         -- IsInGroup() fails for LFD groups, so check unit names directly.
         local addedToParty = false
-        for i = 1, GetNumGroupMembers() do
-            local unit = (IsInRaid() and "raid" or "party") .. i
-            local unitName = UnitName(unit)
-            if unitName and ShortName(sender) == unitName then
-                partyData[sender] = MergeEntry(partyData[sender], sender,
-                    className, specName, role, grade, score, duration,
-                    encType, weekKey, isBoss)
-                partyData[sender].diffLabel     = diffLabel
-                partyData[sender].keystoneLevel = ks > 0 and ks or nil
-                addedToParty = true
-                break
+        local myShort = UnitName("player") or ""
+        if ShortName(sender) ~= myShort then
+            for i = 1, GetNumGroupMembers() do
+                local unit = (IsInRaid() and "raid" or "party") .. i
+                local unitName = UnitName(unit)
+                if unitName and ShortName(sender) == unitName then
+                    local key = ShortName(sender)
+                    partyData[key] = MergeEntry(partyData[key], sender,
+                        className, specName, role, grade, score, duration,
+                        encType, weekKey, isBoss)
+                    partyData[key].diffLabel     = diffLabel
+                    partyData[key].keystoneLevel = ks > 0 and ks or nil
+                    addedToParty = true
+                    break
+                end
             end
         end
 
@@ -714,7 +612,8 @@ local function OnAddonMessage(prefix, payload, channel, sender)
         end)
 
     elseif msgType == "HELLO" then
-        -- Guild: create a no-score placeholder so they appear in the guild tab
+        -- Guild: create or update entry — always refresh class/spec from HELLO
+        -- so stale data from alt characters or spec changes is corrected on login.
         if IsInGuild() and IsGuildMember(sender) then
             local db = GetDB()
             if db then
@@ -737,7 +636,15 @@ local function OnAddonMessage(prefix, payload, channel, sender)
                         dungeonCount = 0, raidCount = 0,
                     }
                 else
-                    db.guild[sender].online = true
+                    -- Always update identity fields — player may have switched
+                    -- characters or specs since the last persisted entry.
+                    db.guild[sender].online    = true
+                    if parts[3] and parts[3] ~= "?" then
+                        db.guild[sender].className = parts[3]
+                    end
+                    if parts[4] and parts[4] ~= "?" then
+                        db.guild[sender].specName  = parts[4]
+                    end
                 end
 
                 -- GRM-style sync back
@@ -759,28 +666,34 @@ local function OnAddonMessage(prefix, payload, channel, sender)
             end
         end
 
-        -- Party: add a no-score placeholder if sender is in our group
-        for i = 1, GetNumGroupMembers() do
-            local unit = (IsInRaid() and "raid" or "party") .. i
-            local unitName = UnitName(unit)
-            if unitName and ShortName(sender) == unitName then
-                if not partyData[sender] then
-                    partyData[sender] = {
-                        name      = sender,
-                        className = parts[3] or "?",
-                        specName  = parts[4] or "?",
-                        grade     = "--",
-                        score     = 0,
-                        online    = true,
-                        timestamp = 0,
-                        weekKey   = GetWeekKey(),
-                        weeklyAvg = 0, allTimeBest = 0,
-                        dungeonBest = 0, raidBest = 0, delveBest = 0, normalBest = 0,
-                    }
-                else
-                    partyData[sender].online = true
+        -- Party: add placeholder if sender is in our group (skip self)
+        local myShort = UnitName("player") or ""
+        if ShortName(sender) ~= myShort then
+            for i = 1, GetNumGroupMembers() do
+                local unit = (IsInRaid() and "raid" or "party") .. i
+                local unitName = UnitName(unit)
+                if unitName and ShortName(sender) == unitName then
+                    local key = ShortName(sender)
+                    if not partyData[key] then
+                        partyData[key] = {
+                            name      = ShortName(sender),
+                            className = parts[3] or "?",
+                            specName  = parts[4] or "?",
+                            grade     = "--",
+                            score     = 0,
+                            online    = true,
+                            timestamp = 0,
+                            weekKey   = GetWeekKey(),
+                            weeklyAvg = 0, allTimeBest = 0,
+                            dungeonBest = 0, raidBest = 0, delveBest = 0, normalBest = 0,
+                        }
+                    else
+                        partyData[key].online    = true
+                        if parts[3] and parts[3] ~= "?" then partyData[key].className = parts[3] end
+                        if parts[4] and parts[4] ~= "?" then partyData[key].specName  = parts[4] end
+                    end
+                    break
                 end
-                break
             end
         end
 
@@ -1033,8 +946,12 @@ function LB.GetGuildData()
                     allBest = math.max(allBest, s)
                     if     enc.encType == "dungeon" then dungBest = math.max(dungBest, s)
                     elseif enc.encType == "raid"    then raidBest = math.max(raidBest, s)
-                    elseif enc.encType == "delve"   then delvBest = math.max(delvBest, s)
-                    else                                 normBest = math.max(normBest, s) end
+                    elseif enc.encType == "delve" and enc.isBoss then
+                        -- Only boss delve encounters count as meaningful delve completions
+                        delvBest = math.max(delvBest, s)
+                    elseif enc.encType ~= "delve" then
+                        normBest = math.max(normBest, s)
+                    end
                 end
             end
 
@@ -1091,44 +1008,50 @@ function LB.GetFriendsData()
     return friendsData
 end
 
--- Delve tab: shows the player's own delve encounter history sorted by score,
--- plus any delve data received from guild/party peers.
--- Unlike the social tabs which track one entry per person, this shows
--- individual delve runs so you can see tier progression over time.
+-- Delve tab: shows the player's own delve encounter history sorted by score.
+-- Respects contentFilter: "weekly" shows only this week's runs, "alltime" shows all.
 function LB.GetDelveData()
-    local result = {}
-
-    -- First: inject own delve encounters from local history
+    local result  = {}
     local history = MidnightSenseiDB and MidnightSenseiDB.encounters
+    local wk      = GetWeekKey()
+
     if history then
         local myName = GetPlayerName()
-        local spec   = Core.ActiveSpec
         for i, enc in ipairs(history) do
-            if enc.encType == "delve" then
-                local key = myName .. "_delve_" .. i
-                result[key] = {
-                    name         = UnitName("player"),
-                    className    = spec and spec.className or enc.className or "?",
-                    specName     = spec and spec.name or enc.specName or "?",
-                    role         = spec and spec.role or enc.role or "?",
-                    grade        = enc.finalGrade or enc.grade or "?",
-                    score        = enc.finalScore or 0,
-                    weeklyAvg    = enc.finalScore or 0,   -- sort key
-                    allTimeBest  = enc.finalScore or 0,
-                    delveBest    = enc.finalScore or 0,
-                    dungeonBest  = 0, raidBest = 0, normalBest = 0,
-                    diffLabel    = enc.diffLabel or "Delve",
-                    keystoneLevel = enc.keystoneLevel,
-                    timestamp    = enc.timestamp or 0,
-                    isSelf       = true,
-                    online       = true,
-                    isDelveRun   = true,  -- flag for row display
-                }
+            if enc.encType == "delve" and enc.isBoss then
+                -- Weekly filter: only include runs from the current WoW week
+                local inWeek = (enc.weekKey and enc.weekKey == wk)
+                if contentFilter == "weekly" and not inWeek then
+                    -- skip this run in weekly view
+                else
+                    local key = myName .. "_delve_" .. i
+                    result[key] = {
+                        name         = UnitName("player"),
+                        className    = enc.className or "?",
+                        specName     = enc.specName  or "?",
+                        role         = enc.role      or "?",
+                        grade        = enc.finalGrade or enc.grade or "?",
+                        score        = enc.finalScore or 0,
+                        weeklyAvg    = enc.finalScore or 0,
+                        allTimeBest  = enc.finalScore or 0,
+                        delveBest    = enc.finalScore or 0,
+                        dungeonBest  = 0, raidBest = 0, normalBest = 0,
+                        diffLabel    = enc.diffLabel    or "",
+                        instanceName = enc.instanceName or "",
+                        bossName     = enc.bossName     or "",
+                        keystoneLevel = enc.keystoneLevel,
+                        timestamp    = enc.timestamp or 0,
+                        weekKey      = enc.weekKey   or "",
+                        isSelf       = true,
+                        online       = true,
+                        isDelveRun   = true,
+                    }
+                end
             end
         end
     end
 
-    -- Also include delve-best data received from guild peers (single entry per person)
+    -- Guild peers: always show their best delve regardless of filter
     local guildData = LB.GetGuildData()
     for name, entry in pairs(guildData) do
         if (entry.delveBest or 0) > 0 and not entry.isSelf then
@@ -1243,12 +1166,12 @@ local function GetRow(parent, idx)
 
     row.rankText  = TF(row,10,"CENTER");  row.rankText:SetPoint("LEFT",row,"LEFT",4,0);   row.rankText:SetWidth(20)
     row.onlineDot = row:CreateTexture(nil,"OVERLAY"); row.onlineDot:SetSize(6,6); row.onlineDot:SetPoint("LEFT",row,"LEFT",26,0)
-    row.nameText  = TF(row,11,"LEFT");    row.nameText:SetPoint("LEFT",row,"LEFT",36,0);  row.nameText:SetWidth(110)
-    row.specText  = TF(row,9,"LEFT");     row.specText:SetPoint("LEFT",row,"LEFT",150,0); row.specText:SetWidth(90)
+    row.nameText  = TF(row,11,"LEFT");    row.nameText:SetPoint("LEFT",row,"LEFT",36,0);  row.nameText:SetWidth(108)
+    row.specText  = TF(row,9,"LEFT");     row.specText:SetPoint("LEFT",row,"LEFT",148,0); row.specText:SetWidth(70)
     row.specText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    row.catText   = TF(row,9,"CENTER");   row.catText:SetPoint("RIGHT",row,"RIGHT",-70,0); row.catText:SetWidth(70)
+    row.catText   = TF(row,9,"LEFT");     row.catText:SetPoint("LEFT",row,"LEFT",222,0);  row.catText:SetWidth(230)
     row.catText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    row.weekText  = TF(row,11,"RIGHT");   row.weekText:SetPoint("RIGHT",row,"RIGHT",-2,0); row.weekText:SetWidth(66)
+    row.weekText  = TF(row,11,"RIGHT");   row.weekText:SetPoint("RIGHT",row,"RIGHT",-2,0); row.weekText:SetWidth(62)
 
     rowFrames[idx] = row
     return row
@@ -1276,35 +1199,39 @@ local function PopulateRows(scrollChild, entries)
         row.nameText:SetText(nm); row.nameText:SetTextColor(cc[1],cc[2],cc[3],1)
         row.specText:SetText((entry.specName or "?").." "..(entry.className or ""))
 
-        -- Category stats column (left of right pair)
+        -- Category stats column — format: Diff/Tier · Instance · Boss
         local catStr = ""
+
+        -- Helper: combine up to three parts with " - " separator, skipping blanks
+        local function JoinLabel(a, b, c)
+            local parts = {}
+            if a and a ~= "" and a ~= "World" then table.insert(parts, a) end
+            if b and b ~= "" then table.insert(parts, b) end
+            if c and c ~= "" then table.insert(parts, c) end
+            return #parts > 0 and table.concat(parts, " - ") or "--"
+        end
+
+        local diff  = (entry.diffLabel and entry.diffLabel ~= "" and entry.diffLabel ~= "World") and entry.diffLabel or nil
+        local inst  = (entry.instanceName and entry.instanceName ~= "") and entry.instanceName or nil
+        local boss  = (entry.bossName and entry.bossName ~= "") and entry.bossName or nil
+
         if contentFilter == "delve" then
-            local dl = entry.diffLabel or "Delve"
-            catStr = dl
+            -- "Tier 8 - The Sinkhole - Zo'shurion"
+            catStr = JoinLabel(diff, inst, boss)
             if entry.isDelveRun and entry.timestamp and entry.timestamp > 0 then
-                catStr = dl .. " |cff888888" .. TAgo(entry.timestamp) .. "|r"
+                catStr = catStr .. " |cff888888" .. TAgo(entry.timestamp) .. "|r"
             end
-        elseif contentFilter == "dungeon" or contentFilter == "raid" then
-            -- Show difficulty first, then boss/location name
-            local diff = (entry.diffLabel and entry.diffLabel ~= "" and entry.diffLabel ~= "World")
-                         and entry.diffLabel or ""
-            local loc  = (entry.bossName and entry.bossName ~= "") and entry.bossName or ""
-            if diff ~= "" and loc ~= "" then
-                catStr = diff .. " - " .. loc
-            elseif diff ~= "" then
-                catStr = diff
-            elseif loc ~= "" then
-                catStr = loc
-            else
-                catStr = "--"
-            end
-        elseif contentFilter == "alltime" then
-            -- Show difficulty label
-            local dl = entry.diffLabel
-            catStr = (dl and dl ~= "" and dl ~= "World") and dl or "--"
-        else  -- weekly
-            local dl = entry.diffLabel
-            catStr = (dl and dl ~= "" and dl ~= "World") and dl or "--"
+        elseif contentFilter == "dungeon" then
+            -- "M+12 - Halls of Infusion - Khajin"  or  "Heroic - The Stonevault - Void Seamstress"
+            catStr = JoinLabel(diff, inst, boss)
+        elseif contentFilter == "raid" then
+            -- "Mythic - Nerub-ar Palace - Queen Ansurek"
+            catStr = JoinLabel(diff, inst, boss)
+        elseif contentFilter == "alltime" or contentFilter == "weekly" then
+            -- Show best available context
+            catStr = JoinLabel(diff, inst, boss)
+        else
+            catStr = "--"
         end
         row.catText:SetText(catStr)
 
@@ -1390,16 +1317,17 @@ local function RefreshContent()
 
     PopulateRows(lbFrame.scrollChild, SortedEntries(rawData))
 
-    -- Update social tab counts
-    local counts = { party=0, guild=0, friends=0 }
-    for _ in pairs(LB.GetPartyData())   do counts.party   = counts.party   + 1 end
-    for _ in pairs(LB.GetGuildData())   do counts.guild   = counts.guild   + 1 end
-    for _ in pairs(LB.GetFriendsData()) do counts.friends = counts.friends + 1 end
+    -- Update social tab counts (skip friends — it has a fixed N/A label)
+    local counts = { party=0, guild=0 }
+    for _ in pairs(LB.GetPartyData())   do counts.party = counts.party + 1 end
+    for _ in pairs(LB.GetGuildData())   do counts.guild = counts.guild + 1 end
 
     if lbFrame.socialTabs then
         for _, tab in ipairs(lbFrame.socialTabs) do
-            local c = counts[tab.key] or 0
-            tab.label:SetText(tab.name .. " (" .. c .. ")")
+            if tab.key ~= "friends" then
+                local c = counts[tab.key] or 0
+                tab.label:SetText(tab.name .. " (" .. c .. ")")
+            end
         end
     end
 
@@ -1522,10 +1450,13 @@ local function CreateLeaderboardFrame()
     xBtn:SetScript("OnClick",function() lbFrame:Hide() end)
 
     -- ── Row 1: Social tabs (y = -26) — Party | Guild | Friends ─────────────
+    -- Note: Friends tab is greyed out — BNGetFriendNumGameAccounts returns 0
+    -- in Midnight 12.0, making cross-realm friend whisper enumeration impossible.
+    -- Friends who share a guild or party still appear in those tabs.
     local socialDefs = {
         {key="party",   name="Party"},
         {key="guild",   name="Guild"},
-        {key="friends", name="Friends"},
+        {key="friends", name="Friends", disabled=true},
     }
     local socialW = math.floor(FW / #socialDefs)
     lbFrame.socialTabs = {}
@@ -1536,13 +1467,31 @@ local function CreateLeaderboardFrame()
         BD(tab, COLOR.TAB_IDLE, COLOR.BORDER)
         tab.key  = td.key ; tab.name = td.name
         tab.label = TF(tab, 11, "CENTER") ; tab.label:SetPoint("CENTER")
-        tab.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
-        tab.label:SetText(td.name)
-        tab:SetScript("OnClick", function()
-            -- Selecting a social tab exits Delve mode
-            if contentFilter == "delve" then contentFilter = "weekly" end
-            SetActiveTab(td.key)
-        end)
+
+        if td.disabled then
+            -- Greyed out — BNet friend enumeration unavailable in Midnight 12.0
+            tab.label:SetTextColor(0.35, 0.33, 0.30, 1)
+            tab.label:SetText(td.name .. " |cff555555(N/A)|r")
+            tab:EnableMouse(true)
+            tab:SetScript("OnEnter", function()
+                GameTooltip:SetOwner(tab, "ANCHOR_BOTTOM")
+                GameTooltip:SetText("Friends (Unavailable)", 1, 0.8, 0.1)
+                GameTooltip:AddLine("BNet friend enumeration is restricted in\nMidnight 12.0. Friends in your Guild or\nParty appear in those tabs instead.", 0.8, 0.8, 0.8, true)
+                GameTooltip:Show()
+            end)
+            tab:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            tab:SetScript("OnClick", function()
+                -- Show a brief message in the scroll area instead of switching
+                print("|cff00D1FFMidnight Sensei:|r Friends tab unavailable — BNet friend character enumeration is restricted in Midnight 12.0. Friends in your guild or party appear in those tabs.")
+            end)
+        else
+            tab.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+            tab.label:SetText(td.name)
+            tab:SetScript("OnClick", function()
+                if contentFilter == "delve" then contentFilter = "weekly" end
+                SetActiveTab(td.key)
+            end)
+        end
         table.insert(lbFrame.socialTabs, tab)
     end
 
@@ -1584,11 +1533,8 @@ local function CreateLeaderboardFrame()
         sb.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
         sb.label:SetText(sd.label)
         sb:SetScript("OnClick", function()
-            -- Sort buttons only apply to social tabs (not Delve)
-            if contentFilter ~= "delve" then
-                contentFilter = sd.key
-                RefreshContent()
-            end
+            contentFilter = sd.key
+            RefreshContent()
         end)
         table.insert(lbFrame.sortBtns, sb)
     end
@@ -1606,10 +1552,10 @@ local function CreateLeaderboardFrame()
         return fs
     end
     Hdr("#",      "LEFT",   4,  20)
-    Hdr("PLAYER", "LEFT",  36, 110)
-    Hdr("SPEC",   "LEFT", 150,  90)
-    lbFrame.hdrCat  = Hdr("D/R/N",  "RIGHT", -70, 70)
-    lbFrame.hdrWeek = Hdr("WK AVG", "RIGHT",  -2, 66)
+    Hdr("PLAYER", "LEFT",  36, 108)
+    Hdr("SPEC",   "LEFT", 148,  70)
+    lbFrame.hdrCat  = Hdr("DIFF / BOSS", "LEFT", 222, 230)
+    lbFrame.hdrWeek = Hdr("WK AVG",      "RIGHT", -2,  62)
 
     -- ── Scroll (starts at y = -114) ──────────────────────────────────────────
     local sf = CreateFrame("ScrollFrame", "MidnightSenseiLBScroll", lbFrame, "UIPanelScrollFrameTemplate")

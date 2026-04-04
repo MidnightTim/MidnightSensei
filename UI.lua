@@ -220,7 +220,8 @@ end
 --------------------------------------------------------------------------------
 -- History row context menu
 --------------------------------------------------------------------------------
-local histCtxMenu = BuildCtxMenu("MidnightSenseiCtxMenu", {
+local histCtxMenu   -- forward declare so closures below can reference it
+histCtxMenu = BuildCtxMenu("MidnightSenseiCtxMenu", {
     { label = "Inspect Details", fn = function()
         if histCtxMenu._enc then UI.ShowEncounterDetail(histCtxMenu._enc) end
     end },
@@ -453,15 +454,25 @@ local function BuildHistoryRows(scrollChild, encounters, rowFrames)
         row.gradeText:SetText("|cff" .. hex .. (enc.finalGrade or "?") .. "|r")
         row.charText:SetText(enc.charName or "?")
 
-        -- Spec column: "[B] SpecName M+12" or "SpecName Heroic" etc.
-        local bossTag  = enc.isBoss and "[B] " or ""
-        local diffSuffix = ""
-        if enc.keystoneLevel then
-            diffSuffix = " M+" .. enc.keystoneLevel
-        elseif enc.diffLabel and enc.diffLabel ~= "" and enc.diffLabel ~= "World" then
-            diffSuffix = " " .. enc.diffLabel
+        -- Spec column: show boss name on boss fights, spec+diff otherwise
+        local specLabel
+        if enc.isBoss and enc.bossName and enc.bossName ~= "" then
+            local ks = enc.keystoneLevel and (" M+"..enc.keystoneLevel) or ""
+            local diff = (not enc.keystoneLevel and enc.diffLabel
+                         and enc.diffLabel ~= "" and enc.diffLabel ~= "World")
+                         and (" "..enc.diffLabel) or ""
+            specLabel = "|cffFF6600[B]|r " .. enc.bossName .. diff .. ks
+        else
+            local bossTag  = enc.isBoss and "[B] " or ""
+            local diffSuffix = ""
+            if enc.keystoneLevel then
+                diffSuffix = " M+" .. enc.keystoneLevel
+            elseif enc.diffLabel and enc.diffLabel ~= "" and enc.diffLabel ~= "World" then
+                diffSuffix = " " .. enc.diffLabel
+            end
+            specLabel = bossTag .. (enc.specName or "?") .. diffSuffix
         end
-        row.specText:SetText(bossTag .. (enc.specName or "?") .. diffSuffix)
+        row.specText:SetText(specLabel)
 
         row.scoreText:SetText(tostring(enc.finalScore or 0))
         row.durText:SetText(FormatDuration(enc.duration))
@@ -1326,7 +1337,7 @@ function UI.ShowFAQ()
         " ",
         "|cffFFD700PLAY STYLE SETTING (Options -> Play Style)|r",
         "Manual: full grade range A+ through F (default).",
-        "Assisted: score capped at B+ (84). Use this if you play with a",
+        "Assisted: score capped at B (75). Use this if you play with a",
         "single-button macro or rotation helper. It keeps the leaderboard",
         "meaningful so A+ reflects real decision-making, not automation.",
         " ",

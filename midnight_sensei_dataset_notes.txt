@@ -1,0 +1,28 @@
+Midnight Sensei starter cooldown dataset
+=======================================
+
+What this file is:
+- A starter dataset for World of Warcraft: Midnight patch 12.0 / Season 1.
+- Focused on MAJOR SPEC COOLDOWNS and ACTIVE RACIALS that are relevant to burst windows, defensives, utility checks, and grading logic.
+- Not a dump of every spell in the game.
+
+Important caveats:
+- verification_status = verified_web means I directly confirmed the spell page or cooldown line from a live web source during this session.
+- verification_status = memory_compiled means the entry was compiled from current retail/Midnight knowledge and should be sanity-checked in game before final hard-coding.
+- verification_status = needs_ingame_check means I am explicitly not claiming the ID/cooldown is fully locked and it should be validated in game or against Wowhead/WoWDB before production use.
+- base_cooldown is the BASE or expected gameplay cooldown. Some specs can alter these with talents, hero talents, set bonuses, spec passives, and encounter effects.
+- resource_gated entries are intentionally included for Devourer because the burst window is not modeled by a simple static cooldown.
+
+Suggested Claude instructions:
+- Treat verified_web entries as higher-confidence.
+- Preserve unverified entries, but flag them for runtime validation or a second-pass data audit.
+- For MidnightSensei, use spell_id as the primary lookup key when present.
+- Add fields such as cooldown_type, talent_modified, charges, off_gcd, buff_aura_id, and paired_spell_id if your addon logic needs them.
+- For racials like Gift of the Naaru or Spatial Rift, support per-class or paired IDs where necessary.
+- Do not assume one cooldown per spec; many specs should track both offensive and defensive windows.
+
+Good next pass:
+1. Verify every memory_compiled spell_id against live WoWDB / Wowhead.
+2. Split shared abilities into per-spec rows where IDs differ.
+3. Add aura/buff spell IDs for tracked windows.
+4. Add talent gates and hero talent modifiers.
