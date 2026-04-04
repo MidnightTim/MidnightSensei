@@ -113,7 +113,6 @@ Provides insight into:
 |-----|------------|
 | Party | Live comparison with current group |
 | Guild | Tracks guild members as they log in |
-| Friends | Tracks Battle.net friends |
 
 ---
 
