@@ -1011,12 +1011,19 @@ function LB.GetGuildData()
             end
 
             local result = {}
-            for k, v in pairs(guildData) do result[k] = v end
+            for k, v in pairs(guildData) do
+                v.dbKey = k  -- stamp exact db key on every peer entry
+                result[k] = v
+            end
             result[myName] = selfEntry
             return result
         end
     end
 
+    -- Stamp the db key onto each entry so right-click remove uses the exact key.
+    for key, entry in pairs(guildData) do
+        entry.dbKey = key
+    end
     return guildData
 end
 
@@ -1123,6 +1130,28 @@ function LB.GetDelveData()
 
     return result
 end
+
+--------------------------------------------------------------------------------
+-- Admin: remove a single guild entry
+-- Clears the entry from SavedVariables. The player will repopulate automatically
+-- when they next broadcast (on login, group join, or Refresh → REQ).
+--------------------------------------------------------------------------------
+function LB.RemoveGuildEntry(dbKey)
+    if not dbKey then return end
+    local db = GetDB()
+    if not db then return end
+
+    if db.guild[dbKey] then
+        local displayName = ShortName(dbKey)
+        db.guild[dbKey] = nil
+        LB.RefreshUI()
+        print("|cff00D1FFMidnight Sensei:|r Removed |cffFFFFFF" .. displayName ..
+              "|r from the leaderboard. They will repopulate on Refresh or next login.")
+    else
+        print("|cffFF4444Midnight Sensei:|r Key '" .. dbKey .. "' not found. Run |cffFFFFFF/ms lb debug|r to list keys.")
+    end
+end
+
 
 function LB.ClearGuildData()
     local db = GetDB()
@@ -1339,6 +1368,29 @@ local function PopulateRows(scrollChild, entries)
         local dc = isOnline and COLOR.ONLINE or COLOR.OFFLINE
         row.onlineDot:SetColorTexture(dc[1],dc[2],dc[3],1)
         row.onlineDot:Show()
+
+        -- Right-click to remove from guild leaderboard (guild tab only, non-self)
+        if activeTab == "guild" and not entry.isSelf then
+            row:EnableMouse(true)
+            local entryDbKey = entry.dbKey or entry.name
+            row:SetScript("OnMouseUp", function(_, button)
+                if button == "RightButton" then
+                    LB.RemoveGuildEntry(entryDbKey)
+                end
+            end)
+            row:SetScript("OnEnter", function()
+                GameTooltip:SetOwner(row, "ANCHOR_TOPRIGHT")
+                GameTooltip:SetText("Right-click to remove from leaderboard", 0.8, 0.8, 0.8)
+                GameTooltip:Show()
+            end)
+            row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        else
+            row:EnableMouse(false)
+            row:SetScript("OnMouseUp", nil)
+            row:SetScript("OnEnter", nil)
+            row:SetScript("OnLeave", nil)
+        end
+
         row:Show()
         yOff = yOff + 22
     end

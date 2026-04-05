@@ -1154,6 +1154,111 @@ function UI.ShowReportPopup()
 end
 
 --------------------------------------------------------------------------------
+-- Verify Export Window
+-- Large scrollable multi-line editbox for copying verify report text.
+-- Built as a custom frame since StaticPopup editboxes are too small.
+--------------------------------------------------------------------------------
+local verifyExportFrame = nil
+
+function UI.ShowVerifyExport(text)
+    if not verifyExportFrame then
+        local f = CreateFrame("Frame", "MidnightSenseiVerifyExport", UIParent, "BackdropTemplate")
+        f:SetSize(540, 400)
+        f:SetPoint("CENTER")
+        f:SetFrameStrata("HIGH")
+        f:SetMovable(true)
+        f:SetClampedToScreen(true)
+        f:EnableMouse(true)
+        if f.SetBackdrop then
+            f:SetBackdrop({
+                bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
+                edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                tile=true, tileSize=16, edgeSize=12,
+                insets={left=2,right=2,top=2,bottom=2}
+            })
+            f:SetBackdropColor(0.06,0.06,0.10,0.97)
+            f:SetBackdropBorderColor(1.00,0.65,0.00,0.90)
+        end
+
+        -- Title bar / drag
+        local tBar = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        tBar:SetPoint("TOPLEFT",  f,"TOPLEFT",  0, 0)
+        tBar:SetPoint("TOPRIGHT", f,"TOPRIGHT", 0, 0)
+        tBar:SetHeight(26)
+        if tBar.SetBackdrop then
+            tBar:SetBackdrop({bgFile="Interface/Tooltips/UI-Tooltip-Background",
+                              edgeFile="Interface/Tooltips/UI-Tooltip-Border",
+                              tile=true,tileSize=16,edgeSize=12,
+                              insets={left=2,right=2,top=2,bottom=2}})
+            tBar:SetBackdropColor(0.10,0.10,0.18,1)
+            tBar:SetBackdropBorderColor(1.00,0.65,0.00,0.90)
+        end
+        tBar:EnableMouse(true)
+        tBar:RegisterForDrag("LeftButton")
+        tBar:SetScript("OnDragStart", function() f:StartMoving() end)
+        tBar:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
+
+        local title = tBar:CreateFontString(nil,"OVERLAY")
+        title:SetFont("Fonts/FRIZQT__.TTF", 12, "")
+        title:SetPoint("CENTER", tBar, "CENTER")
+        title:SetTextColor(1.00,0.65,0.00,1)
+        title:SetText("Midnight Sensei — Verify Report")
+
+        local xBtn = CreateFrame("Button", nil, tBar)
+        xBtn:SetSize(18,18)
+        xBtn:SetPoint("RIGHT", tBar, "RIGHT", -4, 0)
+        local xFs = xBtn:CreateFontString(nil,"OVERLAY")
+        xFs:SetFont("Fonts/FRIZQT__.TTF",11,"")
+        xFs:SetPoint("CENTER")
+        xFs:SetText("X")
+        xFs:SetTextColor(1,0.4,0.4,1)
+        xBtn:SetScript("OnClick", function() f:Hide() end)
+
+        -- Instruction text
+        local hint = f:CreateFontString(nil,"OVERLAY")
+        hint:SetFont("Fonts/FRIZQT__.TTF", 9, "")
+        hint:SetPoint("TOPLEFT",  f,"TOPLEFT",  10, -32)
+        hint:SetPoint("TOPRIGHT", f,"TOPRIGHT", -10,-32)
+        hint:SetTextColor(0.55,0.53,0.50,1)
+        hint:SetJustifyH("LEFT")
+        hint:SetText("Ctrl+A to select all  ·  Ctrl+C to copy  ·  Paste into a GitHub comment")
+
+        -- Scrollable editbox
+        local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT",     f,"TOPLEFT",   10, -46)
+        sf:SetPoint("BOTTOMRIGHT", f,"BOTTOMRIGHT",-28, 36)
+
+        local eb = CreateFrame("EditBox", nil, sf)
+        eb:SetMultiLine(true)
+        eb:SetFontObject(ChatFontNormal)
+        eb:SetWidth(sf:GetWidth())
+        eb:SetAutoFocus(false)
+        eb:SetTextInsets(4,4,4,4)
+        eb:EnableMouse(true)
+        -- Read-only feel: restore text if edited
+        eb:SetScript("OnEscapePressed", function() f:Hide() end)
+        sf:SetScrollChild(eb)
+
+        -- Close button
+        local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        closeBtn:SetSize(80,22)
+        closeBtn:SetPoint("BOTTOM", f,"BOTTOM", 0, 8)
+        closeBtn:SetText("Close")
+        closeBtn:SetScript("OnClick", function() f:Hide() end)
+
+        f.editBox = eb
+        verifyExportFrame = f
+    end
+
+    -- Strip WoW colour codes for clean plain-text export
+    local plain = text:gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r",""):gsub("|n","\n")
+    verifyExportFrame.editBox:SetText(plain)
+    verifyExportFrame.editBox:SetFocus()
+    verifyExportFrame.editBox:HighlightText()
+    verifyExportFrame:Show()
+end
+
+--------------------------------------------------------------------------------
 -- Credits panel  (ScrollFrame - prevents text overflow)
 --------------------------------------------------------------------------------
 local creditsFrame = nil
@@ -1224,7 +1329,7 @@ function UI.ShowCredits()
             "  - Social leaderboard: guild, party, and BNet friends rankings",
             "  - Weekly reset: aligned to Blizzard's Tuesday 7am PDT reset",
             "  - Delve tracking: tier-based scoring for solo content",
-            "  - GRM-style sync: recover your scores after a reinstall",
+            "  - Score sync: syncs across guild members to recover scores after reinstall",
             " ",
             "|cffFFD700Contact:|r  MidnightTim on GitHub (MidnightTim/MidnightSensei)",
             " ",
@@ -1330,6 +1435,26 @@ function UI.ShowCredits()
     end)
 end
 
+-- Opens the Credits panel directly on the Changelog tab (tab 3)
+function UI.ShowChangelog()
+    UI.ShowCredits()
+    C_Timer.After(0.05, function()
+        if creditsFrame and creditsFrame._tabPanels then
+            -- Simulate clicking the Changelog tab (index 3)
+            for i, p in ipairs(creditsFrame._tabPanels) do p:SetShown(i == 3) end
+            if creditsFrame._tabBtns then
+                for i, b in ipairs(creditsFrame._tabBtns) do
+                    ApplyBackdrop(b, i == 3 and {0.12,0.12,0.20,0.95} or C.BG_LIGHT, C.BORDER)
+                    b.label:SetTextColor(
+                        i == 3 and C.ACCENT[1] or C.TEXT_DIM[1],
+                        i == 3 and C.ACCENT[2] or C.TEXT_DIM[2],
+                        i == 3 and C.ACCENT[3] or C.TEXT_DIM[3], 1)
+                end
+            end
+        end
+    end)
+end
+
 --------------------------------------------------------------------------------
 -- FAQ / Help panel
 --------------------------------------------------------------------------------
@@ -1340,13 +1465,15 @@ function UI.ShowFAQ()
         "|cff00D1FFMidnight Sensei - Help & FAQ|r",
         " ",
         "|cffFFD700GETTING STARTED|r",
-        "Type |cffFFFFFF/ms|r to show or hide the HUD. The HUD shows your last grade,",
-        "score, and spec. After a fight you will see a |cffFFFFFF>> Review Fight|r button.",
-        "Right-click the HUD for quick access to all features.",
+        "Type |cffFFFFFF/ms show|r to open the HUD, |cffFFFFFF/ms hide|r to close it.",
+        "The HUD shows your last grade, score, and spec. After a fight you",
+        "will see a |cffFFFFFF>> Review Fight|r button. Right-click the HUD for quick",
+        "access to all features.",
         " ",
         "|cffFFD700UNDERSTANDING YOUR GRADE|r",
         "Grades run from F through A+. Each spec has weighted categories:",
-        "  - Cooldown Usage: did you press your big buttons on cooldown?",
+        "  - Cooldown Usage: did you press your major cooldowns on cooldown?",
+        "  - Rotational Spells: did you use key rotation abilities each fight?",
         "  - Activity: were you casting consistently? (no long idle gaps)",
         "  - Resource Mgmt: did you overcap your resource (Rage/Energy/etc)?",
         "  - Buff Uptime: did you keep your self-buffs active? (specs vary)",
@@ -1355,11 +1482,17 @@ function UI.ShowFAQ()
         " ",
         "A fight shorter than 15 seconds is not recorded.",
         " ",
+        "|cffFFD700ROTATIONAL SPELL FEEDBACK|r",
+        "In addition to cooldowns, Midnight Sensei tracks whether you used",
+        "key rotational spells each fight (e.g. Implosion, Rake, Obliterate).",
+        "If you never used one in a long enough fight, it will appear in your",
+        "feedback. Talent-gated spells are skipped if you don't have the talent.",
+        " ",
         "|cffFFD700VISIBILITY OPTIONS|r",
         "Open |cffFFFFFF/ms options|r (or right-click HUD -> Options) and set:",
         "  Always: HUD always visible",
         "  In Combat: HUD only shows while in combat",
-        "  Hide: HUD hidden (accessible via /ms)",
+        "  Hide: HUD hidden (accessible via /ms show)",
         " ",
         "|cffFFD700GRADE HISTORY|r",
         "Type |cffFFFFFF/ms history|r or right-click -> Grade History.",
@@ -1372,36 +1505,43 @@ function UI.ShowFAQ()
         "Type |cffFFFFFF/ms lb|r to open the social leaderboard.",
         "After each boss fight your score broadcasts to guild, party, and",
         "BNet friends who also have Midnight Sensei installed.",
-        "Tabs: Party (session), Guild (persists), Friends, Delve (personal).",
-        "Weekly average counts boss encounters only - trash pulls and target",
+        "Tabs: Party (session only), Guild (persists across sessions), Friends.",
+        "Guild scores persist between sessions and sync across guild members —",
+        "even if a player is offline you can still see their last recorded score.",
+        "Weekly average counts boss encounters only — trash pulls and target",
         "dummies are never included in rankings.",
+        "Right-click any guild row to remove a player. They repopulate",
+        "automatically when they next log in or you hit Refresh.",
         " ",
         "|cffFFD700NOTE ON MIDNIGHT 12.0 RESTRICTIONS|r",
-        "Blizzard removed CLEU and restricted enemy unit aura reads in 12.0.",
-        "Debuff uptime (Rupture, Flame Shock, etc.) cannot be tracked; those",
-        "categories fall back to a neutral score. All other categories work.",
+        "Blizzard restricted enemy unit aura reads in Midnight 12.0.",
+        "Target debuffs (Rupture, Flame Shock, etc.) cannot be tracked directly.",
+        "These show in your priorityNotes as guidance but are not scored.",
+        "All player self-buffs, cooldowns, and rotational casts work normally.",
         " ",
         "|cffFFD700BOSS VS NORMAL COMBAT|r",
         "Midnight Sensei detects boss encounters via ENCOUNTER_START/END.",
         "Boss fights show a |cffFF6600[Boss]|r tag in history and encounter detail.",
         "Filter your history to |cffFFFFFF[Boss] Only|r to review raid/dungeon boss pulls.",
-        "Cooldown feedback on boss fights includes a reminder to align CDs",
-        "with boss damage windows rather than using them immediately.",
         " ",
         "|cffFFD700TALENT-AWARE COOLDOWNS|r",
-        "Cooldown feedback only lists spells you actually have learned.",
-        "Talents that replace other abilities are handled automatically;",
-        "if you don't have a spell in your spellbook it won't be scored.",
+        "Cooldown scoring only includes spells you have learned.",
+        "If you don't have a talent, it won't be scored against you.",
         " ",
         "|cffFFD700ALL COMMANDS|r",
-        "  /ms             Toggle HUD",
-        "  /ms history     Grade history & trending",
-        "  /ms lb          Social leaderboard",
-        "  /ms options     Settings",
-        "  /ms credits     Attribution",
-        "  /ms help        This panel",
-        "  /ms reset       Clear fight history",
-        "  /ms debug       Show current spec / class IDs",
+        "  /ms show         Show the HUD",
+        "  /ms hide         Hide the HUD",
+        "  /ms history      Grade history & trending",
+        "  /ms lb           Social leaderboard",
+        "  /ms lb remove    Remove a player from guild leaderboard",
+        "  /ms options      Settings",
+        "  /ms faq          This panel",
+        "  /ms update       View changelog",
+        "  /ms credits      Credits & about",
+        "  /ms report       Report a bug on GitHub",
+        "  /ms reset        Clear fight history",
+        "  /ms verify       Toggle spell ID verification mode (dev)",
+        "  /ms debug        Show current spec / class IDs",
     }
 
     if not faqFrame then
@@ -1524,6 +1664,20 @@ function UI.ToggleMainFrame()
         ApplyHudVisibility("show")
         f:Show()
     end
+end
+
+function UI.ShowMainFrame()
+    local f = CreateMainFrame()
+    local lastEnc = MS.Analytics and MS.Analytics.GetLastEncounter and MS.Analytics.GetLastEncounter()
+    PopulateHudFromResult(lastEnc)
+    f.specText:SetText(Core.GetSpecInfoString())
+    ApplyHudVisibility("show")
+    f:Show()
+end
+
+function UI.HideMainFrame()
+    local f = CreateMainFrame()
+    f:Hide()
 end
 
 -- Spec change: update HUD spec text

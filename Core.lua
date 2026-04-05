@@ -32,7 +32,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.2.6"
+    Core.VERSION = ver or "1.2.9"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -239,6 +239,89 @@ Core.CREDITS = {
 
 Core.CHANGELOG = {
     {
+        version = "1.2.9",
+        tagline = "Spec Coverage & Feedback Accuracy",
+        date    = "April 2026",
+        changes = {
+            "Added Devourer Demon Hunter spec (Midnight 12.0 new spec, specIdx 3)",
+            "Fixed multi-character delve leaderboard overwrite — each alt now gets its own row",
+            "Rotational spell tracking added for all 39 specs across all 13 classes",
+            "Feedback fires only when fight is long enough to reasonably expect the spell",
+            "Talent-gated rotational spells (e.g. Power Siphon) now correctly skipped via IsPlayerSpell",
+            "Enemy debuffs removed from uptimeBuffs across all affected specs — were scoring silently as zero",
+            "Duration guards added: neverUsed CD feedback requires 30s+, underused requires 90s+",
+            "Leaderboard right-click remove fixed — now uses exact db.guild key, no fuzzy matching",
+            "Added /ms lb debug to print all stored guild DB keys for diagnostics",
+            "Added /ms verify and /ms verify report — in-game spell ID and aura verification tool",
+            "Verify report opens in a scrollable copy-paste export window for GitHub issues",
+            "/ms bare now prints a short usage hint; /ms show and /ms hide are explicit commands",
+            "/ms help prints the command list inline; /ms faq opens the FAQ panel",
+        },
+    },
+    {
+        version = "1.2.8",
+        tagline = "Shaman & Warlock Spec Pass",
+        date    = "April 2026",
+        changes = {
+            "All three Shaman specs updated: Flame Shock removed from uptimeBuffs (enemy debuff)",
+            "Elemental: Primordial Wave added to majorCooldowns",
+            "Enhancement: Primordial Wave and Sundering added; Maelstrom Weapon kept in procBuffs",
+            "Restoration: Cloudburst Totem and Ancestral Guidance added to majorCooldowns",
+            "Affliction: DoT uptimeBuffs removed; Haunt added to rotationalSpells",
+            "Demonology: Implosion moved from majorCooldowns to rotationalSpells; Power Siphon added as talent-gated",
+            "Destruction: Immolate removed from uptimeBuffs; rotationalSpells added",
+        },
+    },
+    {
+        version = "1.2.7",
+        tagline = "Tracking Architecture Overhaul",
+        date    = "April 2026",
+        changes = {
+            "rotationalSpells bucket introduced — tracks important non-cooldown abilities via ABILITY_USED",
+            "Feedback generated only when spell never used and fight exceeded per-spell minFightSeconds threshold",
+            "talentGated flag added — talent-dependent spells gated by IsPlayerSpell at fight start",
+            "Roll the Bones duplicate fixed in Outlaw — was tracked in both majorCooldowns and procBuffs",
+            "Fire Mage Ignite removed from uptimeBuffs (enemy debuff)",
+            "Unholy DK Blood Plague removed from uptimeBuffs (enemy debuff)",
+            "Fury Warrior scoreWeights corrected: Enrage is a player self-buff, not a debuff",
+            "Augmentation Evoker scoreWeights corrected: Ebon Might is a player self-buff",
+        },
+    },
+    {
+        version = "1.2.6",
+        tagline = "Spec Database Accuracy Pass",
+        date    = "April 2026",
+        changes = {
+            "Enemy debuffs removed from uptimeBuffs for Arms Warrior, all Rogues, Shadow Priest, both Druids, all Hunters",
+            "scoreWeights corrected on all affected specs to remove debuffUptime weight with no trackable data",
+            "Colossus Smash, Rupture, Garrote, Find Weakness, SW:Pain, VT, Moonfire, Sunfire, Rip, Rake all moved to priorityNotes",
+            "All 39 specs verified for correct player-aura-only uptimeBuffs",
+        },
+    },
+    {
+        version = "1.2.5",
+        tagline = "Racial Cooldowns & Version Detection",
+        date    = "April 2026",
+        changes = {
+            "13 combat racial cooldowns added and scored per role via IsPlayerSpell gate",
+            "Version broadcast on login, group join, and guild roster update",
+            "Runtime version detection via C_AddOns.GetAddOnMetadata with hardcoded fallback",
+            "New version notification: 'A new version is available. Check Github for latest update.'",
+        },
+    },
+    {
+        version = "1.2.1",
+        tagline = "Grading & Feedback Refinements",
+        date    = "April 2026",
+        changes = {
+            "inferSimplified behavioral inference added — internal tone modifier, never modifies score",
+            "GenerateFeedback rewritten: up to 8 messages, Biggest Gain labeled in-place",
+            "Healer feedback separated from DPS/tank feedback paths",
+            "Overcap feedback edge-triggered — fires once per overcap entry, not every tick",
+            "ScoreHealerEfficiency returns nil when no healing done, excluded from weighted score",
+        },
+    },
+    {
         version = "1.2.0",
         tagline = "Leaderboard Overhaul & Delve Support",
         date    = "April 2026",
@@ -266,7 +349,7 @@ Core.CHANGELOG = {
             "Boss fight detection via ENCOUNTER_START/END WoW events",
             "Difficulty labels for all content: LFR/Normal/Heroic/Mythic for raids, Normal/Heroic/Mythic/M+N for dungeons, Tier N for delves",
             "Checksum-based integrity system on all leaderboard broadcasts",
-            "GRM-style peer sync -- recover your scores after a reinstall via guild members",
+            "Syncs across guild members — recover your scores after a reinstall",
             "Player appears in their own Guild tab immediately (self-entry injection)",
             "Review Fight button works on login/reload (DB fallback fixed)",
         },
@@ -1705,11 +1788,33 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         if MS.CombatLog and MS.CombatLog.ProcessUnitAura then
             MS.CombatLog.ProcessUnitAura(unit)
         end
+        -- Verify mode: check all spec aura IDs when player auras change
+        if Core.VerifyMode and unit == "player" and C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+            local spec = Core.ActiveSpec
+            if spec then
+                Core.VerifySeenAuras = Core.VerifySeenAuras or {}
+                for _, a in ipairs(spec.procBuffs   or {}) do
+                    if C_UnitAuras.GetPlayerAuraBySpellID(a.id) then
+                        Core.VerifySeenAuras[a.id] = true
+                    end
+                end
+                for _, a in ipairs(spec.uptimeBuffs or {}) do
+                    if C_UnitAuras.GetPlayerAuraBySpellID(a.id) then
+                        Core.VerifySeenAuras[a.id] = true
+                    end
+                end
+            end
+        end
 
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         local unit, _, spellID = ...
         if unit == "player" and spellID then
             Core.Emit(Core.EVENTS.ABILITY_USED, spellID, GetTime())
+            -- Verify mode: record every spell ID cast
+            if Core.VerifyMode then
+                Core.VerifySeenSpells = Core.VerifySeenSpells or {}
+                Core.VerifySeenSpells[spellID] = (Core.VerifySeenSpells[spellID] or 0) + 1
+            end
         end
 
     elseif event == "GROUP_ROSTER_UPDATE" or event == "GUILD_ROSTER_UPDATE" then
@@ -1757,135 +1862,54 @@ SLASH_MIDNIGHTSENSEI2 = "/midnightsensei"
 
 SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
     msg = (msg or ""):lower():trim()
-    if msg == "" or msg == "show" then
-        Call(MS.UI, "ToggleMainFrame")
-        -- Print a quick tip so players know other commands exist
-        print("|cff00D1FFMidnight Sensei:|r Type |cffFFFFFF/ms help|r for all commands.")
+    if msg == "" then
+        print("|cff00D1FFMidnight Sensei:|r Type |cffFFFFFF/ms show|r to open the HUD  ·  |cffFFFFFF/ms hide|r to close it  ·  |cffFFFFFF/ms help|r for all commands.")
+    elseif msg == "show" then
+        Call(MS.UI, "ShowMainFrame")
+    elseif msg == "hide" then
+        Call(MS.UI, "HideMainFrame")
     elseif msg == "options" or msg == "config" then Call(MS.UI, "OpenOptions")
-    elseif msg == "help"    or msg == "?"      then Call(MS.UI, "ShowFAQ")
+    elseif msg == "help"    or msg == "?"      then
+        print("|cff00D1FFMidnight Sensei Commands:|r")
+        print("  /ms show          Show the HUD")
+        print("  /ms hide          Hide the HUD")
+        print("  /ms history       Grade history & trends")
+        print("  /ms lb            Social leaderboard")
+        print("  /ms options       Settings panel")
+        print("  /ms faq           Help & FAQ panel")
+        print("  /ms credits       Credits & about")
+        print("  /ms report        Report a bug on GitHub")
+        print("  /ms reset         Clear fight history")
+        print("  /ms update        Show changelog")
+        print("  /ms debug         Current spec / class IDs")
+        print("  /ms verify        Toggle spell ID verify mode (dev tool)")
+        print("  /ms verify report Print verify findings for current spec")
+    elseif msg == "faq"                        then Call(MS.UI, "ShowFAQ")
     elseif msg == "credits"                    then Call(MS.UI, "ShowCredits")
     elseif msg == "report"                     then Call(MS.UI, "ShowReportPopup")
     elseif msg == "history"                    then Call(MS.UI, "ShowHistory")
     elseif msg == "leaderboard" or msg == "lb" then Call(MS.Leaderboard, "Toggle")
-    elseif msg == "lb fix" then
-        -- ── Beta maintenance: scan and repair leaderboard data issues ─────────
-        -- Removes entries with no meaningful score data, deduplicates guild
-        -- entries with score=0 and no allTimeBest, and prints a summary.
-        -- Remove this command before shipping out of beta.
-        local db = MidnightSenseiDB
-        if not db then
-            print("|cff00D1FFMidnight Sensei:|r No saved data found.")
+    elseif msg == "lb debug" then
+        local db = MidnightSenseiDB and MidnightSenseiDB.leaderboard
+        local guild = db and db.guild
+        if not guild or not next(guild) then
+            print("|cff00D1FFMidnight Sensei:|r Guild DB is empty.")
         else
-            local fixed = 0
-
-            -- 1. Purge guild entries with zero allTimeBest and zero score
-            --    (ghost entries from HELLO before any fight was completed)
-            if db.guild then
-                local toRemove = {}
-                for name, entry in pairs(db.guild) do
-                    local hasMeaningfulData = (entry.allTimeBest or 0) > 0
-                        or (entry.score or 0) > 0
-                        or (entry.weeklyAvg or 0) > 0
-                    if not hasMeaningfulData then
-                        table.insert(toRemove, name)
-                    end
-                end
-                for _, name in ipairs(toRemove) do
-                    db.guild[name] = nil
-                    fixed = fixed + 1
-                    print("|cff888888  Removed ghost guild entry:|r " .. name)
-                end
-            end
-
-            -- 2. Scan encounter history for entries missing class/spec fields
-            --    and back-fill from charName if possible (best-effort).
-            if db.encounters then
-                local patched = 0
-                for i, enc in ipairs(db.encounters) do
-                    if not enc.className or enc.className == "?" then
-                        -- Can't recover class from here; just flag it
-                        patched = patched + 1
-                    end
-                    -- Ensure encType is never nil (older saves may lack it)
-                    if not enc.encType then
-                        enc.encType = "normal"
-                        patched = patched + 1
-                    end
-                end
-                if patched > 0 then
-                    print("|cff888888  Patched " .. patched .. " encounter record(s) with missing fields.|r")
-                    fixed = fixed + patched
-                end
-            end
-
-            -- 3. Report duplicates in encounter history (same timestamp within 1s)
-            if db.encounters then
-                local seen = {}
-                local dupes = 0
-                for i = #db.encounters, 1, -1 do
-                    local enc = db.encounters[i]
-                    local key = (enc.timestamp or 0) .. "_" .. (enc.finalScore or 0)
-                    if seen[key] then
-                        table.remove(db.encounters, i)
-                        dupes = dupes + 1
-                    else
-                        seen[key] = true
-                    end
-                end
-                if dupes > 0 then
-                    print("|cff888888  Removed " .. dupes .. " duplicate encounter(s).|r")
-                    fixed = fixed + dupes
-                end
-            end
-
-            if fixed == 0 then
-                print("|cff00D1FFMidnight Sensei:|r Leaderboard data looks clean — nothing to fix.")
-            else
-                print("|cff00D1FFMidnight Sensei:|r Fixed " .. fixed .. " issue(s). Reopen the leaderboard to see changes.")
-                if MS.Leaderboard and MS.Leaderboard.RefreshUI then
-                    MS.Leaderboard.RefreshUI()
-                end
+            print("|cff00D1FFMidnight Sensei — Guild DB keys:|r")
+            for k, v in pairs(guild) do
+                print(string.format("  |cffFFFFFF%s|r  name=%s  score=%s",
+                      k, tostring(v.name), tostring(v.score)))
             end
         end
-        if MidnightSenseiDB then
-            MidnightSenseiDB.encounters = {}
-            MidnightSenseiDB.stats = {}
-            print("|cff00D1FFMidnight Sensei:|r Encounter history cleared.")
+    elseif msg:sub(1, 10) == "lb remove " then
+        local name = msg:sub(11)
+        if name and name ~= "" then
+            Call(MS.Leaderboard, "RemoveGuildEntry", name)
+        else
+            print("|cff00D1FFMidnight Sensei:|r Usage: /ms lb remove <PlayerName>")
         end
     elseif msg == "update" then
-        local v = Core.VERSION
-        print("|cff00D1FFMidnight Sensei v" .. v .. "|r   -  " .. Core.TAGLINE)
-        print(" ")
-        print("|cffFFD700v1.2.0|r  |cff888888 -  Leaderboard Overhaul & Delve Support|r")
-        print("  + Leaderboard redesigned: Social row (Party/Guild/Friends),")
-        print("    Content row (Delves/Dungeons/Raids), Sort row (Week Avg/All-Time)")
-        print("  + Delve tab shows personal delve run history with tier labels")
-        print("  + Weekly average is now boss-encounters-only (hardcoded, not optional)")
-        print("  + Weekly average fixed  -  was not persisting across reloads")
-        print("  + Weekly reset now aligned to Tuesday 7am PDT (Blizzard reset)")
-        print("  + BNet friends now receive scores via whisper, not just guild channel")
-        print("  + Party channel spam fix for LFD/instance groups")
-        print("  + Grading is now fully behavior-driven — Play Style setting removed")
-        print("  + Registered in WoW Options -> AddOns panel")
-        print("  + Credits panel now has About and Sources tabs")
-        print("  + os.time() crash fixed (not available in WoW Lua environment)")
-        print(" ")
-        print("|cffFFD700v1.1.0|r  |cff888888 -  Leaderboard & Boss Tracking|r")
-        print("  + Social leaderboard: Party, Guild, Friends tabs")
-        print("  + Boss fight detection via ENCOUNTER_START/END events")
-        print("  + Difficulty labels: LFR/Normal/Heroic/Mythic for raids,")
-        print("    Normal/Heroic/Mythic/M+N for dungeons, Tier N for delves")
-        print("  + Integrity checksums on leaderboard score broadcasts")
-        print("  + GRM-style peer sync for score recovery after reinstall")
-        print("  + Leaderboard weekly avg aligned to WoW weekly reset")
-        print(" ")
-        print("|cffFFD700v1.0.0|r  |cff888888 -  Initial Release|r")
-        print("  + Fight grading A+ through F for all 13 classes / 39 specs")
-        print("  + Talent-aware cooldown scoring (IsPlayerSpell check at fight start)")
-        print("  + Per-role scoring: DPS activity, healer efficiency, tank mitigation")
-        print("  + Grade history panel with trend sparkline and encounter detail")
-        print("  + HUD with post-fight review button and right-click context menu")
-        print("  + Midnight 12.0 compatible: UNIT_AURA replaces blocked CLEU")
+        Call(MS.UI, "ShowChangelog")
     elseif msg == "debuglog" then
         local buf = MidnightSenseiDB and MidnightSenseiDB.debugLog
         if not buf or #buf == 0 then
@@ -1919,6 +1943,108 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         else
             print("  No fight result available yet.")
         end
+    elseif msg == "verify" then
+        Core.VerifyMode = not Core.VerifyMode
+        Core.VerifySeenSpells  = Core.VerifySeenSpells  or {}
+        Core.VerifySeenAuras   = Core.VerifySeenAuras   or {}
+        if Core.VerifyMode then
+            Core.VerifySeenSpells = {}
+            Core.VerifySeenAuras  = {}
+            print("|cff00D1FFMidnight Sensei Verify Mode: ON|r")
+            print("|cff888888Cast your spells normally. After combat type /ms verify report.|r")
+        else
+            print("|cff00D1FFMidnight Sensei Verify Mode: OFF|r")
+        end
+
+    elseif msg == "verify report" then
+        local spec = Core.ActiveSpec
+        if not spec then
+            print("|cff00D1FFMidnight Sensei:|r No spec loaded.")
+        else
+            local lines = {}
+            local function L(s) table.insert(lines, s) end
+
+            L("Midnight Sensei — Verify Report")
+            L("Spec: " .. (spec.className or "?") .. " / " .. (spec.name or "?"))
+            L("Version: " .. Core.VERSION)
+            L(string.rep("-", 50))
+
+            L("SPELL ID CHECK (majorCooldowns + rotationalSpells)")
+            local allTracked = {}
+            for _, cd in ipairs(spec.majorCooldowns or {}) do
+                allTracked[cd.id] = { label = cd.label, bucket = "majorCooldowns" }
+            end
+            for _, rs in ipairs(spec.rotationalSpells or {}) do
+                allTracked[rs.id] = { label = rs.label, bucket = "rotationalSpells" }
+            end
+
+            local seen = Core.VerifySeenSpells or {}
+            for id, info in pairs(allTracked) do
+                local fired = seen[id]
+                if fired then
+                    L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]",
+                      info.label, id, fired, info.bucket))
+                else
+                    L(string.format("  FAIL  %-30s id=%-8d NOT SEEN    [%s]",
+                      info.label, id, info.bucket))
+                end
+            end
+
+            L("")
+            L("AURA CHECK (procBuffs + uptimeBuffs)")
+            local allAuras = {}
+            for _, a in ipairs(spec.procBuffs   or {}) do allAuras[a.id] = { label=a.label, bucket="procBuffs"   } end
+            for _, a in ipairs(spec.uptimeBuffs or {}) do allAuras[a.id] = { label=a.label, bucket="uptimeBuffs" } end
+
+            if not next(allAuras) then
+                L("  (no auras defined for this spec)")
+            else
+                for id, info in pairs(allAuras) do
+                    local active, seenVia = false, (Core.VerifySeenAuras or {})[id]
+                    if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+                        local ok, r = pcall(C_UnitAuras.GetPlayerAuraBySpellID, id)
+                        if ok and r then active = true end
+                    end
+                    if active then
+                        L(string.format("  PASS  %-30s id=%-8d ACTIVE NOW       [%s]", info.label, id, info.bucket))
+                    elseif seenVia then
+                        L(string.format("  SEEN  %-30s id=%-8d seen not active   [%s]", info.label, id, info.bucket))
+                    else
+                        L(string.format("  FAIL  %-30s id=%-8d NOT DETECTED      [%s]", info.label, id, info.bucket))
+                    end
+                end
+            end
+
+            L("")
+            local unknownCasts = {}
+            for id, count in pairs(Core.VerifySeenSpells or {}) do
+                if not allTracked[id] then table.insert(unknownCasts, {id=id, count=count}) end
+            end
+            if #unknownCasts > 0 then
+                table.sort(unknownCasts, function(a,b) return a.count > b.count end)
+                L("OTHER SPELLS CAST THIS SESSION (top 10 by count)")
+                for i = 1, math.min(10, #unknownCasts) do
+                    local e = unknownCasts[i]
+                    local spellName = "unknown"
+                    if C_Spell and C_Spell.GetSpellName then
+                        local ok, n = pcall(C_Spell.GetSpellName, e.id)
+                        if ok and n then spellName = n end
+                    end
+                    L(string.format("    id=%-8d  %-30s  x%d", e.id, spellName, e.count))
+                end
+            end
+
+            L("")
+            L("-- paste into a GitHub comment: https://github.com/MidnightTim/MidnightSensei/issues")
+
+            local fullText = table.concat(lines, "\n")
+            if MS.UI and MS.UI.ShowVerifyExport then
+                MS.UI.ShowVerifyExport(fullText)
+            else
+                for _, line in ipairs(lines) do print(line) end
+            end
+        end
+
     elseif msg == "debug version" then
         print("|cff00D1FFMidnight Sensei Version Debug:|r")
         print("  Core.VERSION = " .. tostring(Core.VERSION))
@@ -1999,21 +2125,7 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
             if count == 0 then print("    (empty)") end
         end
     else
-        print("|cff00D1FFMidnight Sensei Commands:|r")
-        print("  /ms               Toggle main HUD")
-        print("  /ms history       Grade history & trends")
-        print("  /ms lb            Social leaderboard")
-        print("  /ms options       Settings panel")
-        print("  /ms help          Help & FAQ")
-        print("  /ms credits       Credits & about")
-        print("  /ms about         Same as /ms credits")
-        print("  /ms report        Report a bug on GitHub")
-        print("  /ms reset         Clear fight history")
-        print("  /ms update        Show changelog")
-        print("  /ms debug         Current spec / class IDs")
-        print("  /ms debug friends  BNet friend detection diagnostic")
-        print("  /ms lb fix        [BETA] Scan and repair leaderboard data issues")
-        print("  /ms debuglog clear  Clear the debug log")
+        print("|cff00D1FFMidnight Sensei:|r Unknown command. Type |cffFFFFFF/ms help|r for a list of commands.")
     end
 end
 
