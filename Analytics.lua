@@ -153,18 +153,23 @@ local function OnCombatStart()
         end
     end
 
-    -- Populate rotational spell tracking — important non-cooldown rotational abilities.
-    -- No IsPlayerSpell gate here: unlike majorCooldowns (which affect score), rotationalSpells
-    -- only generate feedback text. The real gate is minFightSeconds — a short fight suppresses
-    -- the feedback entirely. If the player never casts the spell in a long fight, that IS
-    -- the signal we want to surface.
+    -- Populate rotational spell tracking.
+    -- No IsPlayerSpell gate by default — presence feedback is the safety net.
+    -- Exception: entries marked talentGated=true are gated by IsPlayerSpell
+    -- so players without those talents don't get false "never used" feedback.
     if spec and spec.rotationalSpells then
         for _, rs in ipairs(spec.rotationalSpells) do
-            rotationalTracking[rs.id] = {
-                useCount        = 0,
-                label           = rs.label,
-                minFightSeconds = rs.minFightSeconds or 60,
-            }
+            local include = true
+            if rs.talentGated and IsPlayerSpell then
+                include = IsPlayerSpell(rs.id)
+            end
+            if include then
+                rotationalTracking[rs.id] = {
+                    useCount        = 0,
+                    label           = rs.label,
+                    minFightSeconds = rs.minFightSeconds or 60,
+                }
+            end
         end
     end
 

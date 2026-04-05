@@ -1032,54 +1032,68 @@ function LB.GetDelveData()
     local history = MidnightSenseiDB and MidnightSenseiDB.encounters
     local wk      = GetWeekKey()
 
-    -- Self entry: aggregate all delve boss encounters into one row
+    -- Self entries: aggregate per character that actually did the delve.
+    -- MidnightSenseiDB.encounters is shared across all characters on the account.
+    -- We must key by enc.charName (saved at fight time) not the current player,
+    -- otherwise switching characters overwrites the previous character's entry.
     if history then
-        local myName     = GetPlayerName()
-        local weekScores = {}
-        local allBest    = 0
-        local lastEnc    = nil  -- most recent delve encounter
-        local spec       = Core.ActiveSpec
-
+        -- Group encounters by the character name that ran them
+        local byChar = {}
         for _, enc in ipairs(history) do
             if enc.encType == "delve" and enc.isBoss then
+                local charKey = (enc.charName and enc.realmName)
+                               and (enc.charName .. "-" .. enc.realmName)
+                               or enc.charName
+                               or GetPlayerName()
+                if not byChar[charKey] then
+                    byChar[charKey] = { weekScores = {}, allBest = 0, lastEnc = nil, charName = charKey }
+                end
                 local s = enc.finalScore or 0
-                if s > allBest then
-                    allBest = s
-                    lastEnc = enc
+                local entry = byChar[charKey]
+                if s > entry.allBest then
+                    entry.allBest = s
+                    entry.lastEnc = enc
                 end
                 if enc.weekKey == wk then
-                    table.insert(weekScores, s)
+                    table.insert(entry.weekScores, s)
                 end
             end
         end
 
-        if lastEnc then
-            local wAvg = 0
-            if #weekScores > 0 then
-                local sum = 0
-                for _, s in ipairs(weekScores) do sum = sum + s end
-                wAvg = math.floor(sum / #weekScores)
+        for charKey, charData in pairs(byChar) do
+            local lastEnc = charData.lastEnc
+            if lastEnc then
+                local wAvg = 0
+                if #charData.weekScores > 0 then
+                    local sum = 0
+                    for _, s in ipairs(charData.weekScores) do sum = sum + s end
+                    wAvg = math.floor(sum / #charData.weekScores)
+                end
+                -- Only show if this week has data (weekly filter) or alltime
+                if sortOrder ~= "weekly" or wAvg > 0 then
+                    local isCurrentPlayer = (ShortName(charKey) == UnitName("player"))
+                    result[charKey] = {
+                        name         = ShortName(charKey),
+                        className    = lastEnc.className or "?",
+                        specName     = lastEnc.specName  or "?",
+                        role         = lastEnc.role      or "?",
+                        grade        = lastEnc.finalGrade or lastEnc.grade or "?",
+                        score        = charData.allBest,
+                        weeklyAvg    = wAvg,
+                        allTimeBest  = charData.allBest,
+                        delveBest    = charData.allBest,
+                        dungeonBest  = 0, raidBest = 0, normalBest = 0,
+                        diffLabel    = lastEnc.diffLabel    or "",
+                        instanceName = lastEnc.instanceName or "",
+                        bossName     = lastEnc.bossName     or "",
+                        timestamp    = lastEnc.timestamp    or 0,
+                        weekKey      = wk,
+                        weekScores   = charData.weekScores,
+                        isSelf       = isCurrentPlayer,
+                        online       = true,
+                    }
+                end
             end
-            result[myName] = {
-                name         = UnitName("player"),
-                className    = spec and spec.className or lastEnc.className or "?",
-                specName     = spec and spec.name      or lastEnc.specName  or "?",
-                role         = spec and spec.role      or lastEnc.role      or "?",
-                grade        = lastEnc.finalGrade or lastEnc.grade or "?",
-                score        = allBest,
-                weeklyAvg    = wAvg,
-                allTimeBest  = allBest,
-                delveBest    = allBest,
-                dungeonBest  = 0, raidBest = 0, normalBest = 0,
-                diffLabel    = lastEnc.diffLabel    or "",
-                instanceName = lastEnc.instanceName or "",
-                bossName     = lastEnc.bossName     or "",
-                timestamp    = lastEnc.timestamp    or 0,
-                weekKey      = wk,
-                weekScores   = weekScores,
-                isSelf       = true,
-                online       = true,
-            }
         end
     end
 

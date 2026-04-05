@@ -321,7 +321,7 @@ Core.SPEC_DATABASE = {
             uptimeBuffs = {},
             rotationalSpells = {
                 { id = 12294,  label = "Mortal Strike", minFightSeconds = 30 },
-                { id = 163201, label = "Execute",       minFightSeconds = 60 },
+                { id = 163201, label = "Execute",       minFightSeconds = 45 },  -- execute phase spell
             },
             priorityNotes = {
                 "Apply Colossus Smash / Warbreaker to maximize damage windows (not directly tracked)",
@@ -559,7 +559,7 @@ Core.SPEC_DATABASE = {
             uptimeBuffs = {},
             rotationalSpells = {
                 { id = 34026,  label = "Kill Command",   minFightSeconds = 30 },
-                { id = 259387, label = "Mongoose Bite",  minFightSeconds = 45 },
+                { id = 259387, label = "Mongoose Bite",  minFightSeconds = 30 },  -- core melee ability
             },
             priorityNotes = {
                 "Maintain Serpent Sting on all targets for damage and Focus generation (not directly tracked)",
@@ -595,9 +595,9 @@ Core.SPEC_DATABASE = {
             uptimeBuffs = {},
             rotationalSpells = {
                 -- Critical rotation abilities tracked for presence — never should be zero in a real fight
-                { id = 1943,  label = "Rupture",  minFightSeconds = 30 },
-                { id = 703,   label = "Garrote",  minFightSeconds = 30 },
-                { id = 32645, label = "Envenom",  minFightSeconds = 45 },
+                { id = 1943,  label = "Rupture",  minFightSeconds = 20 },  -- core bleed, applied immediately
+                { id = 703,   label = "Garrote",  minFightSeconds = 20 },  -- opener, should always be used
+                { id = 32645, label = "Envenom",  minFightSeconds = 30 },  -- primary finisher
             },
             priorityNotes = {
                 "Maintain Rupture and Garrote on all targets — core bleed damage (not directly tracked)",
@@ -654,7 +654,7 @@ Core.SPEC_DATABASE = {
             rotationalSpells = {
                 { id = 185438, label = "Shadowstrike",  minFightSeconds = 30 },
                 { id = 196819, label = "Eviscerate",    minFightSeconds = 30 },
-                { id = 195452, label = "Nightblade",    minFightSeconds = 45 },
+                { id = 195452, label = "Nightblade",    minFightSeconds = 30 },  -- damage amp, should apply early
             },
             priorityNotes = {
                 "Shadow Dance for burst — use Shadowstrike charges immediately",
@@ -740,10 +740,10 @@ Core.SPEC_DATABASE = {
             -- uptimeBuffs empty: SW:Pain and Vampiric Touch are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 589,    label = "Shadow Word: Pain", minFightSeconds = 20 },
-                { id = 34914,  label = "Vampiric Touch",    minFightSeconds = 20 },
-                { id = 335467, label = "Devouring Plague",  minFightSeconds = 30 },
-                { id = 8092,   label = "Mind Blast",        minFightSeconds = 30 },
+                { id = 589,    label = "Shadow Word: Pain", minFightSeconds = 15 },  -- opener DoT
+                { id = 34914,  label = "Vampiric Touch",    minFightSeconds = 15 },  -- opener DoT
+                { id = 335467, label = "Devouring Plague",  minFightSeconds = 20 },  -- Insanity spender
+                { id = 8092,   label = "Mind Blast",        minFightSeconds = 20 },  -- Insanity generator
             },
             priorityNotes = {
                 "Maintain Shadow Word: Pain and Vampiric Touch on all targets (not directly tracked)",
@@ -798,8 +798,8 @@ Core.SPEC_DATABASE = {
                 { id = 279302, label = "Frostwyrm's Fury",    expectedUses = "burst windows" },
             },
             rotationalSpells = {
-                { id = 49020,  label = "Obliterate",  minFightSeconds = 20 },
-                { id = 49143,  label = "Frost Strike", minFightSeconds = 20 },
+                { id = 49020,  label = "Obliterate",  minFightSeconds = 15 },  -- primary damage, used constantly
+                { id = 49143,  label = "Frost Strike", minFightSeconds = 20 },  -- Runic Power dump
             },
             procBuffs = {
                 { id = 59052,  label = "Killing Machine",      maxStackTime = 10 },
@@ -829,9 +829,9 @@ Core.SPEC_DATABASE = {
             -- uptimeBuffs empty: Blood Plague is an enemy debuff, not a player self-aura
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 85092,  label = "Festering Strike", minFightSeconds = 20 },
-                { id = 55090,  label = "Scourge Strike",   minFightSeconds = 20 },
-                { id = 47541,  label = "Death Coil",       minFightSeconds = 20 },
+                { id = 85092,  label = "Festering Strike", minFightSeconds = 15 },  -- wound builder
+                { id = 55090,  label = "Scourge Strike",   minFightSeconds = 15 },  -- wound popper
+                { id = 47541,  label = "Death Coil",       minFightSeconds = 20 },  -- Runic Power dump
             },
             priorityNotes = {
                 "Apply Blood Plague and Festering Wounds with Festering Strike (not directly tracked)",
@@ -876,9 +876,9 @@ Core.SPEC_DATABASE = {
             -- not detectable via C_UnitAuras.GetPlayerAuraBySpellID.
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 188196, label = "Flame Shock",  minFightSeconds = 20 },
-                { id = 51505,  label = "Lava Burst",   minFightSeconds = 20 },
-                { id = 60103,  label = "Lava Burst",   minFightSeconds = 20 },  -- empowered variant
+                { id = 188196, label = "Flame Shock",  minFightSeconds = 15 },  -- opener DoT
+                { id = 51505,  label = "Lava Burst",   minFightSeconds = 15 },  -- always on CD
+                { id = 60103,  label = "Lava Burst",   minFightSeconds = 15 },  -- empowered variant
             },
             priorityNotes = {
                 "Maintain Flame Shock on all targets for Lava Surge procs (not directly tracked)",
@@ -1014,8 +1014,8 @@ Core.SPEC_DATABASE = {
             -- uptimeBuffs empty: Ignite is an enemy debuff, not a player self-aura
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 133,    label = "Fireball",   minFightSeconds = 20 },
-                { id = 108853, label = "Fire Blast", minFightSeconds = 20 },
+                { id = 133,    label = "Fireball",   minFightSeconds = 15 },  -- primary builder, used constantly
+                { id = 108853, label = "Fire Blast", minFightSeconds = 15 },  -- instant Hot Streak proc
             },
             procBuffs = {
                 { id = 48108, label = "Hot Streak", maxStackTime = 10 },
@@ -1040,8 +1040,8 @@ Core.SPEC_DATABASE = {
                 { id = 84714, label = "Frozen Orb", expectedUses = "on CD"          },
             },
             rotationalSpells = {
-                { id = 30455,  label = "Ice Lance", minFightSeconds = 20 },
-                { id = 44614,  label = "Flurry",    minFightSeconds = 20 },
+                { id = 30455,  label = "Ice Lance", minFightSeconds = 15 },  -- proc consumer, used constantly
+                { id = 44614,  label = "Flurry",    minFightSeconds = 15 },  -- Brain Freeze consumer
             },
             procBuffs = {
                 { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },
@@ -1089,7 +1089,7 @@ Core.SPEC_DATABASE = {
             rotationalSpells = {
                 -- Haunt has a ~15s CD making it rotation-priority rather than burst-window.
                 -- Tracked via ABILITY_USED; flagged only if never used in fights >= 45s.
-                { id = 48181, label = "Haunt", minFightSeconds = 45 },
+                { id = 48181, label = "Haunt", minFightSeconds = 20 },  -- 15s CD, should appear early
             },
             -- uptimeBuffs intentionally empty: Agony, Corruption, UA are enemy debuffs
             -- and cannot be tracked via C_UnitAuras.GetPlayerAuraBySpellID.
@@ -1126,8 +1126,8 @@ Core.SPEC_DATABASE = {
             rotationalSpells = {
                 -- Tracked via ABILITY_USED; only flagged unused in fights >= minFightSeconds.
                 -- IsPlayerSpell gates talent-dependent entries at fight start.
-                { id = 196277, label = "Implosion",     minFightSeconds = 45 },
-                { id = 264170, label = "Power Siphon",  minFightSeconds = 60 },
+                { id = 196277, label = "Implosion",     minFightSeconds = 15 },              -- any fight with imps
+                { id = 264170, label = "Power Siphon",  minFightSeconds = 60, talentGated = true }, -- talent
             },
             procBuffs = {
                 { id = 267102, label = "Demonic Core", maxStackTime = 20 },
@@ -1166,9 +1166,9 @@ Core.SPEC_DATABASE = {
             -- cannot be tracked via C_UnitAuras.GetPlayerAuraBySpellID.
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 29722,  label = "Incinerate",   minFightSeconds = 20 },
-                { id = 116858, label = "Chaos Bolt",   minFightSeconds = 30 },
-                { id = 348,    label = "Immolate",     minFightSeconds = 20 },
+                { id = 29722,  label = "Incinerate",   minFightSeconds = 15 },  -- filler, used constantly
+                { id = 116858, label = "Chaos Bolt",   minFightSeconds = 20 },  -- primary spender
+                { id = 348,    label = "Immolate",     minFightSeconds = 15 },  -- opener DoT
             },
             priorityNotes = {
                 "Maintain Immolate on all targets for shard generation (not directly tracked)",
@@ -1255,8 +1255,8 @@ Core.SPEC_DATABASE = {
             },
             rotationalSpells = {
                 -- Short-CD high-priority abilities; tracked for presence not frequency
-                { id = 113656, label = "Fists of Fury",   minFightSeconds = 20 },
-                { id = 107428, label = "Rising Sun Kick",  minFightSeconds = 20 },
+                { id = 113656, label = "Fists of Fury",   minFightSeconds = 15 },  -- highest damage CD ~12s
+                { id = 107428, label = "Rising Sun Kick",  minFightSeconds = 15 },  -- ~10s CD
             },
             procBuffs = {
                 { id = 116768, label = "Combo Breaker: BoK", maxStackTime = 15 },
@@ -1294,9 +1294,9 @@ Core.SPEC_DATABASE = {
             -- uptimeBuffs empty: Moonfire and Sunfire are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 8921,  label = "Moonfire",   minFightSeconds = 20 },
-                { id = 93402, label = "Sunfire",    minFightSeconds = 20 },
-                { id = 78674, label = "Starsurge",  minFightSeconds = 30 },
+                { id = 8921,  label = "Moonfire",   minFightSeconds = 15 },  -- opener DoT
+                { id = 93402, label = "Sunfire",    minFightSeconds = 15 },  -- opener DoT
+                { id = 78674, label = "Starsurge",  minFightSeconds = 20 },  -- Astral Power spender
             },
             priorityNotes = {
                 "Maintain Moonfire and Sunfire on all targets — do not let them fall off (not directly tracked)",
@@ -1325,9 +1325,9 @@ Core.SPEC_DATABASE = {
             -- uptimeBuffs empty: Rip and Rake are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 1079,  label = "Rip",            minFightSeconds = 20 },
-                { id = 1822,  label = "Rake",           minFightSeconds = 20 },
-                { id = 22568, label = "Ferocious Bite", minFightSeconds = 30 },
+                { id = 1079,  label = "Rip",            minFightSeconds = 15 },  -- opener bleed
+                { id = 1822,  label = "Rake",           minFightSeconds = 15 },  -- opener bleed
+                { id = 22568, label = "Ferocious Bite", minFightSeconds = 20 },  -- primary spender
             },
             procBuffs = {
                 { id = 69369, label = "Predatory Swiftness", maxStackTime = 12 },  -- VERIFY C_UnitAuras
@@ -1416,9 +1416,9 @@ Core.SPEC_DATABASE = {
                 { id = 370965, label = "The Hunt",       expectedUses = "on CD (talent)" },
             },
             rotationalSpells = {
-                { id = 188499, label = "Blade Dance",      minFightSeconds = 20 },
-                { id = 162794, label = "Chaos Strike",     minFightSeconds = 20 },
-                { id = 258920, label = "Immolation Aura",  minFightSeconds = 20 },
+                { id = 188499, label = "Blade Dance",      minFightSeconds = 15 },  -- priority spender
+                { id = 162794, label = "Chaos Strike",     minFightSeconds = 15 },  -- Fury dump
+                { id = 258920, label = "Immolation Aura",  minFightSeconds = 15 },  -- always on CD
             },
             procBuffs = {
                 { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },
@@ -1458,6 +1458,39 @@ Core.SPEC_DATABASE = {
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
             sourceNote = "Adapted from Icy Veins Vengeance Demon Hunter guide",
+        },
+
+        -- Devourer (Midnight 12.0 new spec — specIdx 3)
+        -- Resource-gated burst via Void Metamorphosis triggered by Soul Fragments.
+        -- Collapsing Star and Reap are available inside the Void Metamorphosis window.
+        -- Spell IDs verified_web from wowdb.com (see dataset notes).
+        [3] = {
+            name = "Devourer", role = "DPS",
+            resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
+            majorCooldowns = {
+                -- Void Metamorphosis is resource-gated (Soul Fragments), not a static CD.
+                -- Tracked for presence via rotationalSpells instead.
+                { id = 258920, label = "Immolation Aura", expectedUses = "on CD"          },
+                { id = 198013, label = "Eye Beam",        expectedUses = "on CD"          },
+                { id = 370965, label = "The Hunt",        expectedUses = "on CD (talent)" },
+            },
+            rotationalSpells = {
+                -- Void Metamorphosis: resource-gated burst window — tracked for presence
+                { id = 1217605, label = "Void Metamorphosis", minFightSeconds = 30 },  -- resource-gated
+                -- Collapsing Star: used inside Void Metamorphosis windows
+                { id = 1221167, label = "Collapsing Star",    minFightSeconds = 30 },  -- inside Void window
+                -- Reap: central to the Devourer burst builder/spender loop
+                { id = 1226019, label = "Reap",               minFightSeconds = 20 },  -- core loop
+            },
+            priorityNotes = {
+                "Build Soul Fragments to trigger Void Metamorphosis windows",
+                "Use Collapsing Star and Reap inside Void Metamorphosis for maximum damage",
+                "Immolation Aura on cooldown for Fury generation and damage",
+                "Eye Beam on cooldown — core damage outside of Void windows",
+                "Pool Fury before entering Void Metamorphosis for burst spending",
+            },
+            scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
+            sourceNote = "Midnight 12.0 Devourer DH — spell IDs verified_web (wowdb.com)",
         },
     },
 
