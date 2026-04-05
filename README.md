@@ -1,11 +1,11 @@
-[![Download Latest](https://img.shields.io/github/v/release/midnightstockton/MidnightSensei?include_prereleases&cacheSeconds=300)](https://github.com/midnightstockton/MidnightSensei/releases)
-[![Download ZIP](https://img.shields.io/badge/Download-Addon%20ZIP-brightgreen)](https://github.com/midnightstockton/MidnightSensei/releases/latest)
-![Downloads](https://img.shields.io/github/downloads/midnightstockton/MidnightSensei/total)
+[![Download Latest](https://img.shields.io/github/v/release/MidnightTim/MidnightSensei?include_prereleases&cacheSeconds=300&label=Download)](https://github.com/MidnightTim/MidnightSensei/releases)
+[![Download ZIP](https://img.shields.io/badge/Download-Addon%20ZIP-brightgreen)](https://github.com/MidnightTim/MidnightSensei/releases/latest)
+![Downloads](https://img.shields.io/github/downloads/MidnightTim/MidnightSensei/total?cacheSeconds=300)
 ![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)
 ![Interface](https://img.shields.io/badge/Interface-120001-blue)
 ![Status](https://img.shields.io/badge/Status-Beta-orange)
-![Stars](https://img.shields.io/github/stars/midnightstockton/MidnightSensei?style=social)
-[![Report Issue](https://img.shields.io/badge/Report-Issue-red)](https://github.com/midnightstockton/MidnightSensei/issues/new/choose)
+![Stars](https://img.shields.io/github/stars/MidnightTim/MidnightSensei?style=social&cacheSeconds=300)
+[![Report Issue](https://img.shields.io/badge/Report-Issue-red)](https://github.com/MidnightTim/MidnightSensei/issues/new/choose)
 
 # 🧠 Midnight Sensei  
 ### Real-Time Performance Coaching for World of Warcraft
