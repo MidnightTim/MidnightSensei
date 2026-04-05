@@ -882,7 +882,15 @@ function LB.GetPartyData()
     local spec   = Core.ActiveSpec
     if spec then
         local history = MidnightSenseiDB and MidnightSenseiDB.encounters
-        local lastEnc = history and history[#history]
+        -- Use last dungeon/raid enc for diffLabel context — not delve/world
+        local lastEnc = nil
+        if history then
+            for i = #history, 1, -1 do
+                local e = history[i]
+                if e.encType == "dungeon" or e.encType == "raid" then lastEnc = e ; break end
+            end
+            if not lastEnc then lastEnc = history[#history] end
+        end
         local wk      = GetWeekKey()
         local wAvg    = ComputeWeeklyAvg(history, wk)
 
@@ -932,7 +940,15 @@ function LB.GetGuildData()
         local spec   = Core.ActiveSpec
         if spec then
             local history = MidnightSenseiDB and MidnightSenseiDB.encounters
-            local lastEnc = history and history[#history]
+            -- Use last dungeon/raid enc for diffLabel context — not delve/world
+            local lastEnc = nil
+            if history then
+                for i = #history, 1, -1 do
+                    local e = history[i]
+                    if e.encType == "dungeon" or e.encType == "raid" then lastEnc = e ; break end
+                end
+                if not lastEnc then lastEnc = history[#history] end
+            end
             local wk      = GetWeekKey()
 
             -- Boss-only weekly avg (always hardcoded)
@@ -1008,66 +1024,83 @@ function LB.GetFriendsData()
     return friendsData
 end
 
--- Delve tab: shows the player's own delve encounter history sorted by score.
--- Respects contentFilter: "weekly" shows only this week's runs, "alltime" shows all.
+-- Delve tab: one row per player showing aggregated delve performance.
+-- Self: computed from local history. Guild peers: from broadcast data.
+-- sortOrder "weekly" = this week's avg; "alltime" = best ever.
 function LB.GetDelveData()
     local result  = {}
     local history = MidnightSenseiDB and MidnightSenseiDB.encounters
     local wk      = GetWeekKey()
 
+    -- Self entry: aggregate all delve boss encounters into one row
     if history then
-        local myName = GetPlayerName()
-        for i, enc in ipairs(history) do
+        local myName     = GetPlayerName()
+        local weekScores = {}
+        local allBest    = 0
+        local lastEnc    = nil  -- most recent delve encounter
+        local spec       = Core.ActiveSpec
+
+        for _, enc in ipairs(history) do
             if enc.encType == "delve" and enc.isBoss then
-                -- Weekly filter: only include runs from the current WoW week
-                local inWeek = (enc.weekKey and enc.weekKey == wk)
-                if sortOrder == "weekly" and not inWeek then
-                    -- skip this run in weekly view
-                else
-                    local key = myName .. "_delve_" .. i
-                    result[key] = {
-                        name         = UnitName("player"),
-                        className    = enc.className or "?",
-                        specName     = enc.specName  or "?",
-                        role         = enc.role      or "?",
-                        grade        = enc.finalGrade or enc.grade or "?",
-                        score        = enc.finalScore or 0,
-                        weeklyAvg    = enc.finalScore or 0,
-                        allTimeBest  = enc.finalScore or 0,
-                        delveBest    = enc.finalScore or 0,
-                        dungeonBest  = 0, raidBest = 0, normalBest = 0,
-                        diffLabel    = enc.diffLabel    or "",
-                        instanceName = enc.instanceName or "",
-                        bossName     = enc.bossName     or "",
-                        keystoneLevel = enc.keystoneLevel,
-                        timestamp    = enc.timestamp or 0,
-                        weekKey      = enc.weekKey   or "",
-                        isSelf       = true,
-                        online       = true,
-                        isDelveRun   = true,
-                    }
+                local s = enc.finalScore or 0
+                if s > allBest then
+                    allBest = s
+                    lastEnc = enc
+                end
+                if enc.weekKey == wk then
+                    table.insert(weekScores, s)
                 end
             end
         end
+
+        if lastEnc then
+            local wAvg = 0
+            if #weekScores > 0 then
+                local sum = 0
+                for _, s in ipairs(weekScores) do sum = sum + s end
+                wAvg = math.floor(sum / #weekScores)
+            end
+            result[myName] = {
+                name         = UnitName("player"),
+                className    = spec and spec.className or lastEnc.className or "?",
+                specName     = spec and spec.name      or lastEnc.specName  or "?",
+                role         = spec and spec.role      or lastEnc.role      or "?",
+                grade        = lastEnc.finalGrade or lastEnc.grade or "?",
+                score        = allBest,
+                weeklyAvg    = wAvg,
+                allTimeBest  = allBest,
+                delveBest    = allBest,
+                dungeonBest  = 0, raidBest = 0, normalBest = 0,
+                diffLabel    = lastEnc.diffLabel    or "",
+                instanceName = lastEnc.instanceName or "",
+                bossName     = lastEnc.bossName     or "",
+                timestamp    = lastEnc.timestamp    or 0,
+                weekKey      = wk,
+                weekScores   = weekScores,
+                isSelf       = true,
+                online       = true,
+            }
+        end
     end
 
-    -- Guild peers: always show their best delve regardless of filter
+    -- Guild peers: one row per person using their broadcast delveBest
     local guildData = LB.GetGuildData()
     for name, entry in pairs(guildData) do
         if (entry.delveBest or 0) > 0 and not entry.isSelf then
-            result[name .. "_best"] = {
+            result[name] = {
                 name        = entry.name,
                 className   = entry.className,
                 specName    = entry.specName,
                 role        = entry.role,
                 grade       = entry.grade,
                 score       = entry.delveBest,
-                weeklyAvg   = entry.delveBest,
+                weeklyAvg   = entry.weeklyAvg or entry.delveBest,
                 allTimeBest = entry.allTimeBest or 0,
                 delveBest   = entry.delveBest,
                 dungeonBest = 0, raidBest = 0, normalBest = 0,
-                diffLabel   = "Best",
+                diffLabel   = entry.diffLabel or "",
                 timestamp   = entry.timestamp or 0,
+                weekKey     = entry.weekKey   or "",
                 isSelf      = false,
                 online      = entry.online,
             }
@@ -1217,7 +1250,11 @@ local function PopulateRows(scrollChild, entries)
         local boss  = (entry.bossName and entry.bossName ~= "") and entry.bossName or nil
 
         if contentType == "delve" then
-            catStr = JoinLabel(diff, inst, boss)
+            -- diff falls back to instanceName when no tier is available — skip it
+            -- to avoid printing the dungeon name twice (e.g. "Gulf of Memory - Gulf of Memory")
+            local delveInst = inst
+            local delveDiff = (diff and inst and diff ~= inst) and diff or nil
+            catStr = JoinLabel(delveDiff, delveInst, boss)
             if entry.isDelveRun and entry.timestamp and entry.timestamp > 0 then
                 catStr = catStr .. " |cff888888" .. TAgo(entry.timestamp) .. "|r"
             end
@@ -1385,7 +1422,7 @@ local function RefreshContent()
     -- Column headers
     local catHdr, weekHdr
     if contentType == "delve" then
-        catHdr  = "TIER"
+        catHdr  = "DELVE / BOSS"
         weekHdr = sortOrder == "alltime" and "SCORE" or "WK AVG"
     elseif contentType == "dungeon" then
         catHdr  = "DIFF / BOSS"

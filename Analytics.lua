@@ -28,7 +28,12 @@ local fightStartTime = 0
 local fightEndTime   = 0
 
 -- Cooldown tracking: [spellID] = { lastUsed, useCount, expectedUses }
-local cdTracking     = {}
+local cdTracking         = {}
+
+-- Rotational spell tracking: [spellID] = { useCount, label, minFightSeconds }
+-- For rotationally important spells that are NOT true cooldowns (no CD, no fixed window).
+-- Only generates feedback if the fight was long enough and the spell was clearly unused.
+local rotationalTracking = {}
 
 -- Overcap tracking  (edge-triggered — only fires once per overcap entry)
 local overcapState   = false   -- true while currently overcapped
@@ -82,7 +87,8 @@ local function OnCombatStart()
     fightStartTime = Now()
     fightEndTime   = 0
 
-    cdTracking    = {}
+    cdTracking          = {}
+    rotationalTracking  = {}
     overcapState  = false
     overcapEvents = 0
     totalGCDs     = 0
@@ -144,6 +150,21 @@ local function OnCombatStart()
                     label        = cd.label,
                 }
             end
+        end
+    end
+
+    -- Populate rotational spell tracking — important non-cooldown rotational abilities.
+    -- No IsPlayerSpell gate here: unlike majorCooldowns (which affect score), rotationalSpells
+    -- only generate feedback text. The real gate is minFightSeconds — a short fight suppresses
+    -- the feedback entirely. If the player never casts the spell in a long fight, that IS
+    -- the signal we want to surface.
+    if spec and spec.rotationalSpells then
+        for _, rs in ipairs(spec.rotationalSpells) do
+            rotationalTracking[rs.id] = {
+                useCount        = 0,
+                label           = rs.label,
+                minFightSeconds = rs.minFightSeconds or 60,
+            }
         end
     end
 
@@ -215,12 +236,17 @@ Core.On(Core.EVENTS.ABILITY_USED, function(spellID, timestamp)
     if not fightActive then return end
 
     totalGCDs   = totalGCDs + 1
-    activeGCDs  = activeGCDs + 1   -- every logged cast counts as active
+    activeGCDs  = activeGCDs + 1
 
     local cd = cdTracking[spellID]
     if cd then
         cd.lastUsed = timestamp
         cd.useCount = cd.useCount + 1
+    end
+
+    local rs = rotationalTracking[spellID]
+    if rs then
+        rs.useCount = rs.useCount + 1
     end
 end)
 
@@ -590,7 +616,10 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
     local expectedMult = math.max(1, math.floor(duration / 120))
     local actScore     = scores.activity or 100
 
-    -- Track highest-impact issue for "Biggest Gain" line
+    -- Track highest-impact issue for "Biggest Gain" line.
+    -- AddGain adds the message normally AND tracks it. At the end the winning
+    -- message is removed from its original position and re-inserted at the top
+    -- with the "Biggest Gain:" label — so it appears exactly once.
     local topGainImpact = 0
     local topGainMsg    = nil
     local function AddGain(impact, msg)
@@ -619,12 +648,16 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
             end
         end
     else
-        for _, cd in ipairs(spec.majorCooldowns or {}) do
-            if cd.label then table.insert(neverUsed, cd.label) end
+        -- cdTracking empty — IsPlayerSpell returned nothing. Only list spells as
+        -- never-used if the fight was long enough to reasonably expect one press.
+        if duration >= 30 then
+            for _, cd in ipairs(spec.majorCooldowns or {}) do
+                if cd.label then table.insert(neverUsed, cd.label) end
+            end
         end
     end
 
-    if #neverUsed > 0 then
+    if #neverUsed > 0 and duration >= 30 then
         table.sort(neverUsed)
         local ctx = bossName and (" during " .. bossName) or ""
         if inferSimplified then
@@ -651,10 +684,28 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
     end
 
     -- ── Underused CDs ───────────────────────────────────────────────────────
-    if #underused > 0 then
+    if #underused > 0 and duration >= 90 then
         table.sort(underused)
         AddGain(20, "You could squeeze more uses from: " ..
             table.concat(underused, ", ") .. " — one use per 2 min of fight time.")
+    end
+
+    -- ── Rotational Spells — important non-cooldown abilities ─────────────────
+    -- Only flags spells that were never used in a fight long enough to warrant them.
+    -- Avoids false positives: short fights and talent-absent spells are pre-filtered.
+    if next(rotationalTracking) then
+        local unused = {}
+        for _, rs in pairs(rotationalTracking) do
+            if rs.useCount == 0 and duration >= rs.minFightSeconds then
+                table.insert(unused, rs.label)
+            end
+        end
+        if #unused > 0 then
+            table.sort(unused)
+            AddGain(25, "Rotational spell(s) never used: " ..
+                table.concat(unused, ", ") ..
+                " — these are important for your spec's damage output.")
+        end
     end
 
     -- ── DPS / Tank: Procs, Resources, Buffs ─────────────────────────────────
@@ -723,8 +774,8 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
         end
     end
 
-    -- ── Behavior tone (soft, non-scoring, Part 2) ────────────────────────────
-    if inferSimplified and #feedback > 0 then
+    -- ── Behavior tone — only when nothing actionable remains ─────────────────
+    if inferSimplified and #feedback == 0 then
         Add("Your rotation appears consistent and well-paced. " ..
             "Tightening burst window timing is the next performance step.")
     end
@@ -738,13 +789,25 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
         end
     end
 
-    -- ── Biggest Performance Gain — prepend highest-impact item ───────────────
+    -- ── Biggest Performance Gain — label the highest-impact item in-place ────
+    -- Rather than removing and re-inserting (which wastes a slot), find the
+    -- message in its current position and prefix it with the Biggest Gain label.
     if topGainMsg then
-        table.insert(feedback, 1, "|cffFFD700Biggest Gain:|r " .. topGainMsg)
+        for i = 1, #feedback do
+            if feedback[i] == topGainMsg then
+                feedback[i] = "|cffFFD700Biggest Gain:|r " .. topGainMsg
+                -- Move it to position 1 if it isn't already
+                if i > 1 then
+                    local tmp = table.remove(feedback, i)
+                    table.insert(feedback, 1, tmp)
+                end
+                break
+            end
+        end
     end
 
-    -- Cap at 6 messages (one extra slot for Biggest Gain)
-    while #feedback > 6 do table.remove(feedback) end
+    -- Cap at 8 — enough room for Biggest Gain + all meaningful coaching points
+    while #feedback > 8 do table.remove(feedback) end
 
     return feedback
 end
