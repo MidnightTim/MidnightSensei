@@ -882,14 +882,20 @@ function LB.GetPartyData()
     local spec   = Core.ActiveSpec
     if spec then
         local history = MidnightSenseiDB and MidnightSenseiDB.encounters
-        -- Use last dungeon/raid enc for diffLabel context — not delve/world
+        -- Use last boss encounter in a dungeon/raid for display context.
+        -- Falls back to any dungeon/raid enc, then any enc, if no boss found.
         local lastEnc = nil
+        local lastEncAny = nil
         if history then
             for i = #history, 1, -1 do
                 local e = history[i]
-                if e.encType == "dungeon" or e.encType == "raid" then lastEnc = e ; break end
+                if e.encType == "dungeon" or e.encType == "raid" then
+                    if not lastEncAny then lastEncAny = e end
+                    if e.isBoss and not lastEnc then lastEnc = e end
+                end
+                if lastEnc then break end
             end
-            if not lastEnc then lastEnc = history[#history] end
+            lastEnc = lastEnc or lastEncAny or history[#history]
         end
         local wk      = GetWeekKey()
         local wAvg    = ComputeWeeklyAvg(history, wk)
@@ -924,6 +930,9 @@ function LB.GetPartyData()
             raidBest    = raidBest,
             delveBest   = delvBest,
             normalBest  = 0,
+            diffLabel    = lastEnc and lastEnc.diffLabel    or "",
+            instanceName = lastEnc and lastEnc.instanceName or "",
+            bossName     = lastEnc and lastEnc.bossName     or "",
         }
     end
     for name, entry in pairs(partyData) do result[name] = entry end
@@ -940,14 +949,20 @@ function LB.GetGuildData()
         local spec   = Core.ActiveSpec
         if spec then
             local history = MidnightSenseiDB and MidnightSenseiDB.encounters
-            -- Use last dungeon/raid enc for diffLabel context — not delve/world
+            -- Use last boss encounter in a dungeon/raid for display context.
+            -- Falls back to any dungeon/raid enc, then any enc, if no boss found.
             local lastEnc = nil
+            local lastEncAny = nil
             if history then
                 for i = #history, 1, -1 do
                     local e = history[i]
-                    if e.encType == "dungeon" or e.encType == "raid" then lastEnc = e ; break end
+                    if e.encType == "dungeon" or e.encType == "raid" then
+                        if not lastEncAny then lastEncAny = e end
+                        if e.isBoss and not lastEnc then lastEnc = e end
+                    end
+                    if lastEnc then break end
                 end
-                if not lastEnc then lastEnc = history[#history] end
+                lastEnc = lastEnc or lastEncAny or history[#history]
             end
             local wk      = GetWeekKey()
 
@@ -990,6 +1005,8 @@ function LB.GetGuildData()
                 delveBest     = delvBest,
                 normalBest    = normBest,
                 diffLabel     = lastEnc and lastEnc.diffLabel    or "",
+                instanceName  = lastEnc and lastEnc.instanceName or "",
+                bossName      = lastEnc and lastEnc.bossName     or "",
                 keystoneLevel = lastEnc and lastEnc.keystoneLevel or nil,
             }
 
