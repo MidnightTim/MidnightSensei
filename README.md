@@ -1,4 +1,4 @@
-[![Download Latest](https://img.shields.io/github/v/release/midnightstockton/MidnightSensei?label=Download)](https://github.com/midnightstockton/MidnightSensei/releases)
+[![Download Latest](https://img.shields.io/github/v/release/midnightstockton/MidnightSensei?include_prereleases)](https://github.com/midnightstockton/MidnightSensei/releases)
 [![Download ZIP](https://img.shields.io/badge/Download-Addon%20ZIP-brightgreen)](https://github.com/midnightstockton/MidnightSensei/releases/latest)
 ![Downloads](https://img.shields.io/github/downloads/midnightstockton/MidnightSensei/total)
 ![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)
