@@ -8,12 +8,42 @@
 [![Report Issue](https://img.shields.io/badge/Report-Issue-red)](https://github.com/midnightstockton/MidnightSensei/issues/new/choose)
 
 # 🧠 Midnight Sensei  
-### Real-time Performance Coaching for World of Warcraft
+### Real-Time Performance Coaching for World of Warcraft
 
-Midnight Sensei is a real-time performance coaching addon for World of Warcraft designed to help you understand how you play, not just how much you do.
+Midnight Sensei is a real-time performance coaching addon designed to help you understand **how you play**, not just how much damage or healing you do.
 
-Instead of throwing raw logs or overwhelming data at you, it evaluates your gameplay during combat and translates it into clear, actionable feedback you can actually use to improve.
-<img width="1973" height="704" alt="image" src="https://github.com/user-attachments/assets/bde8245b-3df9-4ecd-b248-4a9f5fcee408" />
+It evaluates your gameplay during combat and translates it into **clear, actionable feedback** you can use immediately.
+
+<img width="1999" height="636" alt="image" src="https://github.com/user-attachments/assets/16c2c42b-5950-419a-be9b-d4f2cea38bf9" />
+
+---
+
+## ⚠️ What This Addon Is (And Isn’t)
+
+Midnight Sensei is **not** designed to turn you into a top-tier parser overnight.
+
+Instead, it is meant to:
+
+- Help **close gameplay gaps**
+- Act as a **real-time reference while playing**
+- Provide **immediate, actionable feedback**
+- Serve as a **bridge between gameplay and deeper analysis tools**
+
+Think of it as:
+
+> A buffer between playing the game and diving into tools like Warcraft Logs.
+
+More advanced tools like Warcraft Logs will always be:
+- More precise  
+- More granular  
+- More data-rich  
+
+Midnight Sensei focuses on:
+- Speed
+- clarity
+- usability **in the moment**
+
+This addon will continue to improve over time as detection and feedback systems evolve.
 
 ---
 
@@ -21,10 +51,10 @@ Instead of throwing raw logs or overwhelming data at you, it evaluates your game
 
 Midnight Sensei is aimed at players who:
 
-- Want to improve their rotation and decision-making  
-- Feel stuck in the mid-performance range (roughly 60–80 parses)  
+- Want to improve rotation and decision-making  
+- Feel stuck in mid-performance ranges  
 - Don’t want to dig through logs to figure out what went wrong  
-- Prefer feedback that teaches, not punishes  
+- Prefer feedback that teaches instead of overwhelms  
 
 ---
 
@@ -36,11 +66,12 @@ Midnight Sensei is aimed at players who:
 |----------|----------------|
 | Cooldown Usage | Efficient and timely use of major abilities |
 | Activity | Time spent actively casting vs idle |
-| Resource Management | Overcapping or wasted resources |
-| Buff / Proc Usage | Proper proc usage and uptime |
-| Role Efficiency | Healing efficiency or tank mitigation |
+| Resource Management | Overcapping and wasted resources |
+| Buff / Proc Usage | Proc consumption and uptime |
+| Rotational Usage | Missing key abilities entirely |
+| Role Efficiency | Healing efficiency or mitigation |
 
-Each encounter is scored and converted into an easy-to-understand grade.
+Each encounter is scored and converted into a simple grade.
 
 ---
 
@@ -55,7 +86,7 @@ Each encounter is scored and converted into an easy-to-understand grade.
 | D  | Learning Phase |
 | F  | Needs Work |
 
-Grades are designed to be encouraging, not punishing.
+Grades are designed to be **encouraging and directional**, not punishing.
 
 ---
 
@@ -65,43 +96,48 @@ Grades are designed to be encouraging, not punishing.
 
 - Tracks ability usage and GCD activity in real time  
 - Monitors cooldown usage and expected timings  
-- Detects resource overcapping using an edge-triggered system  
-- Evaluates buff uptime and proc consumption  
-- Captures fight duration and performance context  
+- Detects resource overcapping (edge-triggered)  
+- Evaluates proc usage and buff uptime  
+- Tracks rotational abilities (even those without cooldowns)  
+- Uses **player-only aura tracking (Midnight 12.0 compliant)**  
+
+---
+
+### 🧠 Smart Feedback System
+
+Provides actionable insight into:
+
+- Missed cooldowns  
+- Unused rotational abilities  
+- Poor uptime or proc usage  
+- Resource overcapping  
+- Idle time / low activity  
+- Role inefficiencies  
 
 ---
 
 ### 📈 Post-Fight Review
 
 - No intrusive popups  
-- "Review Fight" button appears after combat  
-- Includes:
-  - Category scores  
-  - Final grade  
-  - Personalized feedback  
+- “Review Fight” button appears after combat  
+- Displays:
+  - Final score  
+  - Grade  
+  - Category breakdown  
+  - Top feedback items  
+  - Biggest improvement opportunity  
 
 ---
 
-### 📜 Encounter History & Trends
+### 📜 Encounter History
 
-- Stores last 100 encounters  
+- Stores last **100 encounters**
 - Tracks:
-  - Average score  
-  - Best / worst performance  
-  - Trends over time  
-- Full drill-down per fight  
-
----
-
-### 🧠 Smart Feedback System
-
-Provides insight into:
-
-- Missed cooldown usage  
-- Poor buff uptime  
-- Resource overcapping  
-- Low activity or idle time  
-- Inefficient healing or mitigation  
+  - Scores
+  - Grades
+  - Duration
+  - Encounter type
+- Includes full detail drill-down
 
 ---
 
@@ -111,8 +147,8 @@ Provides insight into:
 
 | Tab | Description |
 |-----|------------|
-| Party | Live comparison with current group |
-| Guild | Tracks guild members as they log in |
+| Party | Live comparison with group |
+| Guild | Tracks guild performance over time |
 
 ---
 
@@ -121,13 +157,13 @@ Provides insight into:
 | Field | Description |
 |------|------------|
 | Player Name | Character name |
-| Class / Spec | Current specialization |
-| Role | DPS, Healer, Tank |
+| Class / Spec | Active specialization |
+| Role | DPS / Healer / Tank |
 | Grade | A–F rating |
-| Score | 0–100 score |
+| Score | 0–100 |
 | Duration | Fight length |
-| Encounter Type | Dungeon, Raid, Delve, World |
-| Last Updated | Time since last fight |
+| Encounter Type | Dungeon / Raid / Delve / World |
+| Last Updated | Timestamp |
 
 ---
 
@@ -135,7 +171,8 @@ Provides insight into:
 
 - Tracks rolling weekly averages  
 - Resets on WoW weekly reset  
-- Rewards consistency over one-time performance  
+- Boss encounters prioritized  
+- Rewards consistency over single performances  
 
 ---
 
@@ -150,25 +187,6 @@ Provides insight into:
 
 ---
 
-### 🗝 Mythic+ Support
-
-- Detects keystone level  
-- Displays as: M+2, M+10, M+20  
-- Stores level with encounter data  
-
----
-
-### 🏰 Raid Difficulty Tracking
-
-| Difficulty | Label |
-|------------|------|
-| LFR | LFR |
-| Normal | Normal |
-| Heroic | Heroic |
-| Mythic | Mythic |
-
----
-
 ### 🔐 Integrity System
 
 - Checksum validation  
@@ -179,57 +197,85 @@ Provides insight into:
 
 ## 🧬 Spec-Aware Coaching
 
-Each spec includes:
-
-- Priority-based evaluation  
-- Cooldown expectations  
-- Resource thresholds  
-- Buff uptime targets  
-
----
-
-## 🚧 Current Status
-
-This is a beta release.
-
-### Known Limitations
-
-- Enemy debuff tracking limited by WoW API  
-- Some specs still being expanded  
-- Scoring continues to evolve  
+- Supports all **13 classes / 39 specs**
+- Includes:
+  - Cooldowns
+  - Rotational abilities
+  - Proc tracking
+  - Talent-aware logic
 
 ---
 
-## 📦 Installation
+## 🧪 Commands
 
-1. Download from Releases  
-2. Extract to:
-AddOns/
-└── MidnightSensei/
-
+| Command | Description |
+|--------|------------|
+| `/ms show` | Show UI |
+| `/ms hide` | Hide UI |
+| `/ms help` | Show commands |
+| `/ms faq` | Open FAQ |
+| `/ms update` | Open changelog |
+| `/ms verify` | Spell verification |
+| `/ms verify report` | Export report |
+| `/ms lb debug` | Debug leaderboard |
 
 ---
 
-## 🙌 Credits
+## ⚠️ Limitations (By Design)
 
-- Icy Veins  
+Due to Midnight 12.0 API restrictions:
+
+- No enemy debuff tracking  
+- No full combat log parsing  
+- Limited party sync in instance groups  
+
+These are **intentional constraints**, not bugs.
+
+---
+
+## 🐛 How to Report Bugs
+
+If something isn’t working correctly, reporting it properly helps fix it quickly.
+
+### Step 1 — Use the Issue Template
+Go here:  
+👉 https://github.com/midnightstockton/MidnightSensei/issues/new/choose
+
+---
+
+### Step 2 — Include the Following
+
+Please include as much of this as possible:
+
+**Basic Info**
+- Class + Spec  
+- What you were doing (raid, dungeon, target dummy, etc.)  
+- Fight duration (approximate is fine)  
+
+**What Happened**
+- What did the addon say or do?  
+- What did you expect instead?  
+
+**Optional (Highly Helpful)**
+- `/ms verify report` output  
+- Screenshot of results screen  
+- Steps to reproduce  
+
+---
+
+---
+
+## 💡 Final Note
+
+Midnight Sensei isn’t here to replace advanced tools.
+
+It’s here to give you **fast, usable feedback while you play** so you can improve without stopping to analyze logs.
+
+---
+
+## ❤️ Credits
+
 - Wowhead  
 - SimulationCraft  
 - Warcraft Logs  
-- WoWAnalyzer
-
-- ## 🐞 Reporting Issues
-
-If something feels off, you can report it here:
-
-👉 https://github.com/midnightstockton/MidnightSensei/issues
-
-Click **"New Issue"** and choose one of the options:
-
-- 🐞 Bug Report – for things not working correctly  
-- 💡 Enhancement Request – for ideas or improvements  
-- ⚡ Quick Report – for anything that just feels off  
-
-The form is quick, just check a few boxes and add a short description.
-
-Even minimal details are helpful.
+- WoWAnalyzer  
