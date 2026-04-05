@@ -239,7 +239,7 @@ If something isn’t working correctly, reporting it properly helps fix it quick
 
 ### Step 1 — Use the Issue Template
 Go here:  
-👉 https://github.com/midnightstockton/MidnightSensei/issues/new/choose
+👉 https://github.com/midnighttim/MidnightSensei/issues/new/choose
 
 ---
 
