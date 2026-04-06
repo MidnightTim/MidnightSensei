@@ -228,7 +228,7 @@ end
 -- Debug Print
 --------------------------------------------------------------------------------
 function Utils.Debug(...)
-    if MidnightSenseiDB and MidnightSenseiDB.settings and MidnightSenseiDB.settings.debugMode then
+    if MidnightSenseiCharDB and MidnightSenseiCharDB.settings and MidnightSenseiCharDB.settings.debugMode then
         print("|cff888888[MS Debug]|r", ...)
     end
 end

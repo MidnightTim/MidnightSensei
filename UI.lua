@@ -10,7 +10,7 @@ MidnightSensei.UI = MidnightSensei.UI or {}
 
 local MS   = MidnightSensei
 local UI   = MS.UI
-local Core = MS.Core
+local Core = MS.Core or MidnightSensei.Core or {}  -- fallback guards against load-order races
 
 --------------------------------------------------------------------------------
 -- Colour palette
@@ -227,8 +227,8 @@ histCtxMenu = BuildCtxMenu("MidnightSenseiCtxMenu", {
     end },
     { label = "Delete Entry", fn = function()
         local idx = histCtxMenu._idx
-        if idx and MidnightSenseiDB and MidnightSenseiDB.encounters then
-            table.remove(MidnightSenseiDB.encounters, idx)
+        if idx and MidnightSenseiCharDB and MidnightSenseiCharDB.encounters then
+            table.remove(MidnightSenseiCharDB.encounters, idx)
             UI.RefreshHistory()
         end
     end },
@@ -500,7 +500,7 @@ end
 
 local function RefreshHistoryContent()
     if not historyFrame then return end
-    local allEnc  = (MidnightSenseiDB and MidnightSenseiDB.encounters) or {}
+    local allEnc  = (MidnightSenseiCharDB and MidnightSenseiCharDB.encounters) or {}
     local filtered = FilterEncounters(allEnc)
 
     -- Sparkline (all for this char/filter)
@@ -644,7 +644,7 @@ function UI.ShowHistory()
         clearBtn:SetPoint("BOTTOMLEFT", historyFrame, "BOTTOMLEFT", 10, 10)
         clearBtn:SetScript("OnClick", function()
             if MidnightSenseiDB then
-                MidnightSenseiDB.encounters = {}
+                MidnightSenseiCharDB.encounters = {}
                 RefreshHistoryContent()
             end
         end)
@@ -866,10 +866,12 @@ function UI.ShowMainCtxMenu()
         AddItem("Options",        -82, function() UI.OpenOptions() end)
         AddItem("Help / FAQ",    -106, function() UI.ShowFAQ() end)
         AddItem("Credits",       -130, function() UI.ShowCredits() end)
-        AddItem("Close HUD",     -154, function()
+        AddItem("Debug Tools",   -154, function() UI.ShowDebugWindow() end)
+        AddItem("Close HUD",     -178, function()
             if mainFrame then mainFrame:Hide() end
         end)
 
+        mainCtxMenu:SetSize(164, 206)
         mainCtxMenu:SetScript("OnHide", CloseAllMenus)
     end
 
@@ -1259,8 +1261,124 @@ function UI.ShowVerifyExport(text)
 end
 
 --------------------------------------------------------------------------------
--- Credits panel  (ScrollFrame - prevents text overflow)
+-- Debug Window
 --------------------------------------------------------------------------------
+local debugFrame = nil
+
+function UI.ShowDebugWindow()
+    if debugFrame then
+        debugFrame:SetShown(not debugFrame:IsShown())
+        return
+    end
+
+    local f = CreateFrame("Frame", "MidnightSenseiDebug", UIParent, "BackdropTemplate")
+    f:SetSize(460, 580)
+    f:SetPoint("CENTER")
+    f:SetFrameStrata("HIGH")
+    f:SetMovable(true)
+    f:SetClampedToScreen(true)
+    f:EnableMouse(true)
+    ApplyBackdrop(f, {0.04,0.04,0.07,0.97}, C.BORDER_GOLD)
+    f:SetScript("OnMouseDown", function(self, btn)
+        if btn == "LeftButton" then self:StartMoving() end
+    end)
+    f:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() end)
+    debugFrame = f
+
+    -- Title
+    local title = MakeFont(f, 13, "CENTER")
+    title:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -12)
+    title:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -12)
+    title:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
+    title:SetText("Midnight Sensei - Debug Tools")
+
+    -- Close button
+    local x = CreateFrame("Button", nil, f)
+    x:SetSize(20, 20)
+    x:SetPoint("TOPRIGHT", f, "TOPRIGHT", -6, -6)
+    local xfs = MakeFont(x, 13, "CENTER")
+    xfs:SetPoint("CENTER")
+    xfs:SetText("|cffFF4444✕|r")
+    x:SetScript("OnClick", function() f:Hide() end)
+
+    -- Separator
+    local sep = f:CreateTexture(nil, "ARTWORK")
+    sep:SetColorTexture(0.3, 0.3, 0.4, 0.5)
+    sep:SetHeight(1)
+    sep:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -30)
+    sep:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, -30)
+
+    -- Helper to run a slash command via the Core dispatch
+    local function RunCmd(cmd)
+        if MS.Core and MS.Core.SlashHandler then
+            MS.Core.SlashHandler(cmd)
+        else
+            -- Fallback: trigger via slash
+            local handler = SlashCmdList["MIDNIGHTSENSEI"] or SlashCmdList["MS"]
+            if handler then handler(cmd) end
+        end
+    end
+
+    -- Button builder
+    local btnY = -40
+    local function AddDebugBtn(label, desc, cmd)
+        local row = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        row:SetSize(428, 42)
+        row:SetPoint("TOPLEFT", f, "TOPLEFT", 16, btnY)
+        ApplyBackdrop(row, {0.07,0.07,0.12,0.6}, C.BORDER)
+
+        local lbl = MakeFont(row, 11, "LEFT")
+        lbl:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -5)
+        lbl:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
+        lbl:SetText(label)
+
+        local dsc = MakeFont(row, 9, "LEFT")
+        dsc:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 5)
+        dsc:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+        dsc:SetText(desc)
+
+        local btn = MakeButton(row, 70, 28, "Run")
+        btn:SetPoint("RIGHT", row, "RIGHT", -6, 0)
+        btn:SetScript("OnClick", function()
+            f:Hide()
+            C_Timer.After(0.1, function() RunCmd(cmd) end)
+        end)
+
+        btnY = btnY - 48
+    end
+
+    AddDebugBtn("Guild Routing",        "Show guild DB entries, roster status, score history",      "debug guild")
+    AddDebugBtn("Guild Broadcast",      "Re-broadcast all your best scores to guild (all types)",   "debug guild broadcast")
+    AddDebugBtn("Guild Inject",         "Send a synthetic test score to guild channel",             "debug guild inject")
+    AddDebugBtn("Guild Ping",           "Send PING to guild — ask a guildie to run Receive",        "debug guild ping")
+    AddDebugBtn("Guild Receive",        "Show last 5 SCORE messages received this session",         "debug guild receive")
+    AddDebugBtn("Self — Delve History", "Show your delve encounter history and boss count",         "debug self")
+    AddDebugBtn("Zone / Instance",      "Show current instance type, diffID, and encType",          "debug zone")
+    AddDebugBtn("Version",              "Show addon version from TOC and metadata APIs",            "debug version")
+    AddDebugBtn("Rotational Spells",    "Show tracked rotational spells for your current spec",     "debug rotational")
+    AddDebugBtn("Friends Detection",    "Show BNet friend API availability",                        "debug friends")
+    AddDebugBtn("Debug Log",            "Print the last 50 checksum/routing log entries",           "debuglog")
+
+    -- Separator before recovery tools
+    local sep2 = f:CreateTexture(nil, "ARTWORK")
+    sep2:SetColorTexture(1, 0.5, 0, 0.3)
+    sep2:SetHeight(1)
+    sep2:SetPoint("TOPLEFT", f, "TOPLEFT", 10, btnY - 4)
+    sep2:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, btnY - 4)
+
+    local recLabel = MakeFont(f, 9, "CENTER")
+    recLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 0, btnY - 6)
+    recLabel:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, btnY - 6)
+    recLabel:SetTextColor(1, 0.5, 0, 0.9)
+    recLabel:SetText("-- Recovery Tools --")
+    btnY = btnY - 20
+
+    AddDebugBtn("Clean Payload",        "Re-broadcast all your best scores with correct format",    "clean payload")
+
+    -- Resize frame to fit content
+    f:SetHeight(math.abs(btnY) + 16)
+    f:Show()
+end
 local creditsFrame = nil
 
 function UI.ShowCredits()
@@ -1681,14 +1799,14 @@ function UI.HideMainFrame()
 end
 
 -- Spec change: update HUD spec text
-Core.On(Core.EVENTS.SPEC_CHANGED, function(spec)
+MS.Core.On(MS.Core.EVENTS.SPEC_CHANGED, function(spec)
     if mainFrame and mainFrame.specText then
-        mainFrame.specText:SetText(Core.GetSpecInfoString())
+        mainFrame.specText:SetText(MS.Core.GetSpecInfoString())
     end
 end)
 
 -- On session ready: populate HUD from last saved encounter (current session or DB)
-Core.On(Core.EVENTS.SESSION_READY, function()
+MS.Core.On(MS.Core.EVENTS.SESSION_READY, function()
     local f = CreateMainFrame()
     local lastEnc = nil
     if MS.Analytics and MS.Analytics.GetLastEncounter then

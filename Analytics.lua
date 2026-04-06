@@ -15,7 +15,7 @@ MidnightSensei.Analytics = MidnightSensei.Analytics or {}
 
 local MS        = MidnightSensei
 local Analytics = MS.Analytics
-local Core      = MS.Core
+local Core      = MS.Core or MidnightSensei.Core or {}
 local CL        = MS.CombatLog   -- populated by CombatLog.lua
 local Utils     = MS.Utils
 
@@ -49,7 +49,7 @@ local feedbackQueue   = {}
 -- Expose last completed result, falling back to the most recent DB entry on login
 function Analytics.GetLastEncounter()
     if Analytics.LastResult then return Analytics.LastResult end
-    local db = MidnightSenseiDB
+    local db = MidnightSenseiCharDB
     if db and db.encounters and #db.encounters > 0 then
         return db.encounters[#db.encounters]
     end
@@ -192,7 +192,7 @@ local function OnCombatEnd(duration)
 
     if result then
         -- Save every encounter to history (for history panel / trending)
-        local db = MidnightSenseiDB
+        local db = MidnightSenseiCharDB
         if db and db.encounters then
             table.insert(db.encounters, result)
             while #db.encounters > 100 do
@@ -267,7 +267,10 @@ Core.On(Core.EVENTS.SESSION_READY, function()
         if not spec or not spec.overcapAt then return end
         if not spec.resourceType then return end
 
-        local cur = UnitPower("player", spec.resourceType)
+        -- UnitPower can return a tainted value in combat in Midnight 12.0.
+        -- Wrap in pcall so a taint error doesn't surface to the user.
+        local ok, cur = pcall(UnitPower, "player", spec.resourceType)
+        if not ok or type(cur) ~= "number" then return end
         local cap = spec.overcapAt
 
         local isNowOvercapped = (cur >= cap)

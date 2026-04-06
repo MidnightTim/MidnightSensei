@@ -32,7 +32,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.2.9"
+    Core.VERSION = ver or "1.3.0"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -104,34 +104,37 @@ tickFrame:SetScript("OnUpdate", function(_, elapsed)
     for _, sub in pairs(tickSubs) do
         if masterElapsed - sub.lastCall >= sub.interval then
             sub.lastCall = masterElapsed
-            sub.fn(elapsed)
+            local ok, err = pcall(sub.fn, elapsed)
+            if not ok and Core.GetSetting and Core.GetSetting("debugMode") then
+                print("|cff888888MS tick error:|r " .. tostring(err))
+            end
         end
     end
 end)
 
 --------------------------------------------------------------------------------
--- SavedVariables  (schema v2 — preserves encounters + leaderboard on bump)
+-- SavedVariables  (schema v3)
+-- MidnightSenseiDB     = account-wide: guild leaderboard, friend list, debug log
+-- MidnightSenseiCharDB = per-character: encounters history, HUD settings
 --------------------------------------------------------------------------------
-local SCHEMA_VERSION = 2
+local SCHEMA_VERSION = 3
 
 function Core.InitSavedVariables()
+    -- Account-wide DB
     MidnightSenseiDB = MidnightSenseiDB or {}
-    if (MidnightSenseiDB.schemaVersion or 0) < SCHEMA_VERSION then
-        local oldEnc = MidnightSenseiDB.encounters
-        local oldLB  = MidnightSenseiDB.leaderboard
-        MidnightSenseiDB = { schemaVersion = SCHEMA_VERSION }
-        MidnightSenseiDB.encounters  = oldEnc or {}
-        MidnightSenseiDB.leaderboard = oldLB  or {}
-    end
     local db = MidnightSenseiDB
-    db.encounters  = db.encounters  or {}
-    db.settings    = db.settings    or {}
-    db.stats       = db.stats       or {}
     db.leaderboard = db.leaderboard or {}
+    db.debugLog    = db.debugLog    or {}
 
-    local s = db.settings
+    -- Per-character DB — settings and encounters are character-specific
+    MidnightSenseiCharDB = MidnightSenseiCharDB or {}
+    local cdb = MidnightSenseiCharDB
+    cdb.encounters = cdb.encounters or {}
+    cdb.settings   = cdb.settings   or {}
+
+    local s = cdb.settings
     local function def(k, v) if s[k] == nil then s[k] = v end end
-    def("hudVisibility",    "always")   -- "always" | "combat" | "hide"
+    def("hudVisibility",    "always")
     def("showPostFight",    true)
     def("gradeStyle",       "encouraging")
     def("trackHealing",     true)
@@ -142,15 +145,40 @@ function Core.InitSavedVariables()
     def("minimumFight",     15)
     def("encounterAdjust",  true)
     def("debugMode",        false)
-    -- playStyle removed: grading is now behavior-driven only (no user selection)
+end
+
+-- Schema v2 → v3 migration: move encounters from account-wide DB to CharDB.
+-- Runs at SESSION_READY so UnitName("player") is guaranteed available.
+-- Safe to call multiple times — exits immediately if nothing to migrate.
+function Core.MigrateEncounters()
+    local db  = MidnightSenseiDB
+    local cdb = MidnightSenseiCharDB
+    if not db or not db.encounters or #db.encounters == 0 then return end
+    if cdb.encounters and #cdb.encounters > 0 then return end  -- already migrated
+
+    local myName  = UnitName("player") or ""
+    local myRealm = GetRealmName()     or ""
+    if myName == "" then return end  -- not in world yet, skip
+
+    local migrated = {}
+    for _, enc in ipairs(db.encounters) do
+        if (enc.charName or "") == myName and (enc.realmName or "") == myRealm then
+            table.insert(migrated, enc)
+        end
+    end
+    if #migrated > 0 then
+        cdb.encounters = migrated
+        DebugLog("[Schema] Migrated " .. #migrated .. " encounters from account DB to CharDB")
+    end
+    -- Leave db.encounters intact — other characters migrate their own slice on login
 end
 
 function Core.GetSetting(key)
-    return MidnightSenseiDB and MidnightSenseiDB.settings and MidnightSenseiDB.settings[key]
+    return MidnightSenseiCharDB and MidnightSenseiCharDB.settings and MidnightSenseiCharDB.settings[key]
 end
 function Core.SetSetting(key, value)
-    if MidnightSenseiDB and MidnightSenseiDB.settings then
-        MidnightSenseiDB.settings[key] = value
+    if MidnightSenseiCharDB and MidnightSenseiCharDB.settings then
+        MidnightSenseiCharDB.settings[key] = value
         Core.Emit(Core.EVENTS.SETTINGS_CHANGED, key, value)
     end
 end
@@ -238,6 +266,26 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.3.0",
+        tagline = "Leaderboard Data Integrity & Direct Friend Queries",
+        date    = "April 2026",
+        changes = {
+            "instanceName now broadcast in SCORE messages — peers see dungeon/raid name, not just difficulty",
+            "bossName and instanceName now stored on all three data routes (party, guild, friends)",
+            "lastEnc selection now prefers boss encounters — leaderboard shows boss name, not trash pull",
+            "Refresh button wait extended to 3s so peer responses arrive before the leaderboard redraws",
+            "Added /ms friend Name-Realm — whisper-based direct score query, no BNet API required",
+            "REQD message protocol added — peers with 1.3.0+ auto-respond to direct queries via whisper",
+            "5-second timeout with clear message if target is offline, missing addon, or needs update",
+            "Score query result prints to chat with grade colour, score, and location context",
+            "Core.On hardened across all files — load-order race no longer causes EVENTS nil crash",
+            "/ms update now opens the Changelog tab in the Credits panel instead of printing to chat",
+            "lb fix beta command fully removed — was silently clearing encounter history on /ms lb debug",
+            "FAQ updated: rotational spell tracking, leaderboard persistence, right-click remove, current commands",
+            "GRM references removed from all user-facing text",
+        },
+    },
     {
         version = "1.2.9",
         tagline = "Spec Coverage & Feedback Accuracy",
@@ -1743,6 +1791,8 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         Core.InitSavedVariables()
         DetectSpec()
         C_Timer.After(3.0, BroadcastVersion)
+        -- Run migration after a short delay so UnitName/GetRealmName are available
+        C_Timer.After(1.0, function() Core.MigrateEncounters() end)
         Core.Emit(Core.EVENTS.SESSION_READY)
         print("|cff00D1FFMidnight Sensei|r v" .. Core.VERSION ..
               " loaded.  Type |cffFFD700/ms|r for commands.")
@@ -1860,7 +1910,7 @@ C_ChatInfo.RegisterAddonMessagePrefix(VER_PREFIX)
 SLASH_MIDNIGHTSENSEI1 = "/ms"
 SLASH_MIDNIGHTSENSEI2 = "/midnightsensei"
 
-SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
+local function MSSlashHandler(msg)
     msg = (msg or ""):lower():trim()
     if msg == "" then
         print("|cff00D1FFMidnight Sensei:|r Type |cffFFFFFF/ms show|r to open the HUD  ·  |cffFFFFFF/ms hide|r to close it  ·  |cffFFFFFF/ms help|r for all commands.")
@@ -1882,7 +1932,12 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         print("  /ms reset         Clear fight history")
         print("  /ms update        Show changelog")
         print("  /ms debug         Current spec / class IDs")
-        print("  /ms verify        Toggle spell ID verify mode (dev tool)")
+        print("  /ms debug guild         Diagnose guild score routing")
+        print("  /ms debug guild inject  Send a test score to guild (pipeline test)")
+        print("  /ms debug guild broadcast  Re-broadcast all your best scores")
+        print("  /ms debug self    Diagnose your delve encounter history")
+        print("  /ms debug zone    Show current instance/zone context and diffID")
+        print("  /ms friend <Name> Query a player's last score directly (addon whisper)")
         print("  /ms verify report Print verify findings for current spec")
     elseif msg == "faq"                        then Call(MS.UI, "ShowFAQ")
     elseif msg == "credits"                    then Call(MS.UI, "ShowCredits")
@@ -1901,6 +1956,17 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
                       k, tostring(v.name), tostring(v.score)))
             end
         end
+    elseif msg:sub(1, 11) == "friend add " then
+        local target = msg:sub(12)
+        Call(MS.Leaderboard, "AddFriend", target)
+    elseif msg:sub(1, 14) == "friend remove " then
+        local target = msg:sub(15)
+        Call(MS.Leaderboard, "RemoveFriend", target)
+    elseif msg:sub(1, 7) == "friend " then
+        local target = msg:sub(8)
+        Call(MS.Leaderboard, "QueryFriend", target)
+    elseif msg == "friend" then
+        print("|cff00D1FFMidnight Sensei:|r Usage: /ms friend Name  or  /ms friend add Name  or  /ms friend remove Name")
     elseif msg:sub(1, 10) == "lb remove " then
         local name = msg:sub(11)
         if name and name ~= "" then
@@ -2060,7 +2126,307 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         else
             print("  GetAddOnMetadata: unavailable")
         end
-    elseif msg == "debug delve" then
+    elseif msg == "clean payload" then
+        -- ── PILOT RECOVERY TOOL — REMOVE BEFORE PUBLIC RELEASE ──────────────
+        -- Rebuilds and re-broadcasts all local encounters in the current payload
+        -- format so peers receive correct checksums and encType values.
+        -- Also purges ghost guild entries (score=0, no category data).
+        -- Run this once after updating to 1.3.0+ to fix cross-client data issues.
+        print("|cff00D1FFMidnight Sensei - Payload Cleanup:|r Starting...")
+        -- Reset rate limits so incoming re-broadcasts aren't silently dropped
+        if MS.Leaderboard and MS.Leaderboard.ResetRateLimits then
+            MS.Leaderboard.ResetRateLimits()
+        end
+        -- Whisper current spec (HELLO) to online guild members so stale
+        -- class/spec data (e.g. showing wrong class) is corrected immediately
+        if MS.Leaderboard and MS.Leaderboard.BroadcastHelloToGuild then
+            MS.Leaderboard.BroadcastHelloToGuild()
+        end
+
+        local db = MidnightSenseiDB
+        if not db then
+            print("|cffFF4444Midnight Sensei:|r No saved data found.")
+        else
+            local fixed = 0
+
+            -- 1. Purge ghost guild entries (populated by HELLO but no score ever received)
+            local lbDB = db.leaderboard and db.leaderboard.guild
+            if lbDB then
+                local toRemove = {}
+                for key, entry in pairs(lbDB) do
+                    local hasData = (entry.score or 0) > 0
+                                 or (entry.allTimeBest or 0) > 0
+                                 or (entry.dungeonBest or 0) > 0
+                                 or (entry.raidBest    or 0) > 0
+                                 or (entry.delveBest   or 0) > 0
+                    if not hasData then
+                        table.insert(toRemove, key)
+                    end
+                end
+                for _, key in ipairs(toRemove) do
+                    lbDB[key] = nil
+                    fixed = fixed + 1
+                    print("|cff888888  Removed ghost guild entry: " .. key .. "|r")
+                end
+            end
+
+            -- 2. Clear debug log so bad checksum entries don't persist
+            local oldLogSize = db.debugLog and #db.debugLog or 0
+            db.debugLog = {}
+            if oldLogSize > 0 then
+                print("|cff888888  Cleared " .. oldLogSize .. " debug log entries.|r")
+            end
+
+            -- 3. Re-broadcast best encounter per encType in current payload format.
+            -- This overwrites peers' stale/bad data with correctly formatted messages.
+            local encounters = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
+            if encounters and #encounters > 0 then
+                local best = {}  -- [encType] = highest scoring eligible encounter
+                for _, enc in ipairs(encounters) do
+                    if enc.finalScore then
+                        local t = enc.encType or "normal"
+                        -- Delves are eligible without isBoss; all others require isBoss=true
+                        local eligible = (t == "delve") or enc.isBoss
+                        if eligible then
+                            if not best[t] or enc.finalScore > best[t].finalScore then
+                                best[t] = enc
+                            end
+                        end
+                    end
+                end
+                local delay = 0
+                for encType, enc in pairs(best) do
+                    delay = delay + 0.6
+                    C_Timer.After(delay, function()
+                        Call(MS.Leaderboard, "BroadcastEncounterToGuild", enc)
+                        print("|cff00D1FFMidnight Sensei:|r  Broadcast " .. encType ..
+                              " (" .. enc.finalScore .. ") — " ..
+                              (enc.diffLabel or "") .. " " ..
+                              (enc.instanceName or ""))
+                    end)
+                    fixed = fixed + 1
+                end
+                if delay == 0 then
+                    print("|cff888888  No boss encounters found to broadcast.|r")
+                end
+            else
+                print("|cff888888  No encounter history found.|r")
+            end
+
+            if fixed > 0 then
+                print("|cff00D1FFMidnight Sensei:|r Cleanup done — " ..
+                      fixed .. " action(s). Peers will receive updated scores shortly.")
+            else
+                print("|cff00D1FFMidnight Sensei:|r Nothing to clean.")
+            end
+
+            if MS.Leaderboard and MS.Leaderboard.RefreshUI then
+                MS.Leaderboard.RefreshUI()
+            end
+        end
+        -- ── END PILOT RECOVERY TOOL ──────────────────────────────────────────
+
+    elseif msg == "debug guild inject" then
+        -- Send a synthetic SCORE message to the guild channel.
+        -- Uses a real checksum so it passes validation on the receiver.
+        -- This tests the full receive → MergeEntry → display pipeline.
+        if not IsInGuild() then
+            print("|cffFF4444Midnight Sensei:|r Not in a guild.")
+        else
+            local spec = Core.ActiveSpec
+            local className = spec and spec.className or "Mage"
+            local specName  = spec and spec.name      or "Frost"
+            local role      = spec and spec.role      or "DPS"
+            local score     = 77
+            local duration  = 120
+            local encType   = "dungeon"
+            local charName  = UnitName("player") or "?"
+            -- Compute real checksum so receiver accepts it
+            local a = (score * 7) % 251
+            local b = (math.floor(duration) * 11) % 251
+            local c = (#encType * 17) % 251
+            local cs = string.format("%03d", (a + b + c) % 251)
+            local payload = table.concat({
+                "SCORE", Core.VERSION,
+                className, specName, role,
+                "B",                          -- grade
+                tostring(score),
+                tostring(duration),
+                "1",                          -- isBoss
+                "TEST_BOSS",                  -- bossName
+                encType,
+                cs,
+                "TEST_Difficulty",            -- diffLabel
+                "0",                          -- keystoneLevel
+                charName,
+                "TEST_Dungeon",               -- instanceName
+            }, "|")
+            if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+                local ok, err = pcall(C_ChatInfo.SendAddonMessage, "MS_LB", payload, "GUILD")
+                if ok then
+                    print("|cff00D1FFMidnight Sensei:|r Injected test dungeon score (" ..
+                          score .. ") to GUILD. Check Polkatron's leaderboard.")
+                else
+                    print("|cffFF4444Midnight Sensei:|r Send failed: " .. tostring(err))
+                end
+            end
+        end
+
+    elseif msg == "debug guild ping" then
+        -- Send a PING to GUILD channel and check if we receive it back
+        print("|cff00D1FFMidnight Sensei:|r Sending PING to GUILD channel...")
+        local myGuild = GetGuildInfo("player")
+        print("  Your guild: " .. tostring(myGuild))
+        if not IsInGuild() then
+            print("  |cffFF4444Not in a guild — GUILD channel unavailable.|r")
+        else
+            local ok, err = pcall(C_ChatInfo.SendAddonMessage, "MS_LB",
+                                  "PING|" .. Core.VERSION, "GUILD")
+            if ok then
+                print("  Send succeeded. Ask a guildie to run /ms debug guild receive")
+                print("  to confirm they receive it. You will NOT see your own message.")
+            else
+                print("  |cffFF4444Send FAILED: " .. tostring(err) .. "|r")
+                print("  This means the GUILD channel is blocked or unavailable.")
+            end
+        end
+
+    elseif msg == "debug guild receive" then
+        print("|cff00D1FFMidnight Sensei - Last Received SCOREs:|r")
+        local myGuild = GetGuildInfo("player")
+        print("  Your guild: " .. tostring(myGuild))
+        -- Check prefix registration
+        local regOk = C_ChatInfo and C_ChatInfo.IsAddonMessagePrefixRegistered
+                      and C_ChatInfo.IsAddonMessagePrefixRegistered("MS_LB")
+        print("  Prefix MS_LB registered: " .. tostring(regOk))
+        local log = MS.Leaderboard and MS.Leaderboard.GetReceivedScoreLog
+                    and MS.Leaderboard.GetReceivedScoreLog()
+        if not log or #log == 0 then
+            print("  No SCORE messages received yet this session.")
+            print("  If prefix=true above, ask sender to /ms debug guild broadcast")
+            print("  If prefix=false, the addon message system is not receiving — try /reload")
+        else
+            for i, entry in ipairs(log) do
+                print(string.format("  [%d] from=%-12s ch=%-8s score=%-4s encType=%-8s isBoss=%s",
+                      i, entry.sender, entry.channel, entry.score,
+                      entry.encType, tostring(entry.isBoss)))
+                if entry.diffLabel ~= "" or entry.instanceName ~= "" then
+                    print(string.format("       diff=%-15s inst=%s",
+                          entry.diffLabel, entry.instanceName))
+                end
+            end
+        end
+
+    elseif msg == "debug guild" then
+        print("|cff00D1FFMidnight Sensei - Guild Routing Debug:|r")
+        print("  IsInGuild(): " .. tostring(IsInGuild()))
+        print("  GetNumGuildMembers(): " .. tostring(GetNumGuildMembers()))
+        local db = MidnightSenseiDB and MidnightSenseiDB.leaderboard
+        local guild = db and db.guild
+        if guild and next(guild) then
+            print(string.format("  db.guild entries:"))
+            for k, v in pairs(guild) do
+                print(string.format("    key=%-20s score=%-4s dungeonBest=%-4s delveBest=%-4s raidBest=%-4s",
+                      k, tostring(v.score), tostring(v.dungeonBest),
+                      tostring(v.delveBest), tostring(v.raidBest)))
+            end
+        else
+            print("  db.guild is EMPTY — no scores received from guildmates")
+        end
+        -- Test IsGuildMember for each online member
+        local n = GetNumGuildMembers()
+        if n > 0 then
+            print("  Guild roster sample (first 5):")
+            for i = 1, math.min(5, n) do
+                local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(i)
+                print(string.format("    [%d] %-20s online=%s", i, tostring(name), tostring(online)))
+            end
+        else
+            print("  Guild roster empty — GetNumGuildMembers() = 0")
+            print("  This is the routing bug: GUILD channel messages may still arrive correctly")
+        end
+        -- Show last encounter for broadcast test
+        local lastEnc = MS.Analytics and MS.Analytics.GetLastEncounter and MS.Analytics.GetLastEncounter()
+        if lastEnc then
+            print(string.format("  Last encounter: score=%s encType=%s isBoss=%s diffLabel=%s",
+                  tostring(lastEnc.finalScore), tostring(lastEnc.encType),
+                  tostring(lastEnc.isBoss), tostring(lastEnc.diffLabel)))
+            print("  NOTE: Only isBoss=true encounters update weeklyAvg on the leaderboard")
+            print("  Type /ms debug guild broadcast to re-broadcast ALL content type bests")
+        else
+            print("  No encounter in history — fight something first")
+        end
+
+    elseif msg == "debug guild broadcast" then
+        local lastEnc = MS.Analytics and MS.Analytics.GetLastEncounter and MS.Analytics.GetLastEncounter()
+        if not lastEnc then
+            print("|cffFF4444Midnight Sensei:|r No encounter to broadcast.")
+        else
+            -- Broadcast the last encounter of each type so all category bests update
+            local db = MidnightSenseiDB
+            local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
+            local best = {}  -- [encType] = highest score encounter
+            if history then
+                for _, enc in ipairs(history) do
+                    local t = enc.encType or "normal"
+                    if not best[t] or (enc.finalScore or 0) > (best[t].finalScore or 0) then
+                        best[t] = enc
+                    end
+                end
+            end
+            local count = 0
+            for encType, enc in pairs(best) do
+                if enc.finalScore then
+                    C_Timer.After(count * 0.5, function()
+                        Call(MS.Leaderboard, "BroadcastEncounterToGuild", enc)
+                    end)
+                    print("|cff00D1FFMidnight Sensei:|r Broadcasting " .. encType ..
+                          " score (" .. enc.finalScore .. ") to guild.")
+                    count = count + 1
+                end
+            end
+            if count == 0 then
+                print("|cffFF4444Midnight Sensei:|r No encounters to broadcast.")
+            end
+        end
+
+    elseif msg == "debug self" then
+        print("|cff00D1FFMidnight Sensei - Self Delve Debug:|r")
+        print("  UnitName('player'): " .. tostring(UnitName("player")))
+        local db = MidnightSenseiDB
+        local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
+        if not history or #history == 0 then
+            print("  No encounter history found in SavedVariables")
+        else
+            print("  Total encounters: " .. #history)
+            local delveCount = 0
+            local delveBoss  = 0
+            for _, enc in ipairs(history) do
+                if enc.encType == "delve" then
+                    delveCount = delveCount + 1
+                    if enc.isBoss then delveBoss = delveBoss + 1 end
+                end
+            end
+            print("  Delve encounters: " .. delveCount .. " (boss: " .. delveBoss .. ")")
+            if delveBoss == 0 then
+                print("  |cffFF4444No delve BOSS encounters — Delve tab requires isBoss=true|r")
+                print("  The encounter must be triggered by ENCOUNTER_START/END inside a delve")
+            end
+            -- Show last delve encounter
+            for i = #history, 1, -1 do
+                local enc = history[i]
+                if enc.encType == "delve" then
+                    print(string.format("  Last delve enc: isBoss=%s score=%s charName=%s encType=%s",
+                          tostring(enc.isBoss), tostring(enc.finalScore),
+                          tostring(enc.charName), tostring(enc.encType)))
+                    print("  diffLabel: " .. tostring(enc.diffLabel))
+                    print("  instanceName: " .. tostring(enc.instanceName))
+                    break
+                end
+            end
+        end
+
+    elseif msg == "debug zone" then
         local instName, instType, diffID, diffName,
               maxPlayers, dynDiff, isDynamic, instMapID = GetInstanceInfo()
         print("|cff00D1FFMidnight Sensei - Instance Debug:|r")
@@ -2076,6 +2442,10 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
             print("  encType:   " .. tostring(ctx.encType))
             print("  diffLabel: " .. tostring(ctx.diffLabel))
             print("  instLabel: " .. tostring(ctx.instanceName))
+        end
+        if instType == "raid" then
+            print("  |cff00D1FFRAID detected|r — if diffLabel shows numeric diffID,")
+            print("  add [" .. tostring(diffID) .. "] = \"" .. tostring(diffName) .. "\" to RAID_DIFF table")
         end
         print("  Note: C_Delves is nil in Midnight 12.0 — tier level not available via API.")
         -- Also print the last saved encounter for comparison
@@ -2128,6 +2498,9 @@ SlashCmdList["MIDNIGHTSENSEI"] = function(msg)
         print("|cff00D1FFMidnight Sensei:|r Unknown command. Type |cffFFFFFF/ms help|r for a list of commands.")
     end
 end
+
+SlashCmdList["MIDNIGHTSENSEI"] = MSSlashHandler
+Core.SlashHandler = MSSlashHandler  -- exposed for debug window buttons
 
 function Core.GetSpecInfoString()
     if not Core.ActiveSpec then return "No spec loaded" end

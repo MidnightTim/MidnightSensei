@@ -16,7 +16,7 @@ MidnightSensei.CombatLog = MidnightSensei.CombatLog or {}
 
 local MS   = MidnightSensei
 local CL   = MS.CombatLog
-local Core = MS.Core
+local Core = MS.Core or MidnightSensei.Core or {}
 
 --------------------------------------------------------------------------------
 -- State
