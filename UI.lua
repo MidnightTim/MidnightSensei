@@ -802,6 +802,22 @@ local function CreateMainFrame()
     reviewBtn:Hide()
     mainFrame.reviewBtn = reviewBtn
 
+    -- Leaderboard button — always visible in bottom right
+    local lbBtn = MakeButton(mainFrame, 90, 22, "Leaderboard")
+    lbBtn:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -4, 4)
+    lbBtn:SetScript("OnClick", function()
+        if MS.Leaderboard and MS.Leaderboard.Toggle then
+            MS.Leaderboard.Toggle()
+        end
+    end)
+    lbBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Leaderboard", 0, 0.82, 1)
+        GameTooltip:AddLine("Guild / Party / Friends / Delves", 0.8, 0.8, 0.8)
+        GameTooltip:Show()
+    end)
+    lbBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     -- Right-click: context menu
     mainFrame:SetScript("OnMouseDown", function(_, btn)
         if btn == "RightButton" then UI.ShowMainCtxMenu() end
