@@ -2,7 +2,7 @@
 ## Title: Midnight Sensei
 ## Notes: Combat performance coaching for all 13 classes — grade your fights A+ to F.
 ## Author: MidnightTim
-## Version: 1.3.2
+## Version: 1.3.3
 ## SavedVariables: MidnightSenseiDB
 ## SavedVariablesPerCharacter: MidnightSenseiCharDB
 ## IconTexture: Interface/Icons/Achievement_BG_winAV

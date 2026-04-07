@@ -336,8 +336,9 @@ local friendsData = {}   -- [playerName] = entry  (session-only)
 --------------------------------------------------------------------------------
 local function GetDB()
     if not MidnightSenseiDB then return nil end
-    MidnightSenseiDB.leaderboard         = MidnightSenseiDB.leaderboard         or {}
-    MidnightSenseiDB.leaderboard.guild   = MidnightSenseiDB.leaderboard.guild   or {}
+    MidnightSenseiDB.leaderboard           = MidnightSenseiDB.leaderboard           or {}
+    MidnightSenseiDB.leaderboard.guild     = MidnightSenseiDB.leaderboard.guild     or {}
+    MidnightSenseiDB.leaderboard.friends   = MidnightSenseiDB.leaderboard.friends   or {}
     return MidnightSenseiDB.leaderboard
 end
 
@@ -430,6 +431,11 @@ function LB.RemoveFriend(nameRealm)
             for k in pairs(friendsData) do
                 if ShortName(k):lower() == shortTarget then
                     friendsData[k] = nil
+                    -- Also clear from SavedVariables
+                    local lbdb = GetDB()
+                    if lbdb and lbdb.friends then
+                        lbdb.friends[k] = nil
+                    end
                     break
                 end
             end
@@ -705,6 +711,14 @@ Core.On(Core.EVENTS.SESSION_READY, function()
                 table.insert(friendList, name)
             end
         end
+        -- Load persisted friend scores from DB — mark all offline until they respond
+        local lbdb = GetDB()
+        if lbdb and lbdb.friends then
+            for k, v in pairs(lbdb.friends) do
+                v.online = false  -- will be set true when they respond this session
+                friendsData[k] = v
+            end
+        end
         LB.RefreshUI()
     end)
     -- Query all manual friends after a short delay so they're loaded first
@@ -875,6 +889,11 @@ local function OnAddonMessage(prefix, payload, channel, sender)
                 friendsData[sender].delveLabel    = diffLabel
                 friendsData[sender].delveInstance = instanceName
                 friendsData[sender].delveBoss     = bossName
+            end
+            -- Persist to SavedVariables so data survives logout
+            local lbdb = GetDB()
+            if lbdb then
+                lbdb.friends[sender] = friendsData[sender]
             end
 
             -- If this arrived via direct whisper (from /ms friend query), print to chat

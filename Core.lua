@@ -32,7 +32,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.3.2"
+    Core.VERSION = ver or "1.3.3"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -282,6 +282,17 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.3.3",
+        tagline = "Offline Score Persistence",
+        date    = "April 2026",
+        changes = {
+            "Friend scores now persist to SavedVariables — last known data survives logout and reload",
+            "Friends tab shows offline members with grey dot and last known scores until they come back online",
+            "Friend scores cleared from SavedVariables when player is removed from the friend list",
+            "Guild member scores already persisted — confirmed working across sessions",
+        },
+    },
     {
         version = "1.3.2",
         tagline = "Friends Leaderboard, Multi-Character Safety & Stability",
@@ -925,25 +936,32 @@ Core.SPEC_DATABASE = {
             name = "Shadow", role = "DPS",
             resourceType = 13, resourceLabel = "INSANITY", overcapAt = 90,
             majorCooldowns = {
-                { id = 228260, label = "Void Eruption",   expectedUses = "on CD"          },
-                { id = 391109, label = "Dark Ascension",  expectedUses = "on CD (talent)" },
-                { id = 263165, label = "Void Torrent",    expectedUses = "on CD"          },
-                { id = 205385, label = "Shadow Crash",    expectedUses = "on CD"          },
+                { id = 228260,  label = "Voidform",        expectedUses = "on CD", minFightSeconds = 60 },  -- renamed from Void Eruption in 12.0
+                { id = 10060,   label = "Power Infusion",  expectedUses = "on CD", minFightSeconds = 60, talentGated = true },  -- class talent, sync with Voidform
+                { id = 263165,  label = "Void Torrent",    expectedUses = "on CD", talentGated = true },    -- Voidweaver only
+                { id = 1227280, label = "Tentacle Slam",   expectedUses = "on CD", talentGated = true },    -- renamed from Shadow Crash in 12.0
             },
             -- uptimeBuffs empty: SW:Pain and Vampiric Touch are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 589,    label = "Shadow Word: Pain", minFightSeconds = 15 },  -- opener DoT
-                { id = 34914,  label = "Vampiric Touch",    minFightSeconds = 15 },  -- opener DoT
-                { id = 335467, label = "Devouring Plague",  minFightSeconds = 20 },  -- Insanity spender
-                { id = 8092,   label = "Mind Blast",        minFightSeconds = 20 },  -- Insanity generator
+                { id = 589,    label = "Shadow Word: Pain", minFightSeconds = 15,
+                  suppressIfTalent = 238558 },  -- Misery (238558): VT auto-applies SW:Pain passively
+                { id = 34914,  label = "Vampiric Touch", minFightSeconds = 15,
+                  suppressIfTalent = 1227280 },  -- Tentacle Slam auto-applies VT to up to 6 targets
+                { id = 335467, label = "Shadow Word: Madness", minFightSeconds = 20 },
+                { id = 8092,   label = "Mind Blast",        minFightSeconds = 20 },
             },
             priorityNotes = {
-                "Maintain Shadow Word: Pain and Vampiric Touch on all targets (not directly tracked)",
-                "Enter Voidform (Void Eruption) or Dark Ascension on cooldown",
-                "Devouring Plague to spend Insanity — never overcap at 90",
+                "Cast Vampiric Touch to apply Shadow Word: Pain automatically (Misery talent)",
+                "Without Misery: manually cast Shadow Word: Pain as opener DoT",
+                "Tentacle Slam applies Vampiric Touch to up to 6 targets automatically (talent)",
+                "Without Tentacle Slam: manually cast Vampiric Touch as opener DoT",
+                "Enter Voidform on cooldown — primary damage cooldown in Midnight 12.0",
+                "Power Infusion on cooldown — sync with Voidform for maximum burst",
+                "Shadow Word: Madness to spend Insanity — never overcap at 90",
                 "Mind Blast on cooldown for Insanity generation",
-                "Void Torrent on cooldown — strong channel, do not cancel",
+                "Void Torrent on cooldown (Voidweaver) — strong channel, do not cancel",
+                "Tentacle Slam on cooldown (talent) — applies Vampiric Touch to up to 6 targets",
             },
             scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
             sourceNote = "Adapted from Icy Veins Shadow Priest guide",
@@ -1602,6 +1620,35 @@ Core.SPEC_DATABASE = {
         [1] = {
             name = "Havoc", role = "DPS",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
+            validSpells = {
+                -- Havoc core abilities
+                [191427]=true,  -- Metamorphosis
+                [198013]=true,  -- Eye Beam
+                [258925]=true,  -- Fel Barrage
+                [370965]=true,  -- The Hunt
+                [188499]=true,  -- Blade Dance
+                [162794]=true,  -- Chaos Strike
+                [258920]=true,  -- Immolation Aura
+                [188501]=true,  -- Spectral Sight
+                [198793]=true,  -- Vengeful Retreat
+                [179057]=true,  -- Chaos Nova
+                [232893]=true,  -- Felblade
+                [185164]=true,  -- Mastery: Demonic Presence
+                -- Shared DH class abilities
+                [255260]=true,  -- Chaos Brand
+                [278326]=true,  -- Consume Magic
+                [196718]=true,  -- Darkness
+                [183752]=true,  -- Disrupt
+                [196055]=true,  -- Double Jump
+                [131347]=true,  -- Glide
+                [217832]=true,  -- Imprison
+                [207684]=true,  -- Sigil of Misery
+                [185123]=true,  -- Throw Glaive
+                [185245]=true,  -- Torment
+                -- proc buffs
+                [337567]=true,  -- Furious Gaze
+                [389860]=true,  -- Unbound Chaos
+            },
             majorCooldowns = {
                 { id = 191427, label = "Metamorphosis",  expectedUses = "burst windows"  },
                 { id = 198013, label = "Eye Beam",       expectedUses = "on CD"          },
@@ -1609,9 +1656,9 @@ Core.SPEC_DATABASE = {
                 { id = 370965, label = "The Hunt",       expectedUses = "on CD (talent)" },
             },
             rotationalSpells = {
-                { id = 188499, label = "Blade Dance",      minFightSeconds = 15 },  -- priority spender
-                { id = 162794, label = "Chaos Strike",     minFightSeconds = 15 },  -- Fury dump
-                { id = 258920, label = "Immolation Aura",  minFightSeconds = 15 },  -- always on CD
+                { id = 188499, label = "Blade Dance",      minFightSeconds = 15 },
+                { id = 162794, label = "Chaos Strike",     minFightSeconds = 15 },
+                { id = 258920, label = "Immolation Aura",  minFightSeconds = 15 },
             },
             procBuffs = {
                 { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },
@@ -1632,11 +1679,35 @@ Core.SPEC_DATABASE = {
         [2] = {
             name = "Vengeance", role = "TANK",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
+            validSpells = {
+                -- Vengeance core abilities
+                [187827]=true,  -- Metamorphosis
+                [204021]=true,  -- Fiery Brand
+                [212084]=true,  -- Fel Devastation
+                [263648]=true,  -- Soul Barrier
+                [203819]=true,  -- Demon Spikes
+                [258920]=true,  -- Immolation Aura
+                [228477]=true,  -- Soul Cleave
+                [210152]=true,  -- Fracture
+                [278386]=true,  -- Demonic Wards
+                [206478]=true,  -- Demonic Appetite
+                -- Shared DH class abilities
+                [255260]=true,  -- Chaos Brand
+                [278326]=true,  -- Consume Magic
+                [196718]=true,  -- Darkness
+                [183752]=true,  -- Disrupt
+                [196055]=true,  -- Double Jump
+                [131347]=true,  -- Glide
+                [217832]=true,  -- Imprison
+                [207684]=true,  -- Sigil of Misery
+                [185123]=true,  -- Throw Glaive
+                [185245]=true,  -- Torment
+            },
             majorCooldowns = {
-                { id = 187827, label = "Metamorphosis",  expectedUses = "emergency mitigation" },
-                { id = 204021, label = "Fiery Brand",    expectedUses = "tank busters"         },
-                { id = 212084, label = "Fel Devastation",expectedUses = "on CD"                },
-                { id = 263648, label = "Soul Barrier",   expectedUses = "big hits (talent)"    },
+                { id = 187827, label = "Metamorphosis",   expectedUses = "emergency mitigation" },
+                { id = 204021, label = "Fiery Brand",     expectedUses = "tank busters"         },
+                { id = 212084, label = "Fel Devastation", expectedUses = "on CD"                },
+                { id = 263648, label = "Soul Barrier",    expectedUses = "big hits (talent)"    },
             },
             uptimeBuffs = {
                 { id = 203819, label = "Demon Spikes", targetUptime = 50 },
@@ -1660,26 +1731,41 @@ Core.SPEC_DATABASE = {
         [3] = {
             name = "Devourer", role = "DPS",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
-            majorCooldowns = {
-                -- Void Metamorphosis is resource-gated (Soul Fragments), not a static CD.
-                -- Tracked for presence via rotationalSpells instead.
-                { id = 258920, label = "Immolation Aura", expectedUses = "on CD"          },
-                { id = 198013, label = "Eye Beam",        expectedUses = "on CD"          },
-                { id = 370965, label = "The Hunt",        expectedUses = "on CD (talent)" },
+            -- Strict whitelist: ONLY these spell IDs are valid for Devourer.
+            -- Any spell not in this table is ignored regardless of spellbook state.
+            -- Hard-blocks all Havoc/Vengeance abilities (Eye Beam, Immolation Aura, etc.)
+            validSpells = {
+                [198589]=true,  -- Blur
+                [1238855]=true, -- Mastery: Monster Within
+                [1227619]=true, -- Shattered Souls
+                [1234195]=true, -- Void Nova
+                [473728]=true,  -- Void Ray
+                [1245412]=true, -- Voidblade
+                [255260]=true,  -- Chaos Brand
+                [278326]=true,  -- Consume Magic
+                [196718]=true,  -- Darkness
+                [183752]=true,  -- Disrupt
+                [196055]=true,  -- Double Jump
+                [131347]=true,  -- Glide
+                [217832]=true,  -- Imprison
+                [207684]=true,  -- Sigil of Misery
+                [185123]=true,  -- Throw Glaive
+                [185245]=true,  -- Torment
+                [1217605]=true, -- Void Metamorphosis
+                [1221167]=true, -- Collapsing Star
+                [1226019]=true, -- Reap
             },
+            majorCooldowns = {},
             rotationalSpells = {
-                -- Void Metamorphosis: resource-gated burst window — tracked for presence
-                { id = 1217605, label = "Void Metamorphosis", minFightSeconds = 30 },  -- resource-gated
-                -- Collapsing Star: used inside Void Metamorphosis windows
-                { id = 1221167, label = "Collapsing Star",    minFightSeconds = 30 },  -- inside Void window
-                -- Reap: central to the Devourer burst builder/spender loop
-                { id = 1226019, label = "Reap",               minFightSeconds = 20 },  -- core loop
+                { id = 1217605, label = "Void Metamorphosis", minFightSeconds = 30 },
+                { id = 1221167, label = "Collapsing Star",    minFightSeconds = 90,
+                  combatGated = true },  -- granted inside Void Metamorphosis, not in spellbook at fight start
+                { id = 1226019, label = "Reap",               minFightSeconds = 20 },
             },
             priorityNotes = {
                 "Build Soul Fragments to trigger Void Metamorphosis windows",
-                "Use Collapsing Star and Reap inside Void Metamorphosis for maximum damage",
-                "Immolation Aura on cooldown for Fury generation and damage",
-                "Eye Beam on cooldown — core damage outside of Void windows",
+                "Use Collapsing Star inside Void Metamorphosis for maximum damage",
+                "Cast Void Ray to generate Souls and Fury outside Void Metamorphosis",
                 "Pool Fury before entering Void Metamorphosis for burst spending",
             },
             scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
@@ -1922,11 +2008,18 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         local unit, _, spellID = ...
         if unit == "player" and spellID then
             Core.Emit(Core.EVENTS.ABILITY_USED, spellID, GetTime())
-            -- Verify mode: record every spell ID cast
             if Core.VerifyMode then
                 Core.VerifySeenSpells = Core.VerifySeenSpells or {}
                 Core.VerifySeenSpells[spellID] = (Core.VerifySeenSpells[spellID] or 0) + 1
             end
+        end
+
+    elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
+        -- Channeled spells (e.g. Collapsing Star) fire CHANNEL_START, not SUCCEEDED.
+        -- Emit ABILITY_USED so they register in cdTracking and rotationalTracking.
+        local unit, _, spellID = ...
+        if unit == "player" and spellID then
+            Core.Emit(Core.EVENTS.ABILITY_USED, spellID, GetTime())
         end
 
     elseif event == "GROUP_ROSTER_UPDATE" or event == "GUILD_ROSTER_UPDATE" then
@@ -1956,6 +2049,7 @@ eventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 eventFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
 eventFrame:RegisterEvent("UNIT_AURA")
 eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
 eventFrame:RegisterEvent("ENCOUNTER_START")
 eventFrame:RegisterEvent("ENCOUNTER_END")
 eventFrame:RegisterEvent("CHAT_MSG_ADDON")
@@ -2056,10 +2150,20 @@ local function MSSlashHandler(msg)
             print("  Spec rotationalSpells defined: " .. #spec.rotationalSpells)
             for _, rs in ipairs(spec.rotationalSpells) do
                 print("  id=" .. rs.id .. " label=" .. rs.label ..
-                      " minFight=" .. (rs.minFightSeconds or 60) .. "s")
+                      " minFight=" .. (rs.minFightSeconds or 60) .. "s" ..
+                      (rs.suppressIfTalent and " suppressIfTalent=" .. rs.suppressIfTalent or "") ..
+                      (rs.talentGated and " talentGated=true" or ""))
             end
         else
             print("  No rotationalSpells defined for current spec.")
+        end
+        if spec and spec.majorCooldowns then
+            print("  Spec majorCooldowns defined: " .. #spec.majorCooldowns)
+            for _, cd in ipairs(spec.majorCooldowns) do
+                print("  id=" .. cd.id .. " label=" .. cd.label ..
+                      (cd.minFightSeconds and " minFight=" .. cd.minFightSeconds .. "s" or "") ..
+                      (cd.talentGated and " talentGated=true" or ""))
+            end
         end
         -- Show last result if available
         local last = MS.Analytics and MS.Analytics.GetLastEncounter and MS.Analytics.GetLastEncounter()
@@ -2388,9 +2492,9 @@ local function MSSlashHandler(msg)
         if guild and next(guild) then
             print(string.format("  db.guild entries:"))
             for k, v in pairs(guild) do
-                print(string.format("    key=%-20s score=%-4s dungeonBest=%-4s delveBest=%-4s raidBest=%-4s",
+                print(string.format("    key=%-20s score=%-4s dungeonBest=%-4s delveBest=%-4s online=%s",
                       k, tostring(v.score), tostring(v.dungeonBest),
-                      tostring(v.delveBest), tostring(v.raidBest)))
+                      tostring(v.delveBest), tostring(v.online)))
             end
         else
             print("  db.guild is EMPTY — no scores received from guildmates")

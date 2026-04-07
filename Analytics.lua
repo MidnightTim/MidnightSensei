@@ -123,18 +123,63 @@ local function OnCombatStart()
         end
     end
 
-    -- Pre-populate CD tracking — spec cooldowns the player currently has
+    -- Helper: check if a talent is active using the most reliable API available.
+    -- C_Traits is more reliable for passive/class talent nodes (e.g. Power Infusion,
+    -- Misery) that aren't always returned by IsPlayerSpell in Midnight 12.0.
+    local function IsTalentActive(spellID)
+        if C_Traits and C_Traits.GetNodeInfo then
+            local configID = C_ClassTalents and C_ClassTalents.GetActiveConfigID
+                             and C_ClassTalents.GetActiveConfigID()
+            if configID then
+                local config = C_Traits.GetConfigInfo and C_Traits.GetConfigInfo(configID)
+                if config and config.treeIDs then
+                    for _, treeID in ipairs(config.treeIDs) do
+                        local nodes = C_Traits.GetTreeNodes and C_Traits.GetTreeNodes(treeID)
+                        if nodes then
+                            for _, nodeID in ipairs(nodes) do
+                                local node = C_Traits.GetNodeInfo(configID, nodeID)
+                                if node and node.activeRank and node.activeRank > 0 then
+                                    local entry = node.activeEntry
+                                    if entry then
+                                        local def = C_Traits.GetEntryInfo and C_Traits.GetEntryInfo(configID, entry.entryID)
+                                        if def and def.definitionID then
+                                            local defInfo = C_Traits.GetDefinitionInfo and C_Traits.GetDefinitionInfo(def.definitionID)
+                                            if defInfo and defInfo.spellID == spellID then
+                                                return true
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        return IsPlayerSpell and IsPlayerSpell(spellID) or false
+    end
+
+    -- Pre-populate CD tracking — spec cooldowns the player currently has.
+    -- IsPlayerSpell works for baseline and spellbook spells.
+    -- IsTalentActive catches class talent nodes not always returned by IsPlayerSpell.
     local spec = Core.ActiveSpec
     if spec and spec.majorCooldowns then
         for _, cd in ipairs(spec.majorCooldowns) do
-            local known = IsPlayerSpell and IsPlayerSpell(cd.id)
-            if known then
-                cdTracking[cd.id] = {
-                    lastUsed     = 0,
-                    useCount     = 0,
-                    expectedUses = cd.expectedUses,
-                    label        = cd.label,
-                }
+            -- If the spec defines a validSpells whitelist, enforce it strictly
+            if spec.validSpells and not spec.validSpells[cd.id] then
+                -- spell not whitelisted for this spec — skip entirely
+            else
+                local known = (IsPlayerSpell and IsPlayerSpell(cd.id))
+                           or IsTalentActive(cd.id)
+                if known then
+                    cdTracking[cd.id] = {
+                        lastUsed        = 0,
+                        useCount        = 0,
+                        expectedUses    = cd.expectedUses,
+                        label           = cd.label,
+                        minFightSeconds = cd.minFightSeconds,
+                    }
+                end
             end
         end
     end
@@ -153,22 +198,43 @@ local function OnCombatStart()
         end
     end
 
+    -- Helper: check if a talent is active using the most reliable API available.
+    -- C_ClassTalents / C_Traits is more reliable for passive talents that stay
+    -- in the spellbook regardless of whether the talent is chosen (e.g. Misery).
     -- Populate rotational spell tracking.
     -- No IsPlayerSpell gate by default — presence feedback is the safety net.
     -- Exception: entries marked talentGated=true are gated by IsPlayerSpell
     -- so players without those talents don't get false "never used" feedback.
+    -- Exception: entries marked suppressIfTalent=id are suppressed when the
+    -- player has that talent (e.g. Misery auto-applies SW:Pain via Vampiric Touch).
     if spec and spec.rotationalSpells then
         for _, rs in ipairs(spec.rotationalSpells) do
-            local include = true
-            if rs.talentGated and IsPlayerSpell then
-                include = IsPlayerSpell(rs.id)
-            end
-            if include then
-                rotationalTracking[rs.id] = {
-                    useCount        = 0,
-                    label           = rs.label,
-                    minFightSeconds = rs.minFightSeconds or 60,
-                }
+            -- Enforce validSpells whitelist if present
+            if spec.validSpells and not spec.validSpells[rs.id] then
+                -- spell not whitelisted for this spec — skip entirely
+            else
+                local include = true
+                if rs.combatGated then
+                    -- Transformation-granted spells (e.g. Collapsing Star inside Void Metamorphosis)
+                    -- are not in the spellbook at fight start — always include and rely on
+                    -- UNIT_SPELLCAST_SUCCEEDED to register casts, minFightSeconds to gate feedback.
+                    include = true
+                elseif rs.talentGated then
+                    include = (IsPlayerSpell and IsPlayerSpell(rs.id))
+                           or IsTalentActive(rs.id)
+                end
+                if include and rs.suppressIfTalent then
+                    if IsTalentActive(rs.suppressIfTalent) then
+                        include = false
+                    end
+                end
+                if include then
+                    rotationalTracking[rs.id] = {
+                        useCount        = 0,
+                        label           = rs.label,
+                        minFightSeconds = rs.minFightSeconds or 60,
+                    }
+                end
             end
         end
     end
@@ -729,10 +795,11 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
         for _, cd in ipairs(spec.majorCooldowns or {}) do
             local data = cdTracking[cd.id]
             if data then
+                local minSecs = cd.minFightSeconds or 30
                 local label = data.label or cd.label or ("Spell "..cd.id)
-                if data.useCount == 0 then
+                if data.useCount == 0 and duration >= minSecs then
                     table.insert(neverUsed, label)
-                elseif data.useCount < expectedMult then
+                elseif data.useCount < expectedMult and duration >= minSecs then
                     table.insert(underused,
                         label .. " (" .. data.useCount .. "/" .. expectedMult .. ")")
                 end
