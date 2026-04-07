@@ -195,8 +195,91 @@ local function OnCombatEnd(duration)
         local db = MidnightSenseiCharDB
         if db and db.encounters then
             table.insert(db.encounters, result)
-            while #db.encounters > 100 do
+            while #db.encounters > 200 do
                 table.remove(db.encounters, 1)
+            end
+
+            -- Update persistent bests — these survive the encounter cap.
+            db.bests = db.bests or {
+                allTimeBest=0, dungeonBest=0, raidBest=0, delveBest=0,
+                weeklyAvg=0, weekKey="", weekScores={},
+                weeklyDungeonBest=0, weeklyRaidBest=0, weeklyDelveBest=0,
+            }
+            local bests = db.bests
+            local s  = result.finalScore or 0
+            local wk = result.weekKey or ""
+
+            -- Reset all weekly data on new WoW week
+            if bests.weekKey ~= wk then
+                bests.weekKey           = wk
+                bests.weekScores        = {}
+                bests.weeklyAvg         = 0
+                bests.weeklyDungeonBest = 0
+                bests.weeklyRaidBest    = 0
+                bests.weeklyDelveBest   = 0
+            end
+
+            -- All-time best — every fight, every content type
+            if s > (bests.allTimeBest or 0) then bests.allTimeBest = s end
+
+            -- Content-specific all-time AND weekly bests
+            if result.encType == "dungeon" then
+                if s > (bests.dungeonBest or 0)        then bests.dungeonBest        = s end
+                if s > (bests.weeklyDungeonBest or 0)  then bests.weeklyDungeonBest  = s end
+            elseif result.encType == "raid" then
+                if s > (bests.raidBest or 0)           then bests.raidBest           = s end
+                if s > (bests.weeklyRaidBest or 0)     then bests.weeklyRaidBest     = s end
+            elseif result.encType == "delve" then
+                if s > (bests.delveBest or 0)          then bests.delveBest          = s end
+                if s > (bests.weeklyDelveBest or 0)    then bests.weeklyDelveBest    = s end
+            end
+
+            -- Boss-level personal best tracking (player-facing only, future Boss Board feature).
+            -- Keyed by bossID (ENCOUNTER_START encounter ID). Only boss kills recorded.
+            -- Structure: bests.bossBests[bossID] = {
+            --   bossName, instanceName, encType, diffLabel,
+            --   bestScore, bestGrade, bestTimestamp, bestWeekKey,
+            --   killCount, firstSeen
+            -- }
+            if result.isBoss and result.bossID then
+                bests.bossBests = bests.bossBests or {}
+                local bid = tostring(result.bossID)
+                local existing = bests.bossBests[bid]
+                local s = result.finalScore or 0
+                if not existing then
+                    bests.bossBests[bid] = {
+                        bossName      = result.bossName     or "?",
+                        instanceName  = result.instanceName or "",
+                        encType       = result.encType      or "normal",
+                        diffLabel     = result.diffLabel    or "",
+                        bestScore     = s,
+                        bestGrade     = result.finalGrade   or "--",
+                        bestTimestamp = result.timestamp,
+                        bestWeekKey   = result.weekKey      or "",
+                        killCount     = 1,
+                        firstSeen     = result.timestamp,
+                    }
+                else
+                    existing.killCount = (existing.killCount or 0) + 1
+                    if s > (existing.bestScore or 0) then
+                        existing.bestScore     = s
+                        existing.bestGrade     = result.finalGrade or "--"
+                        existing.bestTimestamp = result.timestamp
+                        existing.bestWeekKey   = result.weekKey or ""
+                        existing.diffLabel     = result.diffLabel    or existing.diffLabel
+                        existing.instanceName  = result.instanceName or existing.instanceName
+                    end
+                end
+            end
+
+            -- Overall weekly avg — boss kills across all content (for leaderboard sort)
+            if result.isBoss then
+                bests.weekScores = bests.weekScores or {}
+                table.insert(bests.weekScores, s)
+                if #bests.weekScores > 50 then table.remove(bests.weekScores, 1) end
+                local sum = 0
+                for _, v in ipairs(bests.weekScores) do sum = sum + v end
+                bests.weeklyAvg = math.floor(sum / #bests.weekScores)
             end
         end
 

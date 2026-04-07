@@ -470,30 +470,43 @@ local function MergeEntry(existing, name, className, specName, role,
         timestamp    = time(),
         online       = true,
         weekKey      = weekKey,
-        weekScores   = {},
-        weeklyAvg    = 0,
+        -- All-time bests (never reset)
         allTimeBest  = score,
         dungeonBest  = 0,
         raidBest     = 0,
         delveBest    = 0,
         normalBest   = 0,
+        -- Weekly bests (reset each WoW week)
+        dungeonWeekBest = 0,
+        raidWeekBest    = 0,
+        delveWeekBest   = 0,
+        -- Weekly avg across all boss kills (mixed content)
+        weekScores   = {},
+        weeklyAvg    = 0,
+        -- Per-content averages (all-time running)
         dungeonAvg   = 0,
         raidAvg      = 0,
         dungeonCount = 0,
         raidCount    = 0,
     }
 
-    -- Ensure weekScores exists — seed/HELLO entries are created without it
-    if not e.weekScores then e.weekScores = {} end
+    -- Ensure weekly fields exist on older entries
+    if not e.weekScores        then e.weekScores        = {} end
+    if not e.dungeonWeekBest   then e.dungeonWeekBest   = 0  end
+    if not e.raidWeekBest      then e.raidWeekBest      = 0  end
+    if not e.delveWeekBest     then e.delveWeekBest     = 0  end
 
-    -- If new WoW week, reset weekly data
+    -- If new WoW week, reset all weekly data
     if e.weekKey ~= weekKey then
-        e.weekKey    = weekKey
-        e.weekScores = {}
-        e.weeklyAvg  = 0
+        e.weekKey         = weekKey
+        e.weekScores      = {}
+        e.weeklyAvg       = 0
+        e.dungeonWeekBest = 0
+        e.raidWeekBest    = 0
+        e.delveWeekBest   = 0
     end
 
-    -- Only boss fights count toward weekly avg
+    -- Weekly avg — boss kills only (mixed content, for overall leaderboard sort)
     if isBoss then
         table.insert(e.weekScores, score)
         if #e.weekScores > 50 then table.remove(e.weekScores, 1) end
@@ -502,22 +515,25 @@ local function MergeEntry(existing, name, className, specName, role,
         e.weeklyAvg = math.floor(sum / #e.weekScores)
     end
 
-    -- All-time best (all fights)
+    -- All-time best (every fight)
     if score > (e.allTimeBest or 0) then e.allTimeBest = score end
 
-    -- Category bests and averages
+    -- Category all-time bests, weekly bests, and running averages
     if encType == "dungeon" then
-        if score > (e.dungeonBest or 0) then e.dungeonBest = score end
+        if score > (e.dungeonBest or 0)     then e.dungeonBest     = score end
+        if score > (e.dungeonWeekBest or 0) then e.dungeonWeekBest = score end
         e.dungeonCount = (e.dungeonCount or 0) + 1
         local prevSum  = (e.dungeonAvg or 0) * ((e.dungeonCount or 1) - 1)
         e.dungeonAvg   = math.floor((prevSum + score) / e.dungeonCount)
     elseif encType == "raid" then
-        if score > (e.raidBest or 0) then e.raidBest = score end
+        if score > (e.raidBest or 0)     then e.raidBest     = score end
+        if score > (e.raidWeekBest or 0) then e.raidWeekBest = score end
         e.raidCount = (e.raidCount or 0) + 1
         local prevSum = (e.raidAvg or 0) * ((e.raidCount or 1) - 1)
         e.raidAvg     = math.floor((prevSum + score) / e.raidCount)
     elseif encType == "delve" then
-        if score > (e.delveBest or 0) then e.delveBest = score end
+        if score > (e.delveBest or 0)     then e.delveBest     = score end
+        if score > (e.delveWeekBest or 0) then e.delveWeekBest = score end
     else
         if score > (e.normalBest or 0) then e.normalBest = score end
     end
@@ -1264,6 +1280,21 @@ function LB.GetPartyData()
             instanceName = lastEnc and lastEnc.instanceName or "",
             bossName     = lastEnc and lastEnc.bossName     or "",
         }
+        -- Merge CharDB.bests so scores beyond the encounter cap are preserved
+        local cb = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
+        if cb then
+            local e = result[myName]
+            e.allTimeBest = math.max(e.allTimeBest, cb.allTimeBest or 0)
+            e.dungeonBest = math.max(e.dungeonBest, cb.dungeonBest or 0)
+            e.raidBest    = math.max(e.raidBest,    cb.raidBest    or 0)
+            e.delveBest   = math.max(e.delveBest,   cb.delveBest   or 0)
+            if cb.weekKey == wk then
+                if cb.weeklyAvg         > e.weeklyAvg      then e.weeklyAvg      = cb.weeklyAvg         end
+                if (cb.weeklyDungeonBest or 0) > (e.dungeonWeekBest or 0) then e.dungeonWeekBest = cb.weeklyDungeonBest end
+                if (cb.weeklyRaidBest    or 0) > (e.raidWeekBest    or 0) then e.raidWeekBest    = cb.weeklyRaidBest    end
+                if (cb.weeklyDelveBest   or 0) > (e.delveWeekBest   or 0) then e.delveWeekBest   = cb.weeklyDelveBest   end
+            end
+        end
     end
     for name, entry in pairs(partyData) do result[name] = entry end
     return result
@@ -1348,6 +1379,20 @@ function LB.GetGuildData()
                 selfEntry.raidBest    = math.max(selfEntry.raidBest,    existing.raidBest    or 0)
                 selfEntry.delveBest   = math.max(selfEntry.delveBest,   existing.delveBest   or 0)
             end
+            -- Merge with CharDB.bests — the permanent per-character record
+            local cb = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
+            if cb then
+                selfEntry.allTimeBest = math.max(selfEntry.allTimeBest, cb.allTimeBest or 0)
+                selfEntry.dungeonBest = math.max(selfEntry.dungeonBest, cb.dungeonBest or 0)
+                selfEntry.raidBest    = math.max(selfEntry.raidBest,    cb.raidBest    or 0)
+                selfEntry.delveBest   = math.max(selfEntry.delveBest,   cb.delveBest   or 0)
+                if cb.weekKey == wk then
+                    if cb.weeklyAvg > selfEntry.weeklyAvg then selfEntry.weeklyAvg = cb.weeklyAvg end
+                    if (cb.weeklyDungeonBest or 0) > (selfEntry.dungeonWeekBest or 0) then selfEntry.dungeonWeekBest = cb.weeklyDungeonBest end
+                    if (cb.weeklyRaidBest    or 0) > (selfEntry.raidWeekBest    or 0) then selfEntry.raidWeekBest    = cb.weeklyRaidBest    end
+                    if (cb.weeklyDelveBest   or 0) > (selfEntry.delveWeekBest   or 0) then selfEntry.delveWeekBest   = cb.weeklyDelveBest   end
+                end
+            end
             local rb = MidnightSenseiDB
                        and MidnightSenseiDB.leaderboard
                        and MidnightSenseiDB.leaderboard.recoveredBests
@@ -1430,6 +1475,21 @@ function LB.GetFriendsData()
             instanceName = lastEnc and lastEnc.instanceName or "",
             bossName     = lastEnc and lastEnc.bossName     or "",
         }
+        -- Merge CharDB.bests so scores beyond the encounter cap are preserved
+        local cb = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
+        if cb then
+            local e = result[myName]
+            e.allTimeBest = math.max(e.allTimeBest, cb.allTimeBest or 0)
+            e.dungeonBest = math.max(e.dungeonBest, cb.dungeonBest or 0)
+            e.raidBest    = math.max(e.raidBest,    cb.raidBest    or 0)
+            e.delveBest   = math.max(e.delveBest,   cb.delveBest   or 0)
+            if cb.weekKey == wk then
+                if cb.weeklyAvg         > e.weeklyAvg      then e.weeklyAvg      = cb.weeklyAvg         end
+                if (cb.weeklyDungeonBest or 0) > (e.dungeonWeekBest or 0) then e.dungeonWeekBest = cb.weeklyDungeonBest end
+                if (cb.weeklyRaidBest    or 0) > (e.raidWeekBest    or 0) then e.raidWeekBest    = cb.weeklyRaidBest    end
+                if (cb.weeklyDelveBest   or 0) > (e.delveWeekBest   or 0) then e.delveWeekBest   = cb.weeklyDelveBest   end
+            end
+        end
     end
 
     -- Manual friend list entries

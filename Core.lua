@@ -32,7 +32,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.3.0"
+    Core.VERSION = ver or "1.3.2"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -131,7 +131,21 @@ function Core.InitSavedVariables()
     local cdb = MidnightSenseiCharDB
     cdb.encounters = cdb.encounters or {}
     cdb.settings   = cdb.settings   or {}
-
+    cdb.bests      = cdb.bests      or {
+        -- All-time bests (never reset)
+        allTimeBest     = 0,
+        dungeonBest     = 0,
+        raidBest        = 0,
+        delveBest       = 0,
+        -- Weekly bests per content type (reset each WoW week)
+        weekKey         = "",
+        weeklyAvg       = 0,   -- mixed all-boss avg for overall leaderboard sort
+        weekScores      = {},
+        weeklyDungeonBest  = 0,
+        weeklyRaidBest     = 0,
+        weeklyDelveBest    = 0,
+        -- TODO (future): bossBests = {} -- per-encounterID all-time best for boss view
+    }
     local s = cdb.settings
     local function def(k, v) if s[k] == nil then s[k] = v end end
     def("hudVisibility",    "always")
@@ -168,7 +182,9 @@ function Core.MigrateEncounters()
     end
     if #migrated > 0 then
         cdb.encounters = migrated
-        DebugLog("[Schema] Migrated " .. #migrated .. " encounters from account DB to CharDB")
+        if Core.GetSetting("debugMode") then
+            print("|cff888888MS:|r Migrated " .. #migrated .. " encounters to CharDB for " .. myName)
+        end
     end
     -- Leave db.encounters intact — other characters migrate their own slice on login
 end
@@ -266,6 +282,52 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.3.2",
+        tagline = "Friends Leaderboard, Multi-Character Safety & Stability",
+        date    = "April 2026",
+        changes = {
+            -- Friends system
+            "Friends tab fully enabled — manual friend list persists across reloads and logouts",
+            "Add friends via + button in leaderboard or /ms friend add Name-Realm (cap: 20)",
+            "Right-click any friend row to remove; friends tab count excludes self",
+            "On login, all friends are queried automatically 6 seconds after SESSION_READY",
+            "Refresh on Friends tab queries each friend individually via REQD whisper",
+            "Friend query result prints Name (Online) - Updated or (Offline) - Not updated",
+            "8-second timeout before offline message so slow responses aren't marked failed",
+            "Self always appears in Friends tab for comparison",
+            -- Leaderboard data integrity
+            "Checksum validation disabled — formula diverged between versions causing false failures",
+            "GUILD channel addon messages now whispered directly to online members as fallback",
+            "Old-format payload detection: encType inferred from diffLabel for pre-1.3.0 clients",
+            "Delve-specific location (diffLabel, instanceName, bossName) stored separately — no bleed from dungeon broadcasts",
+            "Content isolation hardened: dungeon data never shows in Raids tab and vice versa",
+            "No raids/dungeons/delves recorded shown consistently including self-entry",
+            "Self always visible in Delve tab even with no boss delve encounters",
+            "JoinLabel now filters junk values (0, World) from location display",
+            -- Multi-character support
+            "SavedVariablesPerCharacter introduced: encounters and settings are now per-character",
+            "Guild leaderboard and friend list remain account-wide (shared across all characters)",
+            "Schema v2 to v3 migration runs automatically on first login — no data loss",
+            "GetLastEncounter now returns current character's last fight, not any alt's",
+            "HUD position and settings no longer shared between characters",
+            -- Debug tooling
+            "Debug Tools window added — right-click HUD to open, buttons for every debug command",
+            "/ms debug guild — shows guild DB entries, roster, and score history",
+            "/ms debug guild broadcast — re-broadcasts best score per content type with whisper fallback",
+            "/ms debug guild inject — sends synthetic test score to verify the full receive pipeline",
+            "/ms debug guild ping/receive — channel connectivity test between two clients",
+            "/ms debug self — shows delve encounter history and boss count",
+            "/ms debug zone — renamed from debug delve; shows instance type, diffID, encType",
+            "/ms clean payload — recovery tool: purges ghost entries, re-broadcasts all best scores",
+            -- Stability
+            "UnitPower wrapped in pcall — taint errors in combat no longer surface as BugSack errors",
+            "Tick frame subscribers wrapped in pcall — runtime errors suppressed in normal mode",
+            "GUILD channel trusted implicitly for SCORE and HELLO routing — roster sync not required",
+            "Rate limit raised to 100 per session for pilot testing",
+            "Midnight 12.0 raid encounters (The Voidspire, March on Quel'Danas, The Dreamrift) auto-detected via ENCOUNTER_START",
+        },
+    },
     {
         version = "1.3.0",
         tagline = "Leaderboard Data Integrity & Direct Friend Queries",
