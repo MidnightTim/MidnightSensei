@@ -773,10 +773,6 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
     local expectedMult = math.max(1, math.floor(duration / 120))
     local actScore     = scores.activity or 100
 
-    -- Track highest-impact issue for "Biggest Gain" line.
-    -- AddGain adds the message normally AND tracks it. At the end the winning
-    -- message is removed from its original position and re-inserted at the top
-    -- with the "Biggest Gain:" label — so it appears exactly once.
     local topGainImpact = 0
     local topGainMsg    = nil
     local function AddGain(impact, msg)
@@ -806,8 +802,6 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
             end
         end
     else
-        -- cdTracking empty — IsPlayerSpell returned nothing. Only list spells as
-        -- never-used if the fight was long enough to reasonably expect one press.
         if duration >= 30 then
             for _, cd in ipairs(spec.majorCooldowns or {}) do
                 if cd.label then table.insert(neverUsed, cd.label) end
@@ -818,12 +812,15 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
     if #neverUsed > 0 and duration >= 30 then
         table.sort(neverUsed)
         local ctx = bossName and (" during " .. bossName) or ""
+        local action = isTank   and "use on tank busters or high damage windows"
+                    or isHealer and "align with high incoming damage windows"
+                    or             "align these with burst windows"
         if inferSimplified then
             AddGain(40, "You lost value from unused cooldowns" .. ctx .. ": " ..
                 table.concat(neverUsed, ", ") .. ". Even consistent pressing helps.")
         else
             AddGain(40, "Never pressed" .. ctx .. ": " ..
-                table.concat(neverUsed, ", ") .. " — align these with burst windows.")
+                table.concat(neverUsed, ", ") .. " — " .. action .. ".")
         end
     end
 
@@ -832,25 +829,28 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
         local targetGPM   = isHealer and 25 or isTank and 30 or 40
         local targetTotal = math.floor((duration / 60) * targetGPM)
         local pct         = math.floor((activeGCDs / math.max(1, targetTotal)) * 100)
+        local lost        = targetTotal - activeGCDs
         if inferSimplified then
             AddGain(30, "Your rotation is consistent, but gaps between casts (" ..
                 pct .. "% activity) are the next thing to tighten up.")
         else
+            local severity = pct < 60 and "significant" or "moderate"
             AddGain(30, "Activity: " .. activeGCDs .. "/" .. targetTotal ..
-                " GCDs (" .. pct .. "%) — you are losing casts to downtime.")
+                " GCDs (" .. pct .. "%) — " .. severity .. " downtime, approximately " ..
+                lost .. " casts lost. Find your next spell before the current one finishes.")
         end
     end
 
     -- ── Underused CDs ───────────────────────────────────────────────────────
     if #underused > 0 and duration >= 90 then
         table.sort(underused)
-        AddGain(20, "You could squeeze more uses from: " ..
-            table.concat(underused, ", ") .. " — one use per 2 min of fight time.")
+        local fightMins = string.format("%.1f", duration / 60)
+        AddGain(20, "Used less than expected in a " .. fightMins .. "min fight: " ..
+            table.concat(underused, ", ") ..
+            " — target 1 use per 2 minutes of fight time.")
     end
 
-    -- ── Rotational Spells — important non-cooldown abilities ─────────────────
-    -- Only flags spells that were never used in a fight long enough to warrant them.
-    -- Avoids false positives: short fights and talent-absent spells are pre-filtered.
+    -- ── Rotational Spells ────────────────────────────────────────────────────
     if next(rotationalTracking) then
         local unused = {}
         for _, rs in pairs(rotationalTracking) do
@@ -860,14 +860,19 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
         end
         if #unused > 0 then
             table.sort(unused)
+            local context = isTank   and "survival and threat rotation"
+                         or isHealer and "healing throughput"
+                         or             "damage output"
             AddGain(25, "Rotational spell(s) never used: " ..
                 table.concat(unused, ", ") ..
-                " — these are important for your spec's damage output.")
+                " — these are core to your " .. context .. ".")
         end
     end
 
-    -- ── DPS / Tank: Procs, Resources, Buffs ─────────────────────────────────
+    -- ── Non-healer: Procs, Resources, Mitigation, Buffs ─────────────────────
     if not isHealer then
+
+        -- Procs
         if scores.procUsage and CL and CL.GetAllProcs then
             local procData = CL.GetAllProcs()
             for _, proc in ipairs(spec.procBuffs or {}) do
@@ -876,39 +881,76 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
                     local maxTime = proc.maxStackTime or 10
                     local avgHeld = data.totalActiveTime / data.gained
                     if avgHeld > maxTime * 0.5 then
-                        AddGain(15, "You are losing value from delayed " ..
-                            (proc.label or "proc") .. " usage (" ..
-                            string.format("%.1f", avgHeld) ..
-                            "s avg held, budget " .. maxTime .. "s).")
+                        local heldStr = string.format("%.1f", avgHeld)
+                        local severity = avgHeld > maxTime * 0.8 and "critically delayed" or "delayed"
+                        AddGain(15, (proc.label or "Proc") .. " consumption is " .. severity ..
+                            " — held " .. heldStr .. "s on average (budget: " .. maxTime ..
+                            "s). Consume procs immediately when they appear.")
                     end
                 end
             end
         end
 
+        -- Resource overcap
         local rmScore = scores.resourceMgmt or 100
         if rmScore < 80 then
-            AddGain(15, "Overcapped " .. (spec.resourceLabel or "resource") ..
-                " " .. overcapEvents ..
-                " time(s). Spend before hitting the cap to avoid wasted generation.")
+            local rate = string.format("%.1f", overcapEvents / math.max(1, duration / 60))
+            AddGain(15, "Overcapped " .. (spec.resourceLabel or "resource") .. " " ..
+                overcapEvents .. " time(s) (" .. rate .. "/min) — spend " ..
+                (spec.resourceLabel or "resource") ..
+                " before reaching " .. (spec.overcapAt or 100) ..
+                " to avoid wasted generation.")
         end
 
-        if scores.debuffUptime and CL and CL.GetAllUptimes then
+        -- Tank: mitigation uptime
+        if isTank and scores.mitigationUptime and CL and CL.GetAllUptimes then
+            local uptimeData = CL.GetAllUptimes(duration)
+            for _, buff in ipairs(spec.uptimeBuffs or {}) do
+                local data = uptimeData[buff.id]
+                if data and data.targetUptime and data.targetUptime > 0 then
+                    local actual  = math.floor(data.actualPct)
+                    local target  = data.targetUptime
+                    local apps    = data.appCount or 0
+                    local label   = buff.label or "Mitigation"
+                    if apps == 0 then
+                        AddGain(35, label .. " was never activated — press it on cooldown " ..
+                            "every time it is available to reduce physical damage taken.")
+                    elseif actual < target * 0.6 then
+                        local gap = target - actual
+                        AddGain(30, label .. ": " .. actual .. "% uptime vs " .. target ..
+                            "% target (" .. gap .. "pt gap, " .. apps ..
+                            " application(s)) — you have large windows of unmitigated " ..
+                            "physical damage. Press it the moment it comes off cooldown.")
+                    elseif actual < target * 0.8 then
+                        local gap = target - actual
+                        AddGain(20, label .. ": " .. actual .. "% uptime vs " .. target ..
+                            "% target (" .. gap .. "pt gap) — small gaps are adding up. " ..
+                            "Use it preemptively on heavy melee sequences, not reactively.")
+                    end
+                end
+            end
+        end
+
+        -- DPS: self-buff uptime
+        if not isTank and scores.debuffUptime and CL and CL.GetAllUptimes then
             local uptimeData = CL.GetAllUptimes(duration)
             for _, buff in ipairs(spec.uptimeBuffs or {}) do
                 local data = uptimeData[buff.id]
                 if data and data.targetUptime and data.targetUptime > 0
                 and data.appCount and data.appCount > 0 then
                     if data.actualPct < data.targetUptime * 0.8 then
-                        AddGain(20, (buff.label or "Buff") .. " uptime: " ..
-                            math.floor(data.actualPct) .. "% vs " ..
-                            data.targetUptime .. "% target — reapply sooner.")
+                        local gap = data.targetUptime - math.floor(data.actualPct)
+                        AddGain(20, (buff.label or "Buff") .. ": " ..
+                            math.floor(data.actualPct) .. "% uptime vs " ..
+                            data.targetUptime .. "% target (" .. gap ..
+                            "pt gap) — reapply before it expires, not after.")
                     end
                 end
             end
         end
     end
 
-    -- ── Healer: decision-quality focus ──────────────────────────────────────
+    -- ── Healer feedback ──────────────────────────────────────────────────────
     if isHealer then
         if CL and CL.GetHealingData then
             local hd = CL.GetHealingData()
@@ -917,50 +959,53 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
                 local target  = (spec.healerMetrics and spec.healerMetrics.targetOverheal) or 30
                 if overpct > target + 20 then
                     AddGain(25, string.format(
-                        "Overheal at %.1f%% — mana is being spent on targets that " ..
-                        "do not need it. Cast slightly later or use more reactive heals.",
-                        overpct))
+                        "Overheal at %.1f%% (target: <%d%%) — you are spending mana on " ..
+                        "targets that do not need healing. Cast slightly later or " ..
+                        "switch to reactive spells on targets actively taking damage.",
+                        overpct, target))
                 elseif overpct > target + 10 then
-                    Add(string.format("Overheal: %.1f%%. Slightly elevated — " ..
-                        "consider holding casts on targets above 70%% health.", overpct))
+                    Add(string.format(
+                        "Overheal: %.1f%% (target: <%d%%) — slightly elevated. " ..
+                        "Hold casts on targets above 70%% health and prioritise " ..
+                        "HoTs over direct heals on stable groups.",
+                        overpct, target))
                 end
             end
         end
         if actScore < 70 and totalGCDs > 0 then
-            Add("When the raid is stable, contribute with damage spells to " ..
-                "maintain throughput and Atonement value.")
+            Add("When the group is stable, fill downtime with damage spells " ..
+                "to maintain throughput and Atonement value.")
         end
     end
 
-    -- ── Behavior tone — only when nothing actionable remains ─────────────────
+    -- ── Behavior tone fallback ───────────────────────────────────────────────
     if inferSimplified and #feedback == 0 then
-        Add("Your rotation appears consistent and well-paced. " ..
+        Add("Your rotation is consistent and well-paced. " ..
             "Tightening burst window timing is the next performance step.")
     end
 
-    -- ── Positive if nothing flagged ──────────────────────────────────────────
+    -- ── Nothing flagged ──────────────────────────────────────────────────────
     if #feedback == 0 then
-        if actScore >= 90 and (scores.cooldownUsage or 0) >= 90 then
-            Add("Strong execution — cooldowns and activity both on point.")
-        else
-            Add("Clean performance — keep building on this foundation.")
-        end
-    end
+        local cdScore  = scores.cooldownUsage    or 100
+        local mitScore = scores.mitigationUptime or 100
+        local allHigh  = actScore >= 90 and cdScore >= 90
+                      and (not isTank or mitScore >= 90)
 
-    -- ── Biggest Performance Gain — label the highest-impact item in-place ────
-    -- Rather than removing and re-inserting (which wastes a slot), find the
-    -- message in its current position and prefix it with the Biggest Gain label.
-    if topGainMsg then
-        for i = 1, #feedback do
-            if feedback[i] == topGainMsg then
-                feedback[i] = "|cffFFD700Biggest Gain:|r " .. topGainMsg
-                -- Move it to position 1 if it isn't already
-                if i > 1 then
-                    local tmp = table.remove(feedback, i)
-                    table.insert(feedback, 1, tmp)
-                end
-                break
+        if allHigh then
+            Add("Strong execution — cooldowns and activity both on point.")
+        elseif cdScore < 80 or mitScore < 80 then
+            local hints = {}
+            if cdScore < 80 then
+                table.insert(hints, isTank
+                    and "use defensive cooldowns on tank busters"
+                    or  "press major cooldowns more consistently")
             end
+            if isTank and mitScore < 80 then
+                table.insert(hints, "increase mitigation uptime by pressing Demon Spikes more frequently")
+            end
+            Add("Good foundation — focus next on: " .. table.concat(hints, "; ") .. ".")
+        else
+            Add("Solid performance — tighten up cooldown timing to push higher.")
         end
     end
 

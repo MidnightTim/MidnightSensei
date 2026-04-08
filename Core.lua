@@ -32,7 +32,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.3.3"
+    Core.VERSION = ver or "1.3.4"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -282,6 +282,33 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.3.4",
+        tagline = "Spec Isolation, Detection Fixes & Feedback Overhaul",
+        date    = "April 2026",
+        changes = {
+            -- Devourer
+            "Devourer: validSpells whitelist added — fully isolated from Havoc and Vengeance spell detection",
+            "Devourer: Immolation Aura, Eye Beam, The Hunt and all Havoc/Vengeance abilities hard-blocked",
+            "Devourer: Collapsing Star now correctly detected — fired CHANNEL_START not SUCCEEDED; both events now registered",
+            "Devourer: Collapsing Star minFightSeconds raised to 90 to reflect soul-ramp time required",
+            "All specs: UNIT_SPELLCAST_CHANNEL_START registered — all channeled spells now tracked correctly",
+            -- Vengeance
+            "Vengeance: Demon Spikes uptime was never correctly measured — UpdateUptime was only called on application, never on drop; fixed",
+            -- Feedback
+            "Feedback: cooldown messages now role-aware — tanks, healers, and DPS each receive contextually appropriate coaching",
+            "Feedback: downtime message now shows exact casts lost and labels severity (moderate vs significant)",
+            "Feedback: underused cooldowns now include fight duration so the expected-use math is transparent",
+            "Feedback: mitigation feedback shows actual vs target percentage with point gap and application count",
+            "Feedback: resource overcap includes per-minute rate and names the exact cap threshold",
+            "Feedback: proc feedback labels severity (delayed vs critically delayed) with exact hold time vs budget",
+            "Feedback: rotational spell message is role-aware — survival/threat for tanks, healing throughput for healers",
+            "Feedback: healer overheal shows both actual and target percentages with specific corrective advice",
+            "Feedback: fallback no longer says 'build on this foundation' when scores are mediocre — names what to fix",
+            -- Versions
+            "/ms versions command added — shows addon versions passively collected this session, outdated players flagged",
+        },
+    },
     {
         version = "1.3.3",
         tagline = "Offline Score Persistence",
@@ -2028,14 +2055,23 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "CHAT_MSG_ADDON" then
         local prefix, payload, _, sender = ...
         if prefix ~= VER_PREFIX then return end
-        local theirVer = payload:match("^VERSION|(.+)$")
-        if not theirVer or notifiedThisSession then return end
         local sname = (sender:match("^([^%-]+)") or sender)
         if sname == UnitName("player") then return end
-        if IsNewer(theirVer, Core.VERSION) then
-            notifiedThisSession = true
-            print("|cff00D1FFMidnight Sensei:|r A new version is available. Check Github for latest update.")
-            Call(MS.UI, "ShowUpdateToast", sname, theirVer)
+
+        local theirVer = payload:match("^VERSION|(.+)$")
+        if theirVer then
+            -- Store version for /ms versions report
+            Core.seenVersions = Core.seenVersions or {}
+            Core.seenVersions[sname] = theirVer
+            -- Notify once per session if someone has a newer version
+            if IsNewer(theirVer, Core.VERSION) and not notifiedThisSession then
+                notifiedThisSession = true
+                print("|cff00D1FFMidnight Sensei:|r A new version is available. Check Github for latest update.")
+                Call(MS.UI, "ShowUpdateToast", sname, theirVer)
+            end
+        elseif payload == "VPING" then
+            -- Legacy: ignore pings from older clients that used active pinging
+            return
         end
     end
 end)
@@ -2087,6 +2123,7 @@ local function MSSlashHandler(msg)
         print("  /ms report        Report a bug on GitHub")
         print("  /ms reset         Clear fight history")
         print("  /ms update        Show changelog")
+        print("  /ms versions      Ping and display addon versions of nearby players")
         print("  /ms debug         Current spec / class IDs")
         print("  /ms debug guild         Diagnose guild score routing")
         print("  /ms debug guild inject  Send a test score to guild (pipeline test)")
@@ -2132,6 +2169,27 @@ local function MSSlashHandler(msg)
         end
     elseif msg == "update" then
         Call(MS.UI, "ShowChangelog")
+    elseif msg == "versions" then
+        Core.seenVersions = Core.seenVersions or {}
+        local count = 0
+        for _ in pairs(Core.seenVersions) do count = count + 1 end
+        if count == 0 then
+            print("|cff00D1FFMidnight Sensei:|r No version data yet — versions are collected automatically when players log in or join your group.")
+            return
+        end
+        print("|cff00D1FFMidnight Sensei — Versions seen this session:|r")
+        print("  |cffFFFFFF" .. (UnitName("player") or "You") .. "|r  v" .. Core.VERSION .. "  |cff00FF00(you)|r")
+        local byVersion = {}
+        for name, ver in pairs(Core.seenVersions) do
+            byVersion[ver] = byVersion[ver] or {}
+            table.insert(byVersion[ver], name)
+        end
+        for ver, names in pairs(byVersion) do
+            table.sort(names)
+            local color = (ver == Core.VERSION) and "|cff00FF00" or "|cffFF8800"
+            local flag  = (ver == Core.VERSION) and "" or "  |cffFF8800(outdated)|r"
+            print("  " .. color .. "v" .. ver .. "|r — " .. table.concat(names, ", ") .. flag)
+        end
     elseif msg == "debuglog" then
         local buf = MidnightSenseiDB and MidnightSenseiDB.debugLog
         if not buf or #buf == 0 then

@@ -142,10 +142,7 @@ function CL.ProcessUnitAura(unit)
 
     if spec.uptimeBuffs then
         for _, buff in ipairs(spec.uptimeBuffs) do
-            local isUp = PlayerHasAura(buff.id)
-            if isUp then
-                UpdateUptime(buff.id, true, now)
-            end
+            UpdateUptime(buff.id, PlayerHasAura(buff.id), now)
         end
     end
 
