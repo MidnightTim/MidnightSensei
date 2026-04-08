@@ -370,10 +370,14 @@ Core.On(Core.EVENTS.COMBAT_END,   OnCombatEnd)
 
 -- BOSS_START fires after PLAYER_REGEN_DISABLED (COMBAT_START), so we update
 -- currentBossContext here rather than trying to snapshot it in OnCombatStart.
+-- Exception: in Midnight 12.0 delves, ENCOUNTER_START fires BEFORE
+-- PLAYER_REGEN_DISABLED. The fightActive guard was blocking boss context from
+-- being set in that case. We now always capture it — OnCombatStart already
+-- re-snapshots Core.CurrentEncounter so there is no double-set risk.
 Core.On(Core.EVENTS.BOSS_START, function(encID, encName, diffID)
-    if fightActive then
-        currentBossContext = { name = encName, id = encID, difficultyID = diffID }
-    end
+    currentBossContext = { name = encName, id = encID, difficultyID = diffID }
+    -- If fight is already active, update the in-progress context immediately
+    -- so it's available when CalculateGrade runs at fight end.
 end)
 
 -- Clear boss context on BOSS_END (wipe / end without kill)

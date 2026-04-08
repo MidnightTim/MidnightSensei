@@ -143,6 +143,33 @@ local function TimeAgo(ts)
     else return math.floor(d/86400) .. "d ago" end
 end
 
+-- Truncate a string to at most maxChars *visible* characters, appending ".."
+-- if truncated. WoW colour codes (|cXXXXXXXX…|r) are not counted toward the
+-- limit so coloured boss names don't get cut prematurely.
+local function TruncateLabel(s, maxChars)
+    if not s or s == "" then return s end
+    local plain = s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    if #plain <= maxChars then return s end
+    local visible = 0
+    local i = 1
+    local cutPos = #s
+    while i <= #s do
+        if s:sub(i, i+1) == "|c" then
+            i = i + 10
+        elseif s:sub(i, i+1) == "|r" then
+            i = i + 2
+        else
+            visible = visible + 1
+            if visible >= maxChars - 2 then
+                cutPos = i
+                break
+            end
+            i = i + 1
+        end
+    end
+    return s:sub(1, cutPos) .. ".."
+end
+
 local function HudVisibility()
     return Core.GetSetting("hudVisibility") or "always"
 end
@@ -423,7 +450,7 @@ local function BuildHistoryRows(scrollChild, encounters, rowFrames)
 
             row.specText  = MakeFont(row, 10, "LEFT")
             row.specText:SetPoint("LEFT", row, "LEFT", 136, 0)
-            row.specText:SetWidth(100)
+            row.specText:SetWidth(94)
 
             row.scoreText = MakeFont(row, 11, "RIGHT")
             row.scoreText:SetPoint("RIGHT", row, "RIGHT", -90, 0)
@@ -472,7 +499,7 @@ local function BuildHistoryRows(scrollChild, encounters, rowFrames)
             end
             specLabel = bossTag .. (enc.specName or "?") .. diffSuffix
         end
-        row.specText:SetText(specLabel)
+        row.specText:SetText(TruncateLabel(specLabel, 22))
 
         row.scoreText:SetText(tostring(enc.finalScore or 0))
         row.durText:SetText(FormatDuration(enc.duration))
