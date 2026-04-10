@@ -32,7 +32,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.3.5"
+    Core.VERSION = ver or "1.3.6"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -159,9 +159,6 @@ function Core.InitSavedVariables()
     def("minimumFight",     15)
     def("encounterAdjust",  true)
     def("debugMode",        false)
-    def("officerRankThreshold", 3)  -- rankIndex <= this value is treated as Officer/GM
-                                    -- 0=GM, 1=Alt-GM/Co-GM, 2=Senior Officer, 3=Officer
-                                    -- Future: adjustable per-guild via /ms options
 end
 
 -- Schema v2 → v3 migration: move encounters from account-wide DB to CharDB.
@@ -286,36 +283,24 @@ Core.CREDITS = {
 
 Core.CHANGELOG = {
     {
-        version = "1.3.5",
-        tagline = "Guild Leaderboard Sync, Cross-Character Visibility & Layout Fixes",
+        version = "1.3.6",
+        tagline = "Feedback Depth, Devourer Fixes & Leaderboard Stability",
         date    = "April 2026",
         changes = {
-            -- Guild sync protocol (Issues #30, #34)
-            "Officer Pull/Push protocol: 4-message chain PULLREQ/PULLDATA/REQPUSH/PUSHDATA populates leaderboard across all guild members",
-            "Officers broadcast PULLREQ on login and leaderboard open; all members respond with PULLDATA (staggered 0.5-3.5s)",
-            "After 6s collection window, officer pushes full guild DB as PUSHDATA including own current bests",
-            "Non-officers send REQPUSH on login, leaderboard open, and Refresh — any online officer responds with a full push",
-            "15s cooldown prevents REQPUSH spam from triggering overlapping pull cycles",
-            "Cross-character: each character keyed by sender identity so alts appear as separate leaderboard rows",
-            "PUSHDATA now carries 20 fields: all scores, weekly bests, dungeon/raid/delve location data",
-            "PUSHDATA receiver resolves existing full Name-Realm keys to avoid duplicate rows",
-            "Officer self-injection block now populates location fields from encounter history before push",
-            "Raid tab bleed fixed: dungeon location no longer shows on Raids tab — self-entry now tracks location per content type",
-            -- Rank detection overhaul
-            "GuildRoster() and GuildControlGetRankFlags() confirmed nil in Midnight 12.0 — all calls removed",
-            "Rank detection replaced with rosterCache (built on GUILD_ROSTER_UPDATE) + rankIndex <= officerRankThreshold",
-            "officerRankThreshold setting added (default 3): covers GM(0), Alt-GM(1), Senior Officer(2), Officer(3)",
-            "WhenRosterReady() defers all rank-dependent operations until roster is loaded — eliminates login timing race",
-            "PUSHDATA self-skip fixed: was dropping your own data when officer pushed it back; now only skips sender==self",
-            -- Delve boss detection (Analytics)
-            "Delve boss name now correctly captured — BOSS_START fightActive guard removed; ENCOUNTER_START fires before PLAYER_REGEN_DISABLED in delves",
-            -- Layout (Issue #36)
-            "Leaderboard frame widened 520px to 620px; DIFF/BOSS column widened 230px to 296px",
-            "History panel spec column narrowed to 94px with 22-char colour-code-aware truncation via TruncateLabel()",
-            -- Debug tooling
-            "/ms debug guild pull: full diagnostic showing roster cache, rank index, threshold, officer qualification",
-            "/ms debug guild inject dungeon/raid/delve: inject test score 99 locally for pipeline validation",
-            "/ms debug guild inject remove: cleanly removes all injected test data and recalculates bests",
+            -- Devourer
+            "Devourer: Collapsing Star spell ID corrected to 1221150 (castable spell) from 1221167 (talent node) — confirmed via MidnightTim debug tool session export",
+            "Devourer: Collapsing Star minFightSeconds lowered from 90 to 45 — spell appears ~23s into Void Metamorphosis window; old threshold suppressed feedback on most fights",
+            "Devourer: Collapsing Star no longer triggers never-used feedback when combatGated — Void Metamorphosis window may not have opened",
+            -- Feedback improvements
+            "Feedback: activity threshold lowered from 80 to 85 — players at 80-84% activity now receive a lighter cast-count nudge instead of silence",
+            "Feedback: nothing-flagged fallback now tier-aware — 95+ scores receive specific next-step advice, 90-94 names the weakest scoring category, lower scores retain existing hints",
+            "Feedback: rotational spell tracking now supports cdSec field — specs can define a cooldown duration to enable 'could have cast X more' feedback for high-scoring players",
+            "Feedback: combatGated flag stored on rotational tracking entries — gates both never-used and cast-count feedback correctly",
+            "Feedback: finalScore passed into GenerateFeedback as scores._final — enables score-tier branching in fallback without a second score calculation",
+            -- Leaderboard
+            "Leaderboard: SyncGuildOnlineStatus nil crash fixed — local function was defined after OnAddonMessage and resolved as a nil global at the call site; forward declaration added",
+            "Leaderboard: Delve tab no longer shows player count in the tab label — count is not meaningful for local character history",
+            "Leaderboard: Delve tab online dots now reflect actual online status — were incorrectly forced to green because delve data is local history, not live presence",
         },
     },
     {
@@ -327,7 +312,9 @@ Core.CHANGELOG = {
             "Devourer: validSpells whitelist added — fully isolated from Havoc and Vengeance spell detection",
             "Devourer: Immolation Aura, Eye Beam, The Hunt and all Havoc/Vengeance abilities hard-blocked",
             "Devourer: Collapsing Star now correctly detected — fired CHANNEL_START not SUCCEEDED; both events now registered",
-            "Devourer: Collapsing Star minFightSeconds raised to 90 to reflect soul-ramp time required",
+            "Devourer: Collapsing Star spell ID corrected to 1221150 (castable spell) from 1221167 (talent node) — confirmed via debug tool session data",
+            "Devourer: Collapsing Star minFightSeconds lowered to 45 — spell appears ~23s into Void Metamorphosis window, 90s threshold was too high",
+            "Devourer: Collapsing Star no longer triggers never-used feedback when combatGated — window may not have opened during the fight",
             "All specs: UNIT_SPELLCAST_CHANNEL_START registered — all channeled spells now tracked correctly",
             -- Vengeance
             "Vengeance: Demon Spikes uptime was never correctly measured — UpdateUptime was only called on application, never on drop; fixed",
@@ -1815,14 +1802,14 @@ Core.SPEC_DATABASE = {
                 [185123]=true,  -- Throw Glaive
                 [185245]=true,  -- Torment
                 [1217605]=true, -- Void Metamorphosis
-                [1221167]=true, -- Collapsing Star
+                [1221150]=true, -- Collapsing Star (castable spell ID, confirmed via debug tool)
                 [1226019]=true, -- Reap
             },
             majorCooldowns = {},
             rotationalSpells = {
                 { id = 1217605, label = "Void Metamorphosis", minFightSeconds = 30 },
-                { id = 1221167, label = "Collapsing Star",    minFightSeconds = 90,
-                  combatGated = true },  -- granted inside Void Metamorphosis, not in spellbook at fight start
+                { id = 1221150, label = "Collapsing Star",    minFightSeconds = 45,
+                  combatGated = true },  -- appears ~23s into Void Metamorphosis window; confirmed spellID via debug tool
                 { id = 1226019, label = "Reap",               minFightSeconds = 20 },
             },
             priorityNotes = {
@@ -2163,13 +2150,7 @@ local function MSSlashHandler(msg)
         print("  /ms debug         Current spec / class IDs")
         print("  /ms debug guild         Diagnose guild score routing")
         print("  /ms debug guild inject  Send a test score to guild (pipeline test)")
-        print("  /ms debug guild inject dungeon  Inject test dungeon score=99 locally")
-        print("  /ms debug guild inject raid     Inject test raid score=99 locally")
-        print("  /ms debug guild inject delve    Inject test delve score=99 locally")
-        print("  /ms debug guild inject remove   Remove all injected test scores")
-        print("  /ms debug guild nuke <name>     Hard-delete a player's entry + broadcast zeroed scores")
         print("  /ms debug guild broadcast  Re-broadcast all your best scores")
-        print("  /ms debug guild pull    Officer/GM: pull scores from all guild members")
         print("  /ms debug self    Diagnose your delve encounter history")
         print("  /ms debug zone    Show current instance/zone context and diffID")
         print("  /ms friend <Name> Query a player's last score directly (addon whisper)")
@@ -2538,314 +2519,6 @@ local function MSSlashHandler(msg)
             end
         end
 
-    elseif msg == "debug guild inject dungeon"
-        or msg == "debug guild inject raid"
-        or msg == "debug guild inject delve" then
-        ------------------------------------------------------------------------
-        -- Local score injection for testing the push pipeline.
-        -- Writes a synthetic score directly into CharDB.encounters and CharDB.bests
-        -- AND into db.guild[self] so it shows up immediately in the leaderboard
-        -- and gets included in the next PUSHDATA broadcast.
-        -- Use /ms debug guild inject remove to undo.
-        ------------------------------------------------------------------------
-        local encType = msg:match("inject (%a+)$")  -- "dungeon", "raid", or "delve"
-        local score   = 99
-        local now     = time()
-        local spec    = Core.ActiveSpec
-        local className = spec and spec.className or "?"
-        local specName  = spec and spec.name      or "?"
-        local charName  = UnitName("player")      or "?"
-        local weekKey   = MS.Leaderboard and MS.Leaderboard.GetWeekKey
-                          and MS.Leaderboard.GetWeekKey() or "TEST"
-
-        -- Inject into CharDB.encounters
-        if MidnightSenseiCharDB then
-            MidnightSenseiCharDB.encounters = MidnightSenseiCharDB.encounters or {}
-            local enc = {
-                finalScore   = score,
-                finalGrade   = "A+",
-                grade        = "A+",
-                gradeLabel   = "Exceptional",
-                encType      = encType,
-                isBoss       = true,
-                bossName     = "TEST_Boss_" .. encType,
-                diffLabel    = encType == "dungeon" and "Mythic"
-                            or encType == "raid"    and "Heroic"
-                            or "Tier 8",
-                instanceName = encType == "dungeon" and "TEST_Dungeon"
-                            or encType == "raid"    and "TEST_Raid"
-                            or "TEST_Delve",
-                duration     = 180,
-                timestamp    = now,
-                weekKey      = weekKey,
-                charName     = charName,
-                className    = className,
-                specName     = specName,
-                _injected    = true,   -- marker for removal
-            }
-            table.insert(MidnightSenseiCharDB.encounters, enc)
-
-            -- Update CharDB.bests
-            MidnightSenseiCharDB.bests = MidnightSenseiCharDB.bests or {}
-            local b = MidnightSenseiCharDB.bests
-            b.allTimeBest = math.max(b.allTimeBest or 0, score)
-            if encType == "dungeon" then
-                b.dungeonBest        = math.max(b.dungeonBest or 0, score)
-                b.weeklyDungeonBest  = math.max(b.weeklyDungeonBest or 0, score)
-            elseif encType == "raid" then
-                b.raidBest           = math.max(b.raidBest or 0, score)
-                b.weeklyRaidBest     = math.max(b.weeklyRaidBest or 0, score)
-            elseif encType == "delve" then
-                b.delveBest          = math.max(b.delveBest or 0, score)
-                b.weeklyDelveBest    = math.max(b.weeklyDelveBest or 0, score)
-            end
-            b.weeklyAvg = math.max(b.weeklyAvg or 0, score)
-            b.weekKey   = weekKey
-        end
-
-        -- Write directly into db.guild[self] so the leaderboard shows the
-        -- injected data immediately and the next PUSHDATA broadcast carries it.
-        -- Use the same key format as GetGuildData() to avoid creating a duplicate.
-        if MidnightSenseiDB then
-            local db = MidnightSenseiDB
-            db.leaderboard = db.leaderboard or {}
-            db.leaderboard.guild = db.leaderboard.guild or {}
-            -- GetGuildData() keys self as UnitFullName("player") + "-" + realm
-            local name, realm = UnitFullName("player")
-            realm = (realm and realm ~= "") and realm or (GetRealmName() or "?")
-            local myKey = name .. "-" .. realm
-            if not db.leaderboard.guild[myKey] then
-                db.leaderboard.guild[myKey] = { name = name, weekScores = {} }
-            end
-            local e = db.leaderboard.guild[myKey]
-            e.className   = className
-            e.specName    = specName
-            e.allTimeBest = math.max(e.allTimeBest or 0, score)
-            e.weeklyAvg   = math.max(e.weeklyAvg   or 0, score)
-            e.weekKey     = weekKey
-            if encType == "dungeon" then
-                e.dungeonBest     = math.max(e.dungeonBest     or 0, score)
-                e.dungeonWeekBest = math.max(e.dungeonWeekBest or 0, score)
-                e.diffLabel       = "TEST_Mythic"
-                e.bossName        = "TEST_Boss_dungeon"
-                e.instanceName    = "TEST_Dungeon"
-            elseif encType == "raid" then
-                e.raidBest        = math.max(e.raidBest        or 0, score)
-                e.raidWeekBest    = math.max(e.raidWeekBest    or 0, score)
-                e.diffLabel       = "TEST_Heroic"
-                e.bossName        = "TEST_Boss_raid"
-                e.instanceName    = "TEST_Raid"
-            elseif encType == "delve" then
-                e.delveBest       = math.max(e.delveBest       or 0, score)
-                e.delveWeekBest   = math.max(e.delveWeekBest   or 0, score)
-                e.delveLabel      = "TEST_Tier8"
-                e.delveBoss       = "TEST_Boss_delve"
-                e.delveInstance   = "TEST_Delve"
-            end
-        end
-
-        if MS.Leaderboard and MS.Leaderboard.RefreshUI then MS.Leaderboard.RefreshUI() end
-        print("|cff00D1FFMidnight Sensei:|r Injected test " .. encType ..
-              " score (99) into local DB and guild table.")
-        print("  Run |cffFFFFFF/ms debug guild pull|r to push it to guildies.")
-        print("  Run |cffFFFFFF/ms debug guild inject remove|r to undo.")
-
-    elseif msg == "debug guild inject remove" then
-        ------------------------------------------------------------------------
-        -- Remove all injected test scores from CharDB and db.guild.
-        -- Matches on the _injected = true marker and TEST_ prefixes.
-        ------------------------------------------------------------------------
-        local removedEnc, removedBoss = 0, 0
-
-        -- Remove from CharDB.encounters
-        if MidnightSenseiCharDB and MidnightSenseiCharDB.encounters then
-            local clean = {}
-            for _, enc in ipairs(MidnightSenseiCharDB.encounters) do
-                if enc._injected then
-                    removedEnc = removedEnc + 1
-                else
-                    table.insert(clean, enc)
-                end
-            end
-            MidnightSenseiCharDB.encounters = clean
-        end
-
-        -- Remove TEST_ location fields from db.guild self-entry and
-        -- recalculate bests from remaining clean encounters.
-        local charName = UnitName("player") or "?"
-        local db = MidnightSenseiDB
-        if db and db.leaderboard and db.leaderboard.guild then
-            for k, e in pairs(db.leaderboard.guild) do
-                if (k:match("^([^%-]+)") or k) == charName then
-                    -- Strip any TEST_ fields
-                    for field, val in pairs(e) do
-                        if type(val) == "string" and val:find("^TEST_") then
-                            e[field] = ""
-                            removedBoss = removedBoss + 1
-                        end
-                    end
-                    -- Recalculate bests from clean encounters
-                    local hist = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
-                    if hist then
-                        e.allTimeBest = 0 ; e.dungeonBest = 0
-                        e.raidBest    = 0 ; e.delveBest   = 0
-                        e.weeklyAvg   = 0
-                        for _, enc in ipairs(hist) do
-                            local s = enc.finalScore or 0
-                            e.allTimeBest = math.max(e.allTimeBest, s)
-                            if     enc.encType == "dungeon" then e.dungeonBest = math.max(e.dungeonBest, s)
-                            elseif enc.encType == "raid"    then e.raidBest    = math.max(e.raidBest,    s)
-                            elseif enc.encType == "delve"   then e.delveBest   = math.max(e.delveBest,   s)
-                            end
-                        end
-                    end
-                    break
-                end
-            end
-        end
-
-        -- Fully rebuild CharDB.bests from clean history — zero ALL fields first
-        -- including weekly bests that the inject also inflated.
-        if MidnightSenseiCharDB then
-            local hist = MidnightSenseiCharDB.encounters or {}
-            local b    = MidnightSenseiCharDB.bests or {}
-            local wk   = MS.Leaderboard and MS.Leaderboard.GetWeekKey
-                         and MS.Leaderboard.GetWeekKey() or ""
-            -- Zero everything
-            b.allTimeBest        = 0 ; b.dungeonBest       = 0
-            b.raidBest           = 0 ; b.delveBest         = 0
-            b.weeklyAvg          = 0
-            b.weeklyDungeonBest  = 0 ; b.weeklyRaidBest    = 0
-            b.weeklyDelveBest    = 0
-            -- Rebuild from clean encounters
-            for _, enc in ipairs(hist) do
-                local s = enc.finalScore or 0
-                b.allTimeBest = math.max(b.allTimeBest, s)
-                if enc.encType == "dungeon" then
-                    b.dungeonBest = math.max(b.dungeonBest, s)
-                    if enc.weekKey == wk then b.weeklyDungeonBest = math.max(b.weeklyDungeonBest, s) end
-                elseif enc.encType == "raid" then
-                    b.raidBest = math.max(b.raidBest, s)
-                    if enc.weekKey == wk then b.weeklyRaidBest = math.max(b.weeklyRaidBest, s) end
-                elseif enc.encType == "delve" then
-                    b.delveBest = math.max(b.delveBest, s)
-                    if enc.weekKey == wk then b.weeklyDelveBest = math.max(b.weeklyDelveBest, s) end
-                end
-                if enc.isBoss and enc.weekKey == wk then
-                    b.weeklyAvg = math.max(b.weeklyAvg, s)  -- simplified; full avg computed at display
-                end
-            end
-            MidnightSenseiCharDB.bests = b
-        end
-
-        -- Zero db.guild self-entry scores so they don't get re-broadcast
-        local charName2 = UnitName("player") or "?"
-        local db2 = MidnightSenseiDB
-        if db2 and db2.leaderboard and db2.leaderboard.guild then
-            for k, e in pairs(db2.leaderboard.guild) do
-                if (k:match("^([^%-]+)") or k) == charName2 then
-                    local hist = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters or {}
-                    e.allTimeBest = 0 ; e.dungeonBest = 0
-                    e.raidBest    = 0 ; e.delveBest   = 0
-                    e.weeklyAvg   = 0 ; e.dungeonWeekBest = 0
-                    e.raidWeekBest = 0 ; e.delveWeekBest  = 0
-                    for _, enc in ipairs(hist) do
-                        local s = enc.finalScore or 0
-                        e.allTimeBest = math.max(e.allTimeBest, s)
-                        if     enc.encType == "dungeon" then e.dungeonBest = math.max(e.dungeonBest, s)
-                        elseif enc.encType == "raid"    then e.raidBest    = math.max(e.raidBest,    s)
-                        elseif enc.encType == "delve"   then e.delveBest   = math.max(e.delveBest,   s)
-                        end
-                    end
-                    break
-                end
-            end
-        end
-
-        -- Clear recoveredBests — it may also be holding the inflated score
-        if MidnightSenseiDB and MidnightSenseiDB.leaderboard then
-            MidnightSenseiDB.leaderboard.recoveredBests = nil
-        end
-
-        if MS.Leaderboard and MS.Leaderboard.RefreshUI then MS.Leaderboard.RefreshUI() end
-        print("|cff00D1FFMidnight Sensei:|r Removed " .. removedEnc ..
-              " injected encounter(s) and " .. removedBoss .. " TEST_ field(s).")
-        print("  All bests, weekly fields, and db.guild entry recalculated from clean history.")
-        print("  recoveredBests cleared. Run /ms debug guild pull to push corrected data.")
-
-    elseif msg:match("^debug guild nuke (.+)$") then
-        ------------------------------------------------------------------------
-        -- Hard-delete a named player's entry from db.guild on this machine.
-        -- Usage: /ms debug guild nuke Traum
-        -- Removes ALL keys matching that short name, bypassing upgrade-only merge.
-        -- Also broadcasts a corrective PUSHDATA with zeroed scores to the guild
-        -- so peers who cached an inflated value overwrite it.
-        -- Run this on both machines to fully purge stale data.
-        ------------------------------------------------------------------------
-        local targetName = msg:match("^debug guild nuke (.+)$")
-        targetName = targetName:match("^%s*(.-)%s*$")  -- trim whitespace
-        local shortTarget = targetName:match("^([^%-]+)") or targetName
-
-        local db = MidnightSenseiDB
-        local removed = 0
-        if db and db.leaderboard and db.leaderboard.guild then
-            for k in pairs(db.leaderboard.guild) do
-                if (k:match("^([^%-]+)") or k):lower() == shortTarget:lower() then
-                    db.leaderboard.guild[k] = nil
-                    removed = removed + 1
-                    print("|cff00D1FFMidnight Sensei:|r Nuked db.guild[\"" .. k .. "\"]")
-                end
-            end
-        end
-
-        -- Also clear recoveredBests if it's the self-entry being nuked
-        local myShort = UnitName("player") or ""
-        if shortTarget:lower() == myShort:lower() then
-            if db and db.leaderboard then
-                db.leaderboard.recoveredBests = nil
-                print("|cff00D1FFMidnight Sensei:|r Cleared recoveredBests.")
-            end
-        end
-
-        -- Broadcast corrective zeroed PUSHDATA to guild so peers overwrite
-        -- their cached inflated scores with zeros. They will repopulate from
-        -- real SCORE broadcasts naturally after this.
-        if IsInGuild() then
-            local spec  = Core.ActiveSpec
-            local wk    = MS.Leaderboard and MS.Leaderboard.GetWeekKey
-                          and MS.Leaderboard.GetWeekKey() or ""
-            local zeroed = table.concat({
-                "PUSHDATA", Core.VERSION,
-                shortTarget,
-                "0","0","0","0","0",          -- allTimeBest,weeklyAvg,dungBest,raidBest,delvBest
-                (spec and spec.className or "?"),
-                (spec and spec.name or "?"),
-                wk,
-                "","","","","","",            -- location fields
-                "0","0","0",                  -- weekly category bests
-            }, "|")
-            -- Use a small delay so the nuke DB write settles first
-            C_Timer.After(0.3, function()
-                local ok, err = pcall(C_ChatInfo.SendAddonMessage, "MS_LB", zeroed, "GUILD")
-                if ok then
-                    print("|cff00D1FFMidnight Sensei:|r Broadcast zeroed PUSHDATA for " ..
-                          shortTarget .. " to guild.")
-                else
-                    print("|cffFF4444Midnight Sensei:|r Broadcast failed: " .. tostring(err))
-                end
-            end)
-        end
-
-        if removed == 0 then
-            print("|cffFF4444Midnight Sensei:|r No db.guild entries found for '" ..
-                  targetName .. "'.")
-        else
-            print("|cff00D1FFMidnight Sensei:|r Nuked " .. removed ..
-                  " entr" .. (removed == 1 and "y" or "ies") .. " for '" .. targetName ..
-                  "'. Run on both machines to fully purge.")
-        end
-        if MS.Leaderboard and MS.Leaderboard.RefreshUI then MS.Leaderboard.RefreshUI() end
-
     elseif msg == "debug guild ping" then
         -- Send a PING to GUILD channel and check if we receive it back
         print("|cff00D1FFMidnight Sensei:|r Sending PING to GUILD channel...")
@@ -2962,50 +2635,6 @@ local function MSSlashHandler(msg)
             if count == 0 then
                 print("|cffFF4444Midnight Sensei:|r No encounters to broadcast.")
             end
-        end
-
-    elseif msg == "debug guild pull" then
-        print("|cff00D1FFMidnight Sensei — Pull/Push Diagnostic:|r")
-
-        local inGuild = IsInGuild()
-        print("  In guild:          " .. tostring(inGuild))
-        if not inGuild then return end
-
-        local rosterN = GetNumGuildMembers()
-        print("  GetNumGuildMembers: " .. rosterN)
-
-        -- Cache state (exposed by Leaderboard module for diagnostics)
-        local cacheInfo = MS.Leaderboard and MS.Leaderboard.GetRosterCacheInfo
-                          and MS.Leaderboard.GetRosterCacheInfo()
-        if cacheInfo then
-            print("  Roster cache ready: " .. tostring(cacheInfo.ready))
-            print("  Roster cache size:  " .. cacheInfo.size)
-            print("  Pending actions:    " .. cacheInfo.pending)
-            local myName      = UnitName("player") or "?"
-            local myIdx       = cacheInfo.myRankIndex
-            local threshold   = Core.GetSetting("officerRankThreshold") or 3
-            print("  My name:            " .. myName)
-            print("  My rank index:      " .. tostring(myIdx))
-            print("  Officer threshold:  <= " .. threshold)
-            if myIdx then
-                local qualifies = myIdx <= threshold
-                print("  Qualifies as officer: " ..
-                      (qualifies and "|cff00FF00YES|r" or "|cffFF4444NO|r") ..
-                      "  (index " .. myIdx .. " <= " .. threshold .. " = " .. tostring(qualifies) .. ")")
-                if not qualifies then
-                    print("  |cffFFD700Your rank index (" .. myIdx .. ") is above the officer threshold (" .. threshold .. ").|r")
-                    print("  |cffFFD700Ask your GM to adjust the threshold, or set it manually:|r")
-                    print("  |cffFFD700  (future) /ms options → Officer Rank Threshold|r")
-                end
-            end
-            print("  IsOfficerOrGM():    " .. tostring(cacheInfo.isOfficer))
-        else
-            print("  |cffFF4444Cache info unavailable — Leaderboard module not ready.|r")
-        end
-
-        print("  |cffFFD700Firing action (deferred if roster not ready)...|r")
-        if MS.Leaderboard and MS.Leaderboard.BroadcastPullReq then
-            MS.Leaderboard.BroadcastPullReq()
         end
 
     elseif msg == "debug self" then

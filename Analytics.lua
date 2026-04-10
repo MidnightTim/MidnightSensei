@@ -233,6 +233,8 @@ local function OnCombatStart()
                         useCount        = 0,
                         label           = rs.label,
                         minFightSeconds = rs.minFightSeconds or 60,
+                        combatGated     = rs.combatGated or false,
+                        cdSec           = rs.cdSec or nil,  -- optional CD duration for cast-count estimates
                     }
                 end
             end
@@ -370,14 +372,10 @@ Core.On(Core.EVENTS.COMBAT_END,   OnCombatEnd)
 
 -- BOSS_START fires after PLAYER_REGEN_DISABLED (COMBAT_START), so we update
 -- currentBossContext here rather than trying to snapshot it in OnCombatStart.
--- Exception: in Midnight 12.0 delves, ENCOUNTER_START fires BEFORE
--- PLAYER_REGEN_DISABLED. The fightActive guard was blocking boss context from
--- being set in that case. We now always capture it — OnCombatStart already
--- re-snapshots Core.CurrentEncounter so there is no double-set risk.
 Core.On(Core.EVENTS.BOSS_START, function(encID, encName, diffID)
-    currentBossContext = { name = encName, id = encID, difficultyID = diffID }
-    -- If fight is already active, update the in-progress context immediately
-    -- so it's available when CalculateGrade runs at fight end.
+    if fightActive then
+        currentBossContext = { name = encName, id = encID, difficultyID = diffID }
+    end
 end)
 
 -- Clear boss context on BOSS_END (wipe / end without kill)
@@ -718,6 +716,7 @@ function Analytics.CalculateGrade()
     local grade, gradeColor, gradeLabel = Core.GetGrade(finalScore)
     DebugLog("[Grade] final=" .. finalScore .. " grade=" .. grade)
 
+    scores._final = finalScore  -- available to GenerateFeedback for tier-aware fallback
     local feedback = Analytics.GenerateFeedback(scores, duration, inferSimplified)
 
     local result = {
@@ -829,7 +828,7 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
     end
 
     -- ── Activity / Downtime ──────────────────────────────────────────────────
-    if actScore < 80 and totalGCDs > 0 then
+    if actScore < 85 and totalGCDs > 0 then
         local targetGPM   = isHealer and 25 or isTank and 30 or 40
         local targetTotal = math.floor((duration / 60) * targetGPM)
         local pct         = math.floor((activeGCDs / math.max(1, targetTotal)) * 100)
@@ -837,6 +836,10 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
         if inferSimplified then
             AddGain(30, "Your rotation is consistent, but gaps between casts (" ..
                 pct .. "% activity) are the next thing to tighten up.")
+        elseif actScore >= 80 then
+            -- 80-84 range: positive framing, specific number
+            AddGain(15, "Activity at " .. pct .. "% — roughly " .. lost ..
+                " cast(s) left on the table. Queue your next spell before the current one lands.")
         else
             local severity = pct < 60 and "significant" or "moderate"
             AddGain(30, "Activity: " .. activeGCDs .. "/" .. targetTotal ..
@@ -854,12 +857,28 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
             " — target 1 use per 2 minutes of fight time.")
     end
 
-    -- ── Rotational Spells ────────────────────────────────────────────────────
+    -- ── Rotational spell cast count ─────────────────────────────────────────
+    -- For spells we did track casts on, surface how many more could have fit
+    -- in the fight. This fires even at high scores — a player casting Void Ray
+    -- 6 times when 9 were possible still has room to improve.
     if next(rotationalTracking) then
-        local unused = {}
-        for _, rs in pairs(rotationalTracking) do
-            if rs.useCount == 0 and duration >= rs.minFightSeconds then
+        local unused  = {}
+        local lowUsed = {}
+        for id, rs in pairs(rotationalTracking) do
+            if rs.useCount == 0 and duration >= rs.minFightSeconds and not rs.combatGated then
                 table.insert(unused, rs.label)
+            elseif rs.useCount > 0 and not rs.combatGated then
+                -- If the spec defines a cdSec for this rotational spell, estimate
+                -- how many casts should have fit in the fight.
+                local cdSec = rs.cdSec  -- populated from spec if present
+                if cdSec and cdSec > 0 and duration >= rs.minFightSeconds then
+                    local potential = math.max(1, math.floor(duration / cdSec))
+                    local missed    = potential - rs.useCount
+                    if missed >= 2 then
+                        table.insert(lowUsed, rs.label ..
+                            " (" .. rs.useCount .. "/" .. potential .. ")")
+                    end
+                end
             end
         end
         if #unused > 0 then
@@ -870,6 +889,11 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
             AddGain(25, "Rotational spell(s) never used: " ..
                 table.concat(unused, ", ") ..
                 " — these are core to your " .. context .. ".")
+        end
+        if #lowUsed > 0 then
+            table.sort(lowUsed)
+            AddGain(10, "Could have cast more: " .. table.concat(lowUsed, ", ") ..
+                " — press these on every available GCD when your primary spenders are on cooldown.")
         end
     end
 
@@ -994,9 +1018,34 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
         local mitScore = scores.mitigationUptime or 100
         local allHigh  = actScore >= 90 and cdScore >= 90
                       and (not isTank or mitScore >= 90)
+        local finalScore = scores._final or 0
 
-        if allHigh then
-            Add("Strong execution — cooldowns and activity both on point.")
+        if allHigh and finalScore >= 95 then
+            -- Near-perfect: give them something to reach for
+            local nextSteps = {}
+            if isTank then
+                table.insert(nextSteps, "pre-position defensives before predictable spike damage")
+            elseif isHealer then
+                table.insert(nextSteps, "overlap cooldowns with incoming damage casts rather than reacting")
+            else
+                table.insert(nextSteps, "align burst windows with enemy vulnerability phases")
+            end
+            table.insert(nextSteps, "reduce time between the GCD ending and your next cast to sub-0.2s")
+            Add("Near-perfect execution. The remaining gains are: " ..
+                table.concat(nextSteps, "; ") .. ".")
+        elseif allHigh then
+            -- 90-94: identify the weakest scoring category
+            local weakest = nil
+            local weakScore = 100
+            for cat, val in pairs(scores) do
+                if cat ~= "_final" and type(val) == "number" and val < weakScore then
+                    weakScore = val
+                    weakest   = cat
+                end
+            end
+            local catHint = weakest and weakest:gsub("(%l)(%u)", "%1 %2"):lower() or "cooldown timing"
+            Add("Strong execution overall. Your lowest category is " ..
+                catHint .. " — that is where the next points come from.")
         elseif cdScore < 80 or mitScore < 80 then
             local hints = {}
             if cdScore < 80 then

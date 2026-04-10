@@ -329,54 +329,6 @@ end
 --------------------------------------------------------------------------------
 local partyData   = {}   -- [playerName] = entry  (session-only)
 local friendsData = {}   -- [playerName] = entry  (session-only)
-local pullRespCount = 0  -- PULLDATA responses received in the current pull window
-local pushNewCount  = 0  -- new PUSHDATA entries received from the officer push stream
-local pushDebounce  = nil -- C_Timer handle for the push-stream settle confirmation
-
--- Guild roster cache — populated on GUILD_ROSTER_UPDATE.
--- Avoids re-walking the roster on every rank check and handles the case where
--- GetNumGuildMembers() returns 0 during the initial login roster sync.
-local rosterCache    = {}   -- [shortName] = rankIndex
-local rosterReady    = false
-local pendingActions = {}   -- functions queued to run once roster is ready
-
-local function FlushPendingActions()
-    local actions = pendingActions
-    pendingActions = {}
-    for _, fn in ipairs(actions) do
-        local ok, err = pcall(fn)
-        if not ok and Core.GetSetting("debugMode") then
-            print("|cff888888MS LB:|r pendingAction error: " .. tostring(err))
-        end
-    end
-end
-
-local function RebuildRosterCache()
-    rosterCache = {}
-    local n = GetNumGuildMembers()
-    for i = 1, n do
-        local name, _, rankIndex = GetGuildRosterInfo(i)
-        if name then
-            local short = name:match("^([^%-]+)") or name
-            rosterCache[short] = rankIndex or 99
-        end
-    end
-    rosterReady = (n > 0)
-    if rosterReady then
-        FlushPendingActions()
-    end
-end
-
--- Run fn immediately if the roster is ready, otherwise queue it.
-local function WhenRosterReady(fn)
-    if rosterReady then
-        fn()
-    else
-        table.insert(pendingActions, fn)
-        -- Note: GuildRoster() is not available in Midnight 12.0.
-        -- The roster populates automatically via GUILD_ROSTER_UPDATE on login.
-    end
-end
 -- Guild data lives in MidnightSenseiDB.leaderboard.guild
 
 --------------------------------------------------------------------------------
@@ -410,38 +362,6 @@ local function IsGuildMember(fullName)
         if gName and gName:match("^([^%-]+)") == shortName then return true end
     end
     return false
-end
-
--- Returns true if the given rankIndex has officer-level authority.
--- GuildControlGetRankFlags is not available in Midnight 12.0, so we use a
--- configurable rank index threshold instead. Any rankIndex <= threshold is
--- treated as officer-tier. Default of 3 covers the common 4-rank layout:
---   0 = Guild Master
---   1 = Alt-GM / Co-GM
---   2 = Senior Officer
---   3 = Officer
--- Future: GMs will be able to adjust this threshold via /ms options.
-local function RankIsOfficerTier(rankIndex)
-    local idx = rankIndex or 99
-    local threshold = (Core.GetSetting and Core.GetSetting("officerRankThreshold")) or 3
-    return idx <= threshold
-end
-
--- Returns true if the local player holds an officer-tier rank.
-local function IsOfficerOrGM()
-    if not IsInGuild() then return false end
-    local myName = UnitName("player") or ""
-    local idx = rosterCache[myName]
-    if idx == nil then return false end
-    return RankIsOfficerTier(idx)
-end
-
--- Returns true if the named sender (short name) holds an officer-tier rank.
-local function IsSenderOfficerOrGM(senderShort)
-    if not IsInGuild() then return false end
-    local idx = rosterCache[senderShort]
-    if idx == nil then return false end
-    return RankIsOfficerTier(idx)
 end
 
 -- Friends tab: BNet friend enumeration (BNGetFriendNumGameAccounts) returns 0
@@ -727,160 +647,6 @@ function LB.BroadcastEncounterToGuild(encounter)
     WhisperFriends(payload)
 end
 
-
--- Public wrapper — lets Core.lua slash handler call IsOfficerOrGM without
--- reaching into the local scope of Leaderboard.lua.
-function LB.IsOfficerOrGM()
-    return IsOfficerOrGM()
-end
-
--- Diagnostic helper: returns cache state for /ms debug guild pull
-function LB.GetRosterCacheInfo()
-    local myName = UnitName("player") or ""
-    local myIdx  = rosterCache[myName]
-    local size   = 0
-    for _ in pairs(rosterCache) do size = size + 1 end
-    return {
-        ready         = rosterReady,
-        size          = size,
-        pending       = #pendingActions,
-        myRankIndex   = myIdx,
-        isOfficer     = IsOfficerOrGM(),
-    }
-end
-
--- Fires a PULLREQ to the guild, prints a user-facing status message, and
--- schedules a confirmation 6s later once all staggered responses (0.5-3.5s)
--- have had time to arrive. After confirming, pushes all collected guild entries
--- back out to non-officers via PUSHDATA so their leaderboards also populate.
--- Cooldown to prevent REQPUSH spam from triggering many back-to-back pull cycles
-local lastPullReqTime = 0
-local PULL_COOLDOWN   = 15  -- seconds between full pull cycles
-
-local function SendPullReq(silent)
-    if not IsInGuild() then return end
-    local now = time()
-    if (now - lastPullReqTime) < PULL_COOLDOWN then
-        if not silent then
-            print("|cff00D1FFMidnight Sensei:|r Leaderboard refresh on cooldown, please wait.")
-        end
-        return
-    end
-    WhenRosterReady(function()
-        if not IsOfficerOrGM() then return end
-        lastPullReqTime = time()
-        pullRespCount   = 0
-        SafeSend(LB_PREFIX, "PULLREQ|" .. Core.VERSION, "GUILD")
-        if not silent then
-            print("|cff00D1FFMidnight Sensei:|r Updating leaderboard...")
-        end
-        C_Timer.After(6.0, function()
-            if not silent then
-                if pullRespCount > 0 then
-                    print("|cff00D1FFMidnight Sensei:|r Leaderboard updated — " ..
-                          pullRespCount .. " guild member" ..
-                          (pullRespCount == 1 and "" or "s") .. " responded.")
-                else
-                    print("|cff00D1FFMidnight Sensei:|r Leaderboard up to date.")
-                end
-            end
-            -- Push the complete guild DB (including our own entry) out to all
-            -- guild members so non-officers' leaderboards fully populate.
-            -- This is the authoritative push — it covers everyone who responded
-            -- to the PULLREQ plus any entries already in the DB from prior sessions.
-            local db = GetDB()
-            if db and db.guild then
-                -- Also inject our own current data into db.guild before pushing
-                local myName = UnitName("player") or "?"
-                local cb     = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
-                local spec   = Core.ActiveSpec
-                if cb and spec then
-                    local myKey = GetPlayerName()
-                    if not db.guild[myKey] then db.guild[myKey] = {} end
-                    local e = db.guild[myKey]
-                    e.name        = myName
-                    e.className   = spec.className or e.className or "?"
-                    e.specName    = spec.name      or e.specName  or "?"
-                    e.allTimeBest = math.max(e.allTimeBest or 0, cb.allTimeBest or 0)
-                    e.dungeonBest = math.max(e.dungeonBest or 0, cb.dungeonBest or 0)
-                    e.raidBest    = math.max(e.raidBest    or 0, cb.raidBest    or 0)
-                    e.delveBest   = math.max(e.delveBest   or 0, cb.delveBest   or 0)
-                    e.weeklyAvg   = math.max(e.weeklyAvg   or 0, cb.weeklyAvg   or 0)
-                    e.weekKey     = cb.weekKey or GetWeekKey()
-                    -- Populate location fields from encounter history if not already set.
-                    -- Walk history newest-first to find the best boss encounter per type.
-                    local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
-                    if history then
-                        -- Only skip if we already have both a score AND location for that type
-                        local gotDungeon = (e.dungeonBest or 0) > 0 and (e.diffLabel    or "") ~= ""
-                        local gotRaid    = (e.raidBest    or 0) > 0 and (e.diffLabel    or "") ~= ""
-                        local gotDelve   = (e.delveBest   or 0) > 0 and (e.delveLabel   or "") ~= ""
-                        for i = #history, 1, -1 do
-                            local enc = history[i]
-                            if enc.isBoss and enc.bossName and enc.bossName ~= "" then
-                                if enc.encType == "dungeon" and not gotDungeon then
-                                    e.diffLabel    = enc.diffLabel    or e.diffLabel    or ""
-                                    e.bossName     = enc.bossName     or ""
-                                    e.instanceName = enc.instanceName or e.instanceName or ""
-                                    gotDungeon = true
-                                elseif enc.encType == "raid" and not gotRaid then
-                                    e.diffLabel    = enc.diffLabel    or e.diffLabel    or ""
-                                    e.bossName     = enc.bossName     or ""
-                                    e.instanceName = enc.instanceName or e.instanceName or ""
-                                    gotRaid = true
-                                elseif enc.encType == "delve" and not gotDelve then
-                                    e.delveLabel   = enc.diffLabel    or e.delveLabel   or ""
-                                    e.delveBoss    = enc.bossName     or ""
-                                    e.delveInstance = enc.instanceName or e.delveInstance or ""
-                                    gotDelve = true
-                                end
-                            end
-                            if gotDungeon and gotRaid and gotDelve then break end
-                        end
-                    end
-                end
-                local delay = 0.2
-                for key, e in pairs(db.guild) do
-                    if (e.allTimeBest or 0) > 0 then
-                        local payload = table.concat({
-                            "PUSHDATA",
-                            Core.VERSION,
-                            ShortName(key),
-                            tostring(e.allTimeBest      or 0),
-                            tostring(e.weeklyAvg        or 0),
-                            tostring(e.dungeonBest      or 0),
-                            tostring(e.raidBest         or 0),
-                            tostring(e.delveBest        or 0),
-                            e.className                 or "?",
-                            e.specName                  or "?",
-                            e.weekKey                   or GetWeekKey(),
-                            (e.diffLabel    or ""):gsub("|", "_"),
-                            (e.bossName     or ""):gsub("|", "_"),
-                            (e.instanceName or ""):gsub("|", "_"),
-                            (e.delveLabel   or ""):gsub("|", "_"),
-                            (e.delveBoss    or ""):gsub("|", "_"),
-                            (e.delveInstance or ""):gsub("|", "_"),
-                            tostring(e.dungeonWeekBest  or 0),
-                            tostring(e.raidWeekBest     or 0),
-                            tostring(e.delveWeekBest    or 0),
-                        }, "|")
-                        C_Timer.After(delay, function()
-                            if IsInGuild() then SafeSend(LB_PREFIX, payload, "GUILD") end
-                        end)
-                        delay = delay + 0.1
-                    end
-                end
-            end
-            pullRespCount = 0
-        end)
-    end)
-end
-
--- Public wrapper — lets Core.lua (/ms debug guild pull) trigger a PULLREQ
--- without duplicating the channel send logic.
-function LB.BroadcastPullReq()
-    SendPullReq(false)
-end
 Core.On(Core.EVENTS.GRADE_CALCULATED, BroadcastScore)
 
 -- Auto-refresh leaderboard after each fight if it's open
@@ -935,8 +701,6 @@ end
 
 Core.On(Core.EVENTS.SESSION_READY, function() C_Timer.After(4.0, BroadcastHello) end)
 Core.On(Core.EVENTS.SESSION_READY, function()
-    -- Roster populates automatically via GUILD_ROSTER_UPDATE on login.
-    -- RebuildRosterCache is called from that event handler.
     C_Timer.After(2.0, function()
         SeedPartyFromGroup()
         -- Load persisted friend list from DB
@@ -961,27 +725,16 @@ Core.On(Core.EVENTS.SESSION_READY, function()
     C_Timer.After(6.0, function()
         LB.QueryAllFriends()
     end)
-    -- Officer/GM: broadcast PULLREQ so all addon-carrying guild members send
-    -- their full score summaries. Populates missing entries (alts, players who
-    -- never broadcast since the officer last logged in). Fires at 10s to ensure
-    -- the guild roster is fully loaded before rank checks run.
-    C_Timer.After(10.0, function()
-        if IsInGuild() then
-            WhenRosterReady(function()
-                if IsOfficerOrGM() then
-                    SendPullReq(false)
-                else
-                    SafeSend(LB_PREFIX, "REQPUSH|" .. Core.VERSION, "GUILD")
-                end
-            end)
-        end
-    end)
 end)
 Core.On(Core.EVENTS.SPEC_CHANGED,  function() C_Timer.After(1.0, BroadcastHello) end)
 
 --------------------------------------------------------------------------------
 -- Incoming message parser
 --------------------------------------------------------------------------------
+-- Forward declaration: SyncGuildOnlineStatus is defined later in this file
+-- but called from OnAddonMessage (below) and the event frame. Without this
+-- the local is out of scope at the call site and resolves as a nil global.
+local SyncGuildOnlineStatus
 local function OnAddonMessage(prefix, payload, channel, sender)
     if prefix ~= LB_PREFIX then return end
     local shortSelf = UnitName("player")
@@ -1393,279 +1146,6 @@ local function OnAddonMessage(prefix, payload, channel, sender)
             diffLabel = "", instanceName = "",
         })
         if #receivedScoreLog > 5 then table.remove(receivedScoreLog, 1) end
-
-    elseif msgType == "REQPUSH" then
-        if channel ~= "GUILD" then return end
-        WhenRosterReady(function()
-            local iAmOfficer = IsOfficerOrGM()
-            if Core.GetSetting("debugMode") then
-                print("|cff888888MS LB:|r REQPUSH from " .. ShortName(sender) ..
-                      " — IsOfficerOrGM=" .. tostring(iAmOfficer))
-            end
-            if not iAmOfficer then return end
-            C_Timer.After(1.0 + math.random() * 3.0, function()
-                SendPullReq(true)
-            end)
-        end)
-
-    elseif msgType == "PULLREQ" then
-        ------------------------------------------------------------------------
-        -- Officer Pull Request
-        -- An Officer/GM is asking all guild members to send their score summary.
-        ------------------------------------------------------------------------
-        if channel ~= "GUILD" then return end
-        local senderIsOfficer = IsSenderOfficerOrGM(ShortName(sender))
-        if Core.GetSetting("debugMode") then
-            print("|cff888888MS LB:|r PULLREQ from " .. ShortName(sender) ..
-                  " — IsSenderOfficerOrGM=" .. tostring(senderIsOfficer))
-        end
-        if not senderIsOfficer then return end
-        -- Stagger responses to avoid flooding the channel
-        C_Timer.After(0.5 + math.random() * 3.0, function()
-            local cb   = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
-            local spec = Core.ActiveSpec
-            if Core.GetSetting("debugMode") then
-                print("|cff888888MS LB:|r Sending PULLDATA response — cb=" ..
-                      tostring(cb ~= nil) .. " spec=" .. tostring(spec ~= nil))
-            end
-            if not cb or not spec then return end
-            local charName = UnitName("player") or "?"
-            local payload  = table.concat({
-                "PULLDATA",
-                Core.VERSION,
-                charName,
-                tostring(cb.allTimeBest   or 0),
-                tostring(cb.weeklyAvg     or 0),
-                tostring(cb.dungeonBest   or 0),
-                tostring(cb.raidBest      or 0),
-                tostring(cb.delveBest     or 0),
-                spec.className            or "?",
-                spec.name                 or "?",
-                cb.weekKey                or GetWeekKey(),
-            }, "|")
-            if IsInGuild() then SafeSend(LB_PREFIX, payload, "GUILD") end
-        end)
-
-    elseif msgType == "PULLDATA" then
-        local iAmOfficer = IsOfficerOrGM()
-        if Core.GetSetting("debugMode") then
-            print("|cff888888MS LB:|r PULLDATA from " .. ShortName(sender) ..
-                  " — IsOfficerOrGM=" .. tostring(iAmOfficer) ..
-                  " parts=" .. #parts .. " channel=" .. channel)
-        end
-        if not iAmOfficer then return end
-        if #parts < 11 then return end
-        if channel ~= "GUILD" then return end
-
-        local charName    = parts[3]
-        local allTimeBest = tonumber(parts[4])  or 0
-        local weeklyAvg   = tonumber(parts[5])  or 0
-        local dungeonBest = tonumber(parts[6])  or 0
-        local raidBest    = tonumber(parts[7])  or 0
-        local delveBest   = tonumber(parts[8])  or 0
-        local className   = parts[9]            or "?"
-        local specName    = parts[10]           or "?"
-        local weekKey     = parts[11]           or GetWeekKey()
-
-        -- Plausibility gate — same bounds as SCORE handler
-        if allTimeBest > 100 or dungeonBest > 100 or raidBest > 100 or delveBest > 100 then
-            if Core.GetSetting("debugMode") then
-                print("|cffFF4444MS LB:|r PULLDATA from " .. ShortName(sender) ..
-                      " rejected (out-of-range values)")
-            end
-            return
-        end
-
-        -- Rate limit: reuse the existing senderRateLimit table
-        if not CheckRateLimit(sender .. "_pull") then return end
-
-        local db = GetDB()
-        if not db then return end
-
-        -- Key by full sender identity (Name-Realm if available, else short name).
-        -- Each character gets its own row — this naturally handles alts (#34).
-        if not db.guild[sender] then
-            db.guild[sender] = {
-                name         = charName,
-                className    = className,
-                specName     = specName,
-                grade        = "--",
-                score        = 0,
-                online       = true,
-                timestamp    = time(),
-                weekKey      = weekKey,
-                weekScores   = {},
-                weeklyAvg    = weeklyAvg,
-                allTimeBest  = allTimeBest,
-                dungeonBest  = dungeonBest,
-                raidBest     = raidBest,
-                delveBest    = delveBest,
-                normalBest   = 0,
-                dungeonAvg   = 0,
-                raidAvg      = 0,
-                dungeonCount = 0,
-                raidCount    = 0,
-            }
-            if Core.GetSetting("debugMode") then
-                print("|cff00D1FFMidnight Sensei:|r PULLDATA: new entry " ..
-                      ShortName(sender) .. " (" .. specName .. " " .. className ..
-                      ") best=" .. allTimeBest)
-            end
-        else
-            -- Existing entry: only upgrade scores, never downgrade
-            local e = db.guild[sender]
-            if allTimeBest > (e.allTimeBest or 0) then e.allTimeBest = allTimeBest end
-            if dungeonBest > (e.dungeonBest or 0) then e.dungeonBest = dungeonBest end
-            if raidBest    > (e.raidBest    or 0) then e.raidBest    = raidBest    end
-            if delveBest   > (e.delveBest   or 0) then e.delveBest   = delveBest   end
-            if weeklyAvg   > (e.weeklyAvg   or 0) and weekKey == GetWeekKey() then
-                e.weeklyAvg = weeklyAvg
-            end
-            if className ~= "?" then e.className = className end
-            if specName  ~= "?" then e.specName  = specName  end
-            e.online = true
-        end
-
-        pullRespCount = pullRespCount + 1
-        LB.RefreshUI()
-
-    elseif msgType == "PUSHDATA" then
-        if channel ~= "GUILD" then return end
-        -- Minimum 11 parts for backward compat; full format is 20 parts.
-        -- Fields 12-20 (location, weekly bests) default to "" or 0 if absent.
-        if #parts < 11 then return end
-
-        local senderShort     = ShortName(sender)
-        local senderIsOfficer = IsSenderOfficerOrGM(senderShort)
-
-        if Core.GetSetting("debugMode") then
-            print("|cff888888MS LB:|r PUSHDATA from " .. senderShort ..
-                  " IsSenderOfficerOrGM=" .. tostring(senderIsOfficer) ..
-                  " cacheSize=" .. (function()
-                      local n = 0; for _ in pairs(rosterCache) do n = n + 1 end; return n
-                  end)())
-        end
-
-        if not senderIsOfficer then return end
-
-        local charName        = parts[3]
-        local allTimeBest     = tonumber(parts[4])  or 0
-        local weeklyAvg       = tonumber(parts[5])  or 0
-        local dungeonBest     = tonumber(parts[6])  or 0
-        local raidBest        = tonumber(parts[7])  or 0
-        local delveBest       = tonumber(parts[8])  or 0
-        local className       = parts[9]            or "?"
-        local specName        = parts[10]           or "?"
-        local weekKey         = parts[11]           or GetWeekKey()
-        local diffLabel       = parts[12]           or ""
-        local bossName        = parts[13]           or ""
-        local instanceName    = parts[14]           or ""
-        local delveLabel      = parts[15]           or ""
-        local delveBoss       = parts[16]           or ""
-        local delveInstance   = parts[17]           or ""
-        local dungeonWeekBest = tonumber(parts[18]) or 0
-        local raidWeekBest    = tonumber(parts[19]) or 0
-        local delveWeekBest   = tonumber(parts[20]) or 0
-
-        -- Plausibility gate
-        if allTimeBest > 100 or dungeonBest > 100 or raidBest > 100 or delveBest > 100 then
-            return
-        end
-
-        -- Skip entries pushed by ourselves (shouldn't happen but guard anyway).
-        -- Do NOT skip entries where charName == us — the officer may be pushing
-        -- our own data back to us and we need that to populate our leaderboard.
-        local myShort = UnitName("player") or ""
-        if ShortName(sender) == myShort then return end
-
-        local db = GetDB()
-        if not db then return end
-
-        -- Resolve the correct key. The officer sends charName as a short name
-        -- (e.g. "Llysse"), but db.guild may already have this player keyed as
-        -- their full Name-Realm ("Llysse-Thrall") from prior SCORE broadcasts.
-        -- Prefer the existing key to avoid creating a duplicate short-name row.
-        local key = charName
-        for existingKey in pairs(db.guild) do
-            if ShortName(existingKey) == charName then
-                key = existingKey
-                break
-            end
-        end
-
-        local pushNew = not db.guild[key]
-
-        if not db.guild[key] then
-            db.guild[key] = {
-                name            = charName,
-                className       = className,
-                specName        = specName,
-                grade           = "--",
-                score           = 0,
-                online          = false,
-                timestamp       = time(),
-                weekKey         = weekKey,
-                weekScores      = {},
-                weeklyAvg       = weeklyAvg,
-                allTimeBest     = allTimeBest,
-                dungeonBest     = dungeonBest,
-                raidBest        = raidBest,
-                delveBest       = delveBest,
-                normalBest      = 0,
-                dungeonAvg      = 0,
-                raidAvg         = 0,
-                dungeonCount    = 0,
-                raidCount       = 0,
-                dungeonWeekBest = dungeonWeekBest,
-                raidWeekBest    = raidWeekBest,
-                delveWeekBest   = delveWeekBest,
-                diffLabel       = diffLabel,
-                bossName        = bossName,
-                instanceName    = instanceName,
-                delveLabel      = delveLabel,
-                delveBoss       = delveBoss,
-                delveInstance   = delveInstance,
-            }
-        else
-            local e = db.guild[key]
-            if allTimeBest     > (e.allTimeBest     or 0) then e.allTimeBest     = allTimeBest     end
-            if dungeonBest     > (e.dungeonBest     or 0) then e.dungeonBest     = dungeonBest     end
-            if raidBest        > (e.raidBest        or 0) then e.raidBest        = raidBest        end
-            if delveBest       > (e.delveBest       or 0) then e.delveBest       = delveBest       end
-            if dungeonWeekBest > (e.dungeonWeekBest or 0) and weekKey == GetWeekKey() then
-                e.dungeonWeekBest = dungeonWeekBest end
-            if raidWeekBest    > (e.raidWeekBest    or 0) and weekKey == GetWeekKey() then
-                e.raidWeekBest    = raidWeekBest    end
-            if delveWeekBest   > (e.delveWeekBest   or 0) and weekKey == GetWeekKey() then
-                e.delveWeekBest   = delveWeekBest   end
-            if weeklyAvg       > (e.weeklyAvg       or 0) and weekKey == GetWeekKey() then
-                e.weeklyAvg       = weeklyAvg       end
-            if className ~= "?" then e.className = className end
-            if specName  ~= "?" then e.specName  = specName  end
-            -- Always update location data — display-only, not score data
-            if diffLabel      ~= "" then e.diffLabel      = diffLabel      end
-            if bossName       ~= "" then e.bossName       = bossName       end
-            if instanceName   ~= "" then e.instanceName   = instanceName   end
-            if delveLabel     ~= "" then e.delveLabel     = delveLabel     end
-            if delveBoss      ~= "" then e.delveBoss      = delveBoss      end
-            if delveInstance  ~= "" then e.delveInstance  = delveInstance  end
-        end
-
-        -- Count new entries to report to the user once the push stream settles.
-        -- Debounce: reschedule a 3s timer on every arrival; fires when the stream
-        -- goes quiet (officer has finished sending all entries).
-        pushNewCount = pushNewCount + (pushNew and 1 or 0)
-        if pushDebounce then pushDebounce:Cancel() end
-        pushDebounce = C_Timer.NewTimer(3.0, function()
-            if pushNewCount > 0 then
-                print("|cff00D1FFMidnight Sensei:|r Leaderboard updated — " ..
-                      pushNewCount .. " new entr" ..
-                      (pushNewCount == 1 and "y" or "ies") .. " added.")
-            end
-            pushNewCount = 0
-            pushDebounce = nil
-        end)
-        LB.RefreshUI()
     end
 end
 
@@ -1853,33 +1333,22 @@ function LB.GetGuildData()
         local spec   = Core.ActiveSpec
         if spec then
             local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
-            -- Find the best boss encounter per content type for location display.
-            -- Each tab must show location from its own content type, not bleed
-            -- from the most recent fight regardless of type.
-            local lastDungeonEnc, lastRaidEnc = nil, nil
-            local lastDungeonAny, lastRaidAny = nil, nil
+            -- Use last boss encounter in a dungeon/raid for display context.
+            -- Falls back to any dungeon/raid enc, then any enc, if no boss found.
+            local lastEnc = nil
+            local lastEncAny = nil
             if history then
                 for i = #history, 1, -1 do
                     local e = history[i]
-                    if e.encType == "dungeon" then
-                        if not lastDungeonAny then lastDungeonAny = e end
-                        if e.isBoss and not lastDungeonEnc then lastDungeonEnc = e end
-                    elseif e.encType == "raid" then
-                        if not lastRaidAny then lastRaidAny = e end
-                        if e.isBoss and not lastRaidEnc then lastRaidEnc = e end
+                    if e.encType == "dungeon" or e.encType == "raid" then
+                        if not lastEncAny then lastEncAny = e end
+                        if e.isBoss and not lastEnc then lastEnc = e end
                     end
-                    if lastDungeonEnc and lastRaidEnc then break end
+                    if lastEnc then break end
                 end
-                lastDungeonEnc = lastDungeonEnc or lastDungeonAny
-                lastRaidEnc    = lastRaidEnc    or lastRaidAny
-            end
-            -- Use whichever was more recent for the generic lastEnc (grade/score display)
-            local lastEnc = nil
-            if     lastDungeonEnc and lastRaidEnc then
-                lastEnc = (lastDungeonEnc.timestamp or 0) >= (lastRaidEnc.timestamp or 0)
-                          and lastDungeonEnc or lastRaidEnc
-            elseif lastDungeonEnc then lastEnc = lastDungeonEnc
-            elseif lastRaidEnc    then lastEnc = lastRaidEnc
+                lastEnc = lastEnc or lastEncAny
+                -- Do NOT fall back to history[#history] — it may be a delve/normal
+                -- fight whose diffLabel would bleed into the dungeon/raid display.
             end
             local wk      = GetWeekKey()
 
@@ -1920,15 +1389,10 @@ function LB.GetGuildData()
                 raidBest      = raidBest,
                 delveBest     = delvBest,
                 normalBest    = normBest,
-                -- Dungeon location — from last dungeon boss
-                diffLabel     = lastDungeonEnc and lastDungeonEnc.diffLabel    or "",
-                instanceName  = lastDungeonEnc and lastDungeonEnc.instanceName or "",
-                bossName      = lastDungeonEnc and lastDungeonEnc.bossName     or "",
-                keystoneLevel = lastDungeonEnc and lastDungeonEnc.keystoneLevel or nil,
-                -- Raid location — from last raid boss (separate fields to prevent bleed)
-                raidDiffLabel    = lastRaidEnc and lastRaidEnc.diffLabel    or "",
-                raidInstanceName = lastRaidEnc and lastRaidEnc.instanceName or "",
-                raidBossName     = lastRaidEnc and lastRaidEnc.bossName     or "",
+                diffLabel     = lastEnc and lastEnc.diffLabel    or "",
+                instanceName  = lastEnc and lastEnc.instanceName or "",
+                bossName      = lastEnc and lastEnc.bossName     or "",
+                keystoneLevel = lastEnc and lastEnc.keystoneLevel or nil,
             }
 
             -- Merge with persisted data and peer-recovered bests
@@ -2360,9 +1824,9 @@ local function GetRow(parent, idx)
     row.rankText  = TF(row,10,"CENTER");  row.rankText:SetPoint("LEFT",row,"LEFT",4,0);   row.rankText:SetWidth(20)
     row.onlineDot = row:CreateTexture(nil,"OVERLAY"); row.onlineDot:SetSize(6,6); row.onlineDot:SetPoint("LEFT",row,"LEFT",26,0)
     row.nameText  = TF(row,11,"LEFT");    row.nameText:SetPoint("LEFT",row,"LEFT",36,0);  row.nameText:SetWidth(108)
-    row.specText  = TF(row,9,"LEFT");     row.specText:SetPoint("LEFT",row,"LEFT",148,0); row.specText:SetWidth(110)
+    row.specText  = TF(row,9,"LEFT");     row.specText:SetPoint("LEFT",row,"LEFT",148,0); row.specText:SetWidth(70)
     row.specText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    row.catText   = TF(row,9,"LEFT");     row.catText:SetPoint("LEFT",row,"LEFT",262,0);  row.catText:SetWidth(290)
+    row.catText   = TF(row,9,"LEFT");     row.catText:SetPoint("LEFT",row,"LEFT",222,0);  row.catText:SetWidth(230)
     row.catText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
     row.weekText  = TF(row,11,"RIGHT");   row.weekText:SetPoint("RIGHT",row,"RIGHT",-2,0); row.weekText:SetWidth(62)
 
@@ -2404,31 +1868,17 @@ local function PopulateRows(scrollChild, entries)
             return #parts > 0 and table.concat(parts, " - ") or "--"
         end
 
-        local diff, inst, boss
-        if contentType == "raid" then
-            -- Use raid-specific location fields to prevent dungeon names bleeding
-            -- into the raid tab. Self-entries store these separately; peer entries
-            -- from db.guild use the generic fields (their last raid broadcast).
-            local rd = (entry.raidDiffLabel    and entry.raidDiffLabel    ~= "") and entry.raidDiffLabel    or entry.diffLabel
-            local ri = (entry.raidInstanceName and entry.raidInstanceName ~= "") and entry.raidInstanceName or entry.instanceName
-            local rb = (entry.raidBossName     and entry.raidBossName     ~= "") and entry.raidBossName     or entry.bossName
-            -- Only use these if the entry actually has raid data — peer entries
-            -- may have dungeon location in the generic fields when raidBest > 0
-            -- only from CharDB.bests merge. Guard: require raidBest > 0.
-            if (entry.raidBest or 0) > 0 then
-                diff = (rd and rd ~= "" and rd ~= "World") and rd or nil
-                inst = (ri and ri ~= "") and ri or nil
-                boss = (rb and rb ~= "") and rb or nil
-            end
-        else
-            diff = (entry.diffLabel and entry.diffLabel ~= "" and entry.diffLabel ~= "World") and entry.diffLabel or nil
-            inst = (entry.instanceName and entry.instanceName ~= "") and entry.instanceName or nil
-            boss = (entry.bossName and entry.bossName ~= "") and entry.bossName or nil
-        end
+        local diff  = (entry.diffLabel and entry.diffLabel ~= "" and entry.diffLabel ~= "World") and entry.diffLabel or nil
+        local inst  = (entry.instanceName and entry.instanceName ~= "") and entry.instanceName or nil
+        local boss  = (entry.bossName and entry.bossName ~= "") and entry.bossName or nil
 
-        -- For dungeon tab: nil out location if entry has no dungeon data.
-        -- Raid tab location is already guarded in the extraction block above.
+        -- Only show location data when the entry has actual data for this content type.
+        -- Guild entries store the last broadcast's location regardless of content type,
+        -- so a dungeon diffLabel must not show on the raid tab when raidBest is zero.
+        -- This applies to self-entries too — isSelf only exempts from placeholder rows.
         if contentType == "dungeon" and (entry.dungeonBest or 0) == 0 then
+            diff, inst, boss = nil, nil, nil
+        elseif contentType == "raid" and (entry.raidBest or 0) == 0 then
             diff, inst, boss = nil, nil, nil
         end
 
@@ -2530,7 +1980,7 @@ local function PopulateRows(scrollChild, entries)
 
         -- Online dot
         local isOnline = (entry.online ~= false)
-        if activeTab == "party" or contentType == "delve" then isOnline = true end
+        if activeTab == "party" then isOnline = true end
         local dc = isOnline and COLOR.ONLINE or COLOR.OFFLINE
         row.onlineDot:SetColorTexture(dc[1],dc[2],dc[3],1)
         row.onlineDot:Show()
@@ -2642,10 +2092,6 @@ local function RefreshContent()
         end
     end
 
-    -- Delve count for content row
-    local delveCount = 0
-    for _ in pairs(LB.GetDelveData()) do delveCount = delveCount + 1 end
-
     -- Show + button only on friends tab; grey it out when at cap
     if lbFrame.addFriendBtn then
         local atCap = #friendList >= FRIEND_LIST_MAX
@@ -2665,7 +2111,7 @@ local function RefreshContent()
                 active and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2],
                 active and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3], 1)
             if cb.filterKey == "delve" then
-                cb.label:SetText("Delves (" .. delveCount .. ")")
+                cb.label:SetText("Delves")
             end
         end
     end
@@ -2738,7 +2184,7 @@ end
 local function CreateLeaderboardFrame()
     if lbFrame then return lbFrame end
 
-    local FW, FH = 680, 480
+    local FW, FH = 520, 480
     lbFrame = CreateFrame("Frame","MidnightSenseiLeaderboard",UIParent,"BackdropTemplate")
     lbFrame:SetSize(FW,FH)
     lbFrame:SetPoint("CENTER",UIParent,"CENTER",240,0)
@@ -2855,8 +2301,8 @@ local function CreateLeaderboardFrame()
     end
     Hdr("#",      "LEFT",   4,  20)
     Hdr("PLAYER", "LEFT",  36, 108)
-    Hdr("SPEC",   "LEFT", 148, 110)
-    lbFrame.hdrCat  = Hdr("DIFF / BOSS", "LEFT", 262, 290)
+    Hdr("SPEC",   "LEFT", 148,  70)
+    lbFrame.hdrCat  = Hdr("DIFF / BOSS", "LEFT", 222, 230)
     lbFrame.hdrWeek = Hdr("WK AVG",      "RIGHT", -2,  62)
 
     -- ── Scroll (starts at y = -114) ──────────────────────────────────────────
@@ -2956,18 +2402,6 @@ local function CreateLeaderboardFrame()
             BroadcastToAll(reqPayload)
             WhisperFriends(reqPayload)
         end
-        -- Guild tab: also trigger a data sync so the leaderboard gets
-        -- the latest scores from everyone, not just who happens to be
-        -- broadcasting right now.
-        if activeTab == "guild" and IsInGuild() then
-            WhenRosterReady(function()
-                if IsOfficerOrGM() then
-                    C_Timer.After(0.3, function() SendPullReq(true) end)
-                else
-                    SafeSend(LB_PREFIX, "REQPUSH|" .. Core.VERSION, "GUILD")
-                end
-            end)
-        end
         C_Timer.After(3.0, function()
             RefreshContent()
             rFs:SetText("Refresh")
@@ -2990,19 +2424,6 @@ function LB.Show()
     SetActiveTab(activeTab)
     frame:Show()
     RefreshContent()
-    -- On open, trigger a data sync so the view is as fresh as possible.
-    -- Officers run a full pull cycle; non-officers ask an officer to push.
-    if IsInGuild() then
-        C_Timer.After(0.5 + math.random() * 1.0, function()
-            WhenRosterReady(function()
-                if IsOfficerOrGM() then
-                    SendPullReq(true)
-                else
-                    SafeSend(LB_PREFIX, "REQPUSH|" .. Core.VERSION, "GUILD")
-                end
-            end)
-        end)
-    end
 end
 
 function LB.Toggle()
@@ -3023,7 +2444,6 @@ lbEventFrame:SetScript("OnEvent",function(self,event,...)
     if event=="CHAT_MSG_ADDON" then
         OnAddonMessage(...)
     elseif event=="GUILD_ROSTER_UPDATE" then
-        RebuildRosterCache()
         SyncGuildOnlineStatus()
     elseif event=="GROUP_ROSTER_UPDATE" then
         local current={}
