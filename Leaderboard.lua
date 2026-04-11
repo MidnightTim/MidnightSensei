@@ -116,12 +116,26 @@ local function GetInstanceContext()
         ctx.encType      = "dungeon"
         ctx.instanceName = instName or ""
         local keystoneLevel = nil
-        if C_ChallengeMode and C_ChallengeMode.GetSlottedKeystoneInfo then
-            local ok, _, _, ksLevel = pcall(C_ChallengeMode.GetSlottedKeystoneInfo)
-            if ok and ksLevel and ksLevel > 0 then
-                keystoneLevel       = ksLevel
-                ctx.diffLabel       = "M+" .. ksLevel
-                ctx.keystoneLevel   = ksLevel
+        if C_ChallengeMode then
+            -- GetActiveKeystoneInfo returns the level of the key currently in
+            -- progress — reliable after the key is consumed and combat starts.
+            -- GetSlottedKeystoneInfo only works before the key is activated.
+            if C_ChallengeMode.GetActiveKeystoneInfo then
+                local ok, ksLevel = pcall(C_ChallengeMode.GetActiveKeystoneInfo)
+                if ok and ksLevel and ksLevel > 0 then
+                    keystoneLevel     = ksLevel
+                    ctx.diffLabel     = "M+" .. ksLevel
+                    ctx.keystoneLevel = ksLevel
+                end
+            end
+            -- Fallback: try slotted keystone (only valid before key activation)
+            if not keystoneLevel and C_ChallengeMode.GetSlottedKeystoneInfo then
+                local ok, _, _, ksLevel = pcall(C_ChallengeMode.GetSlottedKeystoneInfo)
+                if ok and ksLevel and ksLevel > 0 then
+                    keystoneLevel     = ksLevel
+                    ctx.diffLabel     = "M+" .. ksLevel
+                    ctx.keystoneLevel = ksLevel
+                end
             end
         end
         if not keystoneLevel then
@@ -868,12 +882,21 @@ local function OnAddonMessage(prefix, payload, channel, sender)
                     db.guild[sender].bossName      = bossName
                     db.guild[sender].instanceName  = instanceName
                     db.guild[sender].keystoneLevel = ks > 0 and ks or nil
-                    -- Store delve-specific location separately so dungeon
-                    -- broadcasts don't overwrite it
-                    if encType == "delve" then
-                        db.guild[sender].delveLabel    = diffLabel
-                        db.guild[sender].delveInstance = instanceName
-                        db.guild[sender].delveBoss     = bossName
+                    -- Store per-content-type location fields so each tab shows
+                    -- its own last location rather than the last broadcast of any type
+                    if encType == "dungeon" then
+                        db.guild[sender].dungeonLabel    = diffLabel
+                        db.guild[sender].dungeonInstance = instanceName
+                        db.guild[sender].dungeonBoss     = bossName
+                        db.guild[sender].dungeonKs       = ks > 0 and ks or nil
+                    elseif encType == "raid" then
+                        db.guild[sender].raidLabel       = diffLabel
+                        db.guild[sender].raidInstance    = instanceName
+                        db.guild[sender].raidBoss        = bossName
+                    elseif encType == "delve" then
+                        db.guild[sender].delveLabel      = diffLabel
+                        db.guild[sender].delveInstance   = instanceName
+                        db.guild[sender].delveBoss       = bossName
                     end
                 end
             end
@@ -889,7 +912,16 @@ local function OnAddonMessage(prefix, payload, channel, sender)
             friendsData[sender].bossName      = bossName
             friendsData[sender].instanceName  = instanceName
             friendsData[sender].keystoneLevel = ks > 0 and ks or nil
-            if encType == "delve" then
+            if encType == "dungeon" then
+                friendsData[sender].dungeonLabel    = diffLabel
+                friendsData[sender].dungeonInstance = instanceName
+                friendsData[sender].dungeonBoss     = bossName
+                friendsData[sender].dungeonKs       = ks > 0 and ks or nil
+            elseif encType == "raid" then
+                friendsData[sender].raidLabel       = diffLabel
+                friendsData[sender].raidInstance    = instanceName
+                friendsData[sender].raidBoss        = bossName
+            elseif encType == "delve" then
                 friendsData[sender].delveLabel    = diffLabel
                 friendsData[sender].delveInstance = instanceName
                 friendsData[sender].delveBoss     = bossName
@@ -1333,23 +1365,27 @@ function LB.GetGuildData()
         local spec   = Core.ActiveSpec
         if spec then
             local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
-            -- Use last boss encounter in a dungeon/raid for display context.
-            -- Falls back to any dungeon/raid enc, then any enc, if no boss found.
-            local lastEnc = nil
-            local lastEncAny = nil
+            -- Use last boss encounter per content type for accurate per-tab display.
+            -- Separate dungeon and raid so each tab shows its own last location.
+            local lastDungEnc, lastDungAny = nil, nil
+            local lastRaidEnc, lastRaidAny = nil, nil
             if history then
                 for i = #history, 1, -1 do
                     local e = history[i]
-                    if e.encType == "dungeon" or e.encType == "raid" then
-                        if not lastEncAny then lastEncAny = e end
-                        if e.isBoss and not lastEnc then lastEnc = e end
+                    if e.encType == "dungeon" then
+                        if not lastDungAny then lastDungAny = e end
+                        if e.isBoss and not lastDungEnc then lastDungEnc = e end
+                    elseif e.encType == "raid" then
+                        if not lastRaidAny then lastRaidAny = e end
+                        if e.isBoss and not lastRaidEnc then lastRaidEnc = e end
                     end
-                    if lastEnc then break end
+                    if lastDungEnc and lastRaidEnc then break end
                 end
-                lastEnc = lastEnc or lastEncAny
-                -- Do NOT fall back to history[#history] — it may be a delve/normal
-                -- fight whose diffLabel would bleed into the dungeon/raid display.
+                lastDungEnc = lastDungEnc or lastDungAny
+                lastRaidEnc = lastRaidEnc or lastRaidAny
             end
+            -- Generic lastEnc for top-level grade/score display (prefer boss, either type)
+            local lastEnc = lastDungEnc or lastRaidEnc
             local wk      = GetWeekKey()
 
             -- Boss-only weekly avg (always hardcoded)
@@ -1357,12 +1393,24 @@ function LB.GetGuildData()
 
             -- Category bests from full history
             local allBest, dungBest, raidBest, delvBest, normBest = 0, 0, 0, 0, 0
+            -- Per-content weekly averages (boss kills this week only)
+            local dungSum, dungCount, raidSum, raidCount = 0, 0, 0, 0
             if history then
                 for _, enc in ipairs(history) do
                     local s = enc.finalScore or 0
                     allBest = math.max(allBest, s)
-                    if     enc.encType == "dungeon" then dungBest = math.max(dungBest, s)
-                    elseif enc.encType == "raid"    then raidBest = math.max(raidBest, s)
+                    if enc.encType == "dungeon" then
+                        dungBest = math.max(dungBest, s)
+                        if enc.isBoss and (enc.weekKey == wk) then
+                            dungSum   = dungSum   + s
+                            dungCount = dungCount + 1
+                        end
+                    elseif enc.encType == "raid" then
+                        raidBest = math.max(raidBest, s)
+                        if enc.isBoss and (enc.weekKey == wk) then
+                            raidSum   = raidSum   + s
+                            raidCount = raidCount + 1
+                        end
                     elseif enc.encType == "delve" then
                         delvBest = math.max(delvBest, s)
                     elseif enc.encType ~= "delve" then
@@ -1370,6 +1418,8 @@ function LB.GetGuildData()
                     end
                 end
             end
+            local selfDungAvg = dungCount > 0 and math.floor(dungSum / dungCount) or 0
+            local selfRaidAvg = raidCount > 0 and math.floor(raidSum / raidCount) or 0
 
             local existing = guildData[myName]
             local selfEntry = {
@@ -1389,10 +1439,20 @@ function LB.GetGuildData()
                 raidBest      = raidBest,
                 delveBest     = delvBest,
                 normalBest    = normBest,
+                dungeonAvg    = selfDungAvg,
+                raidAvg       = selfRaidAvg,
                 diffLabel     = lastEnc and lastEnc.diffLabel    or "",
                 instanceName  = lastEnc and lastEnc.instanceName or "",
                 bossName      = lastEnc and lastEnc.bossName     or "",
                 keystoneLevel = lastEnc and lastEnc.keystoneLevel or nil,
+                -- Per-type location fields — prevent cross-content bleed in display
+                dungeonLabel    = lastDungEnc and lastDungEnc.diffLabel    or "",
+                dungeonInstance = lastDungEnc and lastDungEnc.instanceName or "",
+                dungeonBoss     = lastDungEnc and lastDungEnc.bossName     or "",
+                dungeonKs       = lastDungEnc and lastDungEnc.keystoneLevel or nil,
+                raidLabel       = lastRaidEnc and lastRaidEnc.diffLabel    or "",
+                raidInstance    = lastRaidEnc and lastRaidEnc.instanceName or "",
+                raidBoss        = lastRaidEnc and lastRaidEnc.bossName     or "",
             }
 
             -- Merge with persisted data and peer-recovered bests
@@ -1826,9 +1886,10 @@ local function GetRow(parent, idx)
     row.nameText  = TF(row,11,"LEFT");    row.nameText:SetPoint("LEFT",row,"LEFT",36,0);  row.nameText:SetWidth(108)
     row.specText  = TF(row,9,"LEFT");     row.specText:SetPoint("LEFT",row,"LEFT",148,0); row.specText:SetWidth(70)
     row.specText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    row.catText   = TF(row,9,"LEFT");     row.catText:SetPoint("LEFT",row,"LEFT",222,0);  row.catText:SetWidth(230)
+    row.catText   = TF(row,9,"LEFT");     row.catText:SetPoint("LEFT",row,"LEFT",222,0);  row.catText:SetWidth(330)
     row.catText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    row.weekText  = TF(row,11,"RIGHT");   row.weekText:SetPoint("RIGHT",row,"RIGHT",-2,0); row.weekText:SetWidth(62)
+    row.latestText = TF(row,11,"RIGHT");  row.latestText:SetPoint("RIGHT",row,"RIGHT",-86,0); row.latestText:SetWidth(80)
+    row.weekText   = TF(row,11,"RIGHT");  row.weekText:SetPoint("RIGHT",row,"RIGHT",-2,0);    row.weekText:SetWidth(80)
 
     rowFrames[idx] = row
     return row
@@ -1872,6 +1933,32 @@ local function PopulateRows(scrollChild, entries)
         local inst  = (entry.instanceName and entry.instanceName ~= "") and entry.instanceName or nil
         local boss  = (entry.bossName and entry.bossName ~= "") and entry.bossName or nil
 
+        -- Use per-content-type location fields when available — prevents LFR/raid
+        -- diffLabels from bleeding into the Dungeons tab and vice versa.
+        if contentType == "dungeon" then
+            local dl = entry.dungeonLabel    or ""
+            local di = entry.dungeonInstance or ""
+            local db = entry.dungeonBoss     or ""
+            local dk = entry.dungeonKs
+            if dl ~= "" or di ~= "" then
+                -- Prefer explicit M+ label from dungeonKs if diffLabel didn't carry it
+                local displayDiff = (dk and dk > 0) and ("M+" .. dk)
+                                    or (dl ~= "" and dl ~= "World" and dl) or nil
+                diff = displayDiff
+                inst = di ~= "" and di or nil
+                boss = db ~= "" and db or nil
+            end
+        elseif contentType == "raid" then
+            local rl = entry.raidLabel    or ""
+            local ri = entry.raidInstance or ""
+            local rb = entry.raidBoss     or ""
+            if rl ~= "" or ri ~= "" then
+                diff = (rl ~= "" and rl ~= "World" and rl) or nil
+                inst = ri ~= "" and ri or nil
+                boss = rb ~= "" and rb or nil
+            end
+        end
+
         -- Only show location data when the entry has actual data for this content type.
         -- Guild entries store the last broadcast's location regardless of content type,
         -- so a dungeon diffLabel must not show on the raid tab when raidBest is zero.
@@ -1900,6 +1987,7 @@ local function PopulateRows(scrollChild, entries)
                             or contentType == "raid"    and "|cff555555No raids recorded|r"
                             or "|cff555555No data yet|r"
             row.catText:SetText(noDataText)
+            if row.latestText then row.latestText:SetText("|cff555555--|r") end
             row.weekText:SetText("|cff555555--|r")
         else
             if contentType == "delve" then
@@ -1914,68 +2002,51 @@ local function PopulateRows(scrollChild, entries)
             end
             row.catText:SetText(catStr)
 
-        -- Right column — contentType picks the category; sortOrder picks weekly vs best
-        local rightStr
-        if contentType == "delve" then
-            if sortOrder == "alltime" then
-                local v = entry.score or 0
-                rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
-            else
-                local wAvg = entry.weeklyAvg or 0
-                local wk   = GetWeekKey()
-                if wAvg > 0 then
-                    rightStr = "|cff"..GHex(wAvg)..wAvg.."|r"
-                    if entry.weekKey and entry.weekKey ~= wk then
-                        rightStr = rightStr .. " |cff888888(prev)|r"
-                    end
-                else
-                    rightStr = "|cff888888--this week--|r"
-                end
-            end
-        elseif contentType == "dungeon" then
-            if sortOrder == "alltime" then
-                local v = entry.dungeonBest or 0
-                rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
-            else
-                -- Use dungeonAvg for weekly; fall back to dungeonBest if no avg stored
-                local v = (entry.dungeonAvg and entry.dungeonAvg > 0) and entry.dungeonAvg
-                          or (entry.dungeonBest and entry.dungeonBest > 0 and entry.weeklyAvg > 0
-                              and entry.weeklyAvg) or 0
-                -- Only show if they actually have dungeon data
-                if (entry.dungeonBest or 0) == 0 then v = 0 end
-                local wk = GetWeekKey()
-                if v > 0 then
-                    rightStr = "|cff"..GHex(v)..v.."|r"
-                    if entry.weekKey and entry.weekKey ~= wk then
-                        rightStr = rightStr .. " |cff888888(prev)|r"
-                    end
-                else
-                    rightStr = "|cff888888--|r"
-                end
-            end
-        elseif contentType == "raid" then
-            if sortOrder == "alltime" then
-                local v = entry.raidBest or 0
-                rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
-            else
-                -- Use raidAvg for weekly; only show if they have raid data
-                local v = (entry.raidAvg and entry.raidAvg > 0) and entry.raidAvg or 0
-                if (entry.raidBest or 0) == 0 then v = 0 end
-                local wk = GetWeekKey()
-                if v > 0 then
-                    rightStr = "|cff"..GHex(v)..v.."|r"
-                    if entry.weekKey and entry.weekKey ~= wk then
-                        rightStr = rightStr .. " |cff888888(prev)|r"
-                    end
-                else
-                    rightStr = "|cff888888--|r"
-                end
-            end
-        else  -- fallback
-            local v = entry.allTimeBest or entry.score or 0
-            rightStr = v > 0 and ("|cff"..GHex(v)..v.."|r") or "|cff888888--|r"
+        -- Right columns — LATEST (most recent fight) and WK AVG (boss weekly avg)
+        local function GradeScore(score)
+            if not score or score == 0 then return "|cff888888--|r" end
+            local grade = MS.Core and MS.Core.GetGrade and MS.Core.GetGrade(score)
+            local gLetter = grade or "?"
+            return "|cff"..GHex(score)..gLetter.."  "..score.."|r"
         end
-        row.weekText:SetText(rightStr)
+
+        -- Latest: entry.score is always the most recent broadcast score
+        local latestStr
+        local latestScore = entry.score or 0
+        if latestScore > 0 then
+            latestStr = GradeScore(latestScore)
+        else
+            latestStr = "|cff888888--|r"
+        end
+
+        -- Weekly avg: content-type specific
+        local weekStr
+        local wk = GetWeekKey()
+        local wAvg = 0
+        if contentType == "dungeon" then
+            wAvg = (entry.dungeonAvg and entry.dungeonAvg > 0) and entry.dungeonAvg
+                   or ((entry.dungeonBest or 0) > 0 and (entry.weeklyAvg or 0) > 0
+                       and entry.weeklyAvg) or 0
+            if (entry.dungeonBest or 0) == 0 then wAvg = 0 end
+        elseif contentType == "raid" then
+            wAvg = (entry.raidAvg and entry.raidAvg > 0) and entry.raidAvg or 0
+            if (entry.raidBest or 0) == 0 then wAvg = 0 end
+        elseif contentType == "delve" then
+            wAvg = entry.weeklyAvg or 0
+        else
+            wAvg = entry.weeklyAvg or 0
+        end
+        if wAvg > 0 then
+            weekStr = GradeScore(wAvg)
+            if entry.weekKey and entry.weekKey ~= wk then
+                weekStr = weekStr .. " |cff888888(prev)|r"
+            end
+        else
+            weekStr = "|cff888888--|r"
+        end
+
+        if row.latestText then row.latestText:SetText(latestStr) end
+        row.weekText:SetText(weekStr)
         end -- end: not isPlaceholder
 
         -- Online dot
@@ -2040,12 +2111,32 @@ end
 local function SortedEntries(dataTable)
     local list = {}
     for _, entry in pairs(dataTable) do table.insert(list, entry) end
-    -- Sort by content category best, with sortOrder as tiebreaker priority
+
+    -- "player" sorts alphabetically; "recent" sorts by last activity timestamp
+    if sortOrder == "player" then
+        table.sort(list, function(a, b)
+            return (a.name or "") < (b.name or "")
+        end)
+        return list
+    end
+    if sortOrder == "recent" then
+        table.sort(list, function(a, b)
+            local at = a.timestamp or 0
+            local bt = b.timestamp or 0
+            if at ~= bt then return at > bt end
+            return (a.name or "") < (b.name or "")
+        end)
+        return list
+    end
+
     local key
     if     contentType == "delve"   then
         key = sortOrder == "alltime" and "allTimeBest" or "weeklyAvg"
-    elseif contentType == "dungeon" then key = "dungeonBest"
-    elseif contentType == "raid"    then key = "raidBest"
+    elseif contentType == "dungeon" then
+        key = sortOrder == "latest" and "score" or "dungeonBest"
+    elseif contentType == "raid"    then
+        key = sortOrder == "latest" and "score" or "raidBest"
+    elseif sortOrder   == "latest"  then key = "score"
     elseif sortOrder   == "alltime" then key = "allTimeBest"
     else                                 key = "weeklyAvg"
     end
@@ -2116,35 +2207,26 @@ local function RefreshContent()
         end
     end
 
-    -- Highlight active sort button (hidden when Delves active — sort by score always)
+    -- Highlight active sort header button
     if lbFrame.sortBtns then
         for _, sb in ipairs(lbFrame.sortBtns) do
-            local active = (sb.filterKey == sortOrder)
+            local active = (sb.sortKey == sortOrder)
             BD(sb, active and COLOR.TAB_ACTIVE or COLOR.TAB_IDLE, COLOR.BORDER)
-            sb.label:SetTextColor(
+            sb.fs:SetTextColor(
                 active and COLOR.ACCENT[1] or COLOR.TEXT_DIM[1],
                 active and COLOR.ACCENT[2] or COLOR.TEXT_DIM[2],
                 active and COLOR.ACCENT[3] or COLOR.TEXT_DIM[3], 1)
         end
     end
 
-    -- Column headers
-    local catHdr, weekHdr
-    if contentType == "delve" then
-        catHdr  = "DELVE / BOSS"
-        weekHdr = sortOrder == "alltime" and "SCORE" or "WK AVG"
-    elseif contentType == "dungeon" then
-        catHdr  = "DIFF / BOSS"
-        weekHdr = sortOrder == "alltime" and "BEST" or "WK AVG"
-    elseif contentType == "raid" then
-        catHdr  = "DIFF / BOSS"
-        weekHdr = sortOrder == "alltime" and "BEST" or "WK AVG"
-    else
-        catHdr  = "DIFFICULTY"
-        weekHdr = sortOrder == "alltime" and "BEST" or "WK AVG"
+    -- Column headers (cat label only — sort headers are buttons, updated above)
+    local catHdr
+    if     contentType == "delve"   then catHdr = "RECENT DELVE / BOSS"
+    elseif contentType == "dungeon" then catHdr = "RECENT DIFF / BOSS"
+    elseif contentType == "raid"    then catHdr = "RECENT DIFF / BOSS"
+    else                                 catHdr = "RECENT DIFFICULTY"
     end
-    if lbFrame.hdrCat  then lbFrame.hdrCat:SetText(catHdr)   end
-    if lbFrame.hdrWeek then lbFrame.hdrWeek:SetText(weekHdr) end
+    if lbFrame.hdrCat and lbFrame.hdrCat.fs then lbFrame.hdrCat.fs:SetText(catHdr) end
 
     -- Grey out social tabs when Delve is active
     local isDelve = (contentType == "delve")
@@ -2184,7 +2266,7 @@ end
 local function CreateLeaderboardFrame()
     if lbFrame then return lbFrame end
 
-    local FW, FH = 520, 480
+    local FW, FH = 720, 480
     lbFrame = CreateFrame("Frame","MidnightSenseiLeaderboard",UIParent,"BackdropTemplate")
     lbFrame:SetSize(FW,FH)
     lbFrame:SetPoint("CENTER",UIParent,"CENTER",240,0)
@@ -2264,34 +2346,13 @@ local function CreateLeaderboardFrame()
         table.insert(lbFrame.contentBtns, btn)
     end
 
-    -- ── Row 3: Sort buttons (y = -74) — Week Avg | All-Time ─────────────────
-    local sortDefs = {
-        {key="weekly",  label="Week Avg"},
-        {key="alltime", label="All-Time"},
-    }
-    local sortW = math.floor(FW / #sortDefs)
-    lbFrame.sortBtns = {}
-    for i, sd in ipairs(sortDefs) do
-        local sb = CreateFrame("Button", nil, lbFrame, "BackdropTemplate")
-        sb:SetSize(sortW, 20)
-        sb:SetPoint("TOPLEFT", lbFrame, "TOPLEFT", (i-1)*sortW, -74)
-        BD(sb, COLOR.TAB_IDLE, COLOR.BORDER)
-        sb.filterKey = sd.key
-        sb.label = TF(sb, 9, "CENTER") ; sb.label:SetPoint("CENTER")
-        sb.label:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
-        sb.label:SetText(sd.label)
-        sb:SetScript("OnClick", function()
-            sortOrder = sd.key
-            RefreshContent()
-        end)
-        table.insert(lbFrame.sortBtns, sb)
-    end
+    -- ── Sort row removed — sorting now via clickable column headers below ─────
 
-    -- ── Column headers (y = -96) ─────────────────────────────────────────────
+    -- ── Column headers (y = -74, moved up since sort row removed) ────────────
     local hdr = CreateFrame("Frame", nil, lbFrame)
-    hdr:SetPoint("TOPLEFT",  lbFrame, "TOPLEFT",   4, -96)
-    hdr:SetPoint("TOPRIGHT", lbFrame, "TOPRIGHT", -20, -96)
-    hdr:SetHeight(16)
+    hdr:SetPoint("TOPLEFT",  lbFrame, "TOPLEFT",   4, -74)
+    hdr:SetPoint("TOPRIGHT", lbFrame, "TOPRIGHT", -20, -74)
+    hdr:SetHeight(22)
     local function Hdr(t, anchor, x, w)
         local fs = TF(hdr, 9, anchor)
         fs:SetPoint(anchor, hdr, anchor, x, 0) ; fs:SetWidth(w)
@@ -2299,15 +2360,43 @@ local function CreateLeaderboardFrame()
         fs:SetText(t)
         return fs
     end
-    Hdr("#",      "LEFT",   4,  20)
-    Hdr("PLAYER", "LEFT",  36, 108)
-    Hdr("SPEC",   "LEFT", 148,  70)
-    lbFrame.hdrCat  = Hdr("DIFF / BOSS", "LEFT", 222, 230)
-    lbFrame.hdrWeek = Hdr("WK AVG",      "RIGHT", -2,  62)
+    -- Clickable sort header helper
+    local function SortHdr(label, sortKey, anchor, x, w)
+        local btn = CreateFrame("Button", nil, hdr, "BackdropTemplate")
+        btn:SetSize(w, 20)
+        btn:SetPoint(anchor, hdr, anchor, x, 0)
+        BD(btn, COLOR.TAB_IDLE, COLOR.BORDER)
+        local fs = TF(btn, 9, "CENTER") ; fs:SetPoint("CENTER")
+        fs:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+        fs:SetText(label)
+        btn.fs = fs ; btn.sortKey = sortKey
+        btn:SetScript("OnClick", function()
+            sortOrder = sortKey
+            RefreshContent()
+        end)
+        btn:SetScript("OnEnter", function()
+            BD(btn, COLOR.TAB_ACTIVE, COLOR.BORDER)
+            fs:SetTextColor(COLOR.ACCENT[1], COLOR.ACCENT[2], COLOR.ACCENT[3], 1)
+        end)
+        btn:SetScript("OnLeave", function()
+            BD(btn, COLOR.TAB_IDLE, COLOR.BORDER)
+            fs:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+        end)
+        return btn
+    end
+
+    Hdr("#",      "LEFT",  4,  20)
+    lbFrame.hdrPlayer  = SortHdr("PLAYER",             "player", "LEFT",   36, 108)
+    Hdr("SPEC",   "LEFT", 148, 70)
+    lbFrame.hdrCat     = SortHdr("RECENT DIFF / BOSS", "recent", "LEFT",  222, 336)
+    lbFrame.hdrLatest  = SortHdr("LATEST",             "latest", "RIGHT",  -86, 80)
+    lbFrame.hdrWeek    = SortHdr("WK AVG",             "weekly", "RIGHT",   -2, 80)
+
+    lbFrame.sortBtns = { lbFrame.hdrPlayer, lbFrame.hdrCat, lbFrame.hdrLatest, lbFrame.hdrWeek }
 
     -- ── Scroll (starts at y = -114) ──────────────────────────────────────────
     local sf = CreateFrame("ScrollFrame", "MidnightSenseiLBScroll", lbFrame, "UIPanelScrollFrameTemplate")
-    sf:SetPoint("TOPLEFT",     lbFrame, "TOPLEFT",   4, -114)
+    sf:SetPoint("TOPLEFT",     lbFrame, "TOPLEFT",   4, -98)
     sf:SetPoint("BOTTOMRIGHT", lbFrame, "BOTTOMRIGHT", -22, 36)
     local sc = CreateFrame("Frame", nil, sf)
     sc:SetWidth(sf:GetWidth()) ; sc:SetHeight(200) ; sf:SetScrollChild(sc)

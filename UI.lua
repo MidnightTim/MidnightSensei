@@ -339,8 +339,10 @@ function UI.ShowEncounterDetail(enc)
     if enc.componentScores then
         table.insert(lines, "|cffFFD700Component Scores:|r")
         for k, v in pairs(enc.componentScores) do
-            local lbl = k:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
-            table.insert(lines, string.format("  %-24s %d", lbl, math.floor(v or 0)))
+            if k ~= "_final" then
+                local lbl = k:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
+                table.insert(lines, string.format("  %-24s %d", lbl, math.floor(v or 0)))
+            end
         end
         table.insert(lines, " ")
     end
@@ -450,10 +452,10 @@ local function BuildHistoryRows(scrollChild, encounters, rowFrames)
 
             row.specText  = MakeFont(row, 10, "LEFT")
             row.specText:SetPoint("LEFT", row, "LEFT", 136, 0)
-            row.specText:SetWidth(94)
+            row.specText:SetWidth(130)
 
             row.scoreText = MakeFont(row, 11, "RIGHT")
-            row.scoreText:SetPoint("RIGHT", row, "RIGHT", -90, 0)
+            row.scoreText:SetPoint("RIGHT", row, "RIGHT", -126, 0)
             row.scoreText:SetWidth(34)
 
             row.durText   = MakeFont(row, 9, "RIGHT")
@@ -499,7 +501,7 @@ local function BuildHistoryRows(scrollChild, encounters, rowFrames)
             end
             specLabel = bossTag .. (enc.specName or "?") .. diffSuffix
         end
-        row.specText:SetText(TruncateLabel(specLabel, 22))
+        row.specText:SetText(TruncateLabel(specLabel, 28))
 
         row.scoreText:SetText(tostring(enc.finalScore or 0))
         row.durText:SetText(FormatDuration(enc.duration))
@@ -647,12 +649,12 @@ function UI.ShowHistory()
             fs:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
             fs:SetText(t)
         end
-        Hdr("GR",       "LEFT",   8,  28)
-        Hdr("CHARACTER","LEFT",  42,  88)
-        Hdr("SPEC",     "LEFT", 134, 100)
-        Hdr("SCORE",    "RIGHT", -90,  34)
-        Hdr("DUR",      "RIGHT", -48,  40)
-        Hdr("WHEN",     "RIGHT",  -2,  44)
+        Hdr("GR",         "LEFT",   8,  28)
+        Hdr("CHARACTER",  "LEFT",  42,  88)
+        Hdr("SPEC / DIFF","LEFT", 134, 136)
+        Hdr("SCORE",      "RIGHT", -126, 34)
+        Hdr("DUR",        "RIGHT",  -48, 40)
+        Hdr("WHEN",       "RIGHT",   -2, 44)
 
         -- Scroll frame
         local scroll = CreateFrame("ScrollFrame", "MidnightSenseiHistoryScroll",
@@ -1020,8 +1022,10 @@ ShowResultPanel = function(result)
     table.insert(fbLines, "|cffFFD700Component Scores:|r")
     if result.componentScores then
         for k, v in pairs(result.componentScores) do
-            local lbl = k:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
-            table.insert(fbLines, string.format("  %-22s %d", lbl, math.floor(v or 0)))
+            if k ~= "_final" then
+                local lbl = k:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
+                table.insert(fbLines, string.format("  %-22s %d", lbl, math.floor(v or 0)))
+            end
         end
     end
 
@@ -1674,6 +1678,13 @@ function UI.ShowFAQ()
         "Right-click any guild row to remove a player. They repopulate",
         "automatically when they next log in or you hit Refresh.",
         " ",
+        "Each tab (Dungeons, Raids) shows location info from that content type",
+        "only — an LFR run will never bleed into the Dungeons tab.",
+        "Mythic+ key level is shown where available (e.g. M+15).",
+        "After updating the addon, each player needs to complete one new",
+        "dungeon or raid for their tab location to reflect the correct content.",
+        "Your own entry updates immediately from local history — no new run needed.",
+        " ",
         "|cffFFD700NOTE ON MIDNIGHT 12.0 RESTRICTIONS|r",
         "Blizzard restricted enemy unit aura reads in Midnight 12.0.",
         "Target debuffs (Rupture, Flame Shock, etc.) cannot be tracked directly.",
@@ -1918,4 +1929,69 @@ MS.Core.On(MS.Core.EVENTS.SESSION_READY, function()
             end)
         end
     end)
+end)
+
+--------------------------------------------------------------------------------
+-- Minimap Button (LibDBIcon)
+-- Requires: LibStub, LibDataBroker-1.1, LibDBIcon-1.0 (bundled in libs\)
+-- Collapses/hides correctly with Minimap Map Icons and all other LDB managers.
+--------------------------------------------------------------------------------
+local function CreateMinimapButton()
+    local LibStub    = LibStub
+    local LDB        = LibStub and LibStub("LibDataBroker-1.1", true)
+    local LibDBIcon  = LibStub and LibStub("LibDBIcon-1.0",     true)
+
+    if not LDB or not LibDBIcon then
+        -- Libs not loaded yet — shouldn't happen given TOC order, but guard anyway
+        if Core.GetSetting("debugMode") then
+            print("|cff888888MS:|r LibDBIcon not available — minimap button skipped.")
+        end
+        return
+    end
+
+    -- Ensure minimap saved settings exist
+    if MidnightSenseiDB then
+        MidnightSenseiDB.minimapIcon = MidnightSenseiDB.minimapIcon or { hide = false }
+    end
+
+    -- DataBroker object — this is what LDB managers (ElvUI, TitanPanel, etc.) display
+    local broker = LDB:NewDataObject("MidnightSensei", {
+        type  = "launcher",
+        label = "Midnight Sensei",
+        icon  = "Interface\\AddOns\\MidnightSensei\\logo",
+        OnClick = function(self, btn)
+            if btn == "RightButton" and IsShiftKeyDown() then
+                -- Shift+Right-click: open the HUD right-click context menu
+                UI.ShowMainCtxMenu()
+            elseif btn == "RightButton" then
+                if MS.Leaderboard and MS.Leaderboard.Toggle then
+                    MS.Leaderboard.Toggle()
+                end
+            else
+                UI.ToggleMainFrame()
+            end
+        end,
+        OnTooltipShow = function(tip)
+            tip:SetText("Midnight Sensei", 1, 0.82, 0)
+            tip:AddLine("Left-click: Toggle HUD", 0.8, 0.8, 0.8)
+            tip:AddLine("Right-click: Leaderboard", 0.8, 0.8, 0.8)
+            tip:AddLine("Shift+Right-click: Options", 0.8, 0.8, 0.8)
+        end,
+    })
+
+    -- Register with LibDBIcon — this handles all positioning, dragging,
+    -- and hide/show compatibility with minimap button manager addons
+    LibDBIcon:Register("MidnightSensei", broker,
+        MidnightSenseiDB and MidnightSenseiDB.minimapIcon)
+end
+
+-- Use PLAYER_ENTERING_WORLD — fires after SavedVariables are loaded and
+-- all frames including Minimap are ready
+local minimapEventFrame = CreateFrame("Frame")
+minimapEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+minimapEventFrame:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_ENTERING_WORLD" then
+        self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+        C_Timer.After(0.5, CreateMinimapButton)
+    end
 end)

@@ -283,6 +283,37 @@ Core.CREDITS = {
 
 Core.CHANGELOG = {
     {
+        version = "1.3.7",
+        tagline = "Leaderboard Overhaul, Minimap Button & Keystone Detection",
+        date    = "April 2026",
+        changes = {
+            -- Leaderboard display
+            "Leaderboard: frame widened to 720px — long boss/instance names no longer break across lines",
+            "Leaderboard: split right column into LATEST and WK AVG — grade letter and score shown in each",
+            "Leaderboard: four clickable sort headers — PLAYER (A-Z), RECENT DIFF/BOSS (timestamp), LATEST (score), WK AVG (weekly avg)",
+            "Leaderboard: per-content-type location fields added — LFR no longer bleeds into the Dungeons tab",
+            "Leaderboard: raidAvg and dungeonAvg now computed for self-entry from local history — WK AVG column was showing -- for own raids",
+            -- Keystone
+            "Keystone: GetActiveKeystoneInfo now used instead of GetSlottedKeystoneInfo — key level was nil during combat since the key is consumed before PLAYER_REGEN_DISABLED fires",
+            "Keystone: /ms debug backfill keys command added — retroactively patches Mythic dungeon history using season best data from GetSeasonBestForMap; /ms debug backfill keys clear to revert",
+            -- Grade History
+            "Grade History: SPEC column renamed SPEC / DIFF and widened — difficulty label and M+ level now visible without truncation",
+            "Grade History: truncation limit raised from 22 to 28 characters",
+            -- UI cosmetic
+            "UI: _final key filtered from component scores display — no longer shows as a raw row in Fight Complete and Encounter Detail panels",
+            -- Minimap
+            "Minimap: LibDBIcon minimap button added — left-click toggles HUD, right-click toggles Leaderboard, Shift+right-click opens Options",
+            "Minimap: collapses and hides correctly with Minimap Map Icons and all LDB manager addons",
+            "Minimap: uses logo.tga as icon; position persists across sessions",
+            -- Slash / FAQ
+            "/ms versions help text corrected — was misleadingly labelled 'Ping' when passive collection is the only supported method",
+            "FAQ: leaderboard section updated — per-tab location accuracy, M+ key level display, one-new-run caveat for peers documented",
+            -- Libraries
+            "LibStub, LibDataBroker-1.1, LibDBIcon-1.0 bundled in libs\\ folder and added to TOC load order",
+            "TOC: ## IconTexture added — logo.tga now appears in the WoW AddOns panel",
+        },
+    },
+    {
         version = "1.3.6",
         tagline = "Feedback Depth, Devourer Fixes & Leaderboard Stability",
         date    = "April 2026",
@@ -2146,7 +2177,7 @@ local function MSSlashHandler(msg)
         print("  /ms report        Report a bug on GitHub")
         print("  /ms reset         Clear fight history")
         print("  /ms update        Show changelog")
-        print("  /ms versions      Ping and display addon versions of nearby players")
+        print("  /ms versions      Show addon versions passively collected this session")
         print("  /ms debug         Current spec / class IDs")
         print("  /ms debug guild         Diagnose guild score routing")
         print("  /ms debug guild inject  Send a test score to guild (pipeline test)")
@@ -2741,6 +2772,169 @@ local function MSSlashHandler(msg)
             for k in pairs(fd) do count = count + 1 ; print("    " .. k) end
             if count == 0 then print("    (empty)") end
         end
+    elseif msg == "debug backfill keys" then
+        print("|cff00D1FFMidnight Sensei - Keystone Backfill:|r")
+
+        -- Step 1: Probe available APIs and report what we find
+        print("  Probing available APIs...")
+        local hasMapTable      = C_ChallengeMode and C_ChallengeMode.GetMapTable ~= nil
+        local hasMapUIInfo     = C_ChallengeMode and C_ChallengeMode.GetMapUIInfo ~= nil
+        local hasRecentRuns    = C_MythicPlus    and C_MythicPlus.GetRecentRunsForMap ~= nil
+        local hasSeasonBest    = C_MythicPlus    and C_MythicPlus.GetSeasonBestAffixScoreInfoForMap ~= nil
+        local hasRatingSummary = C_PlayerInfo    and C_PlayerInfo.GetPlayerMythicPlusRatingSummary ~= nil
+        local hasActiveInfo    = C_ChallengeMode and C_ChallengeMode.GetActiveKeystoneInfo ~= nil
+        local hasBestForMap    = C_MythicPlus    and C_MythicPlus.GetSeasonBestForMap ~= nil
+        print("  C_ChallengeMode.GetMapTable:                     " .. tostring(hasMapTable))
+        print("  C_ChallengeMode.GetMapUIInfo:                    " .. tostring(hasMapUIInfo))
+        print("  C_MythicPlus.GetRecentRunsForMap:                " .. tostring(hasRecentRuns))
+        print("  C_MythicPlus.GetSeasonBestAffixScoreInfoForMap:  " .. tostring(hasSeasonBest))
+        print("  C_MythicPlus.GetSeasonBestForMap:                " .. tostring(hasBestForMap))
+        print("  C_PlayerInfo.GetPlayerMythicPlusRatingSummary:   " .. tostring(hasRatingSummary))
+        print("  C_ChallengeMode.GetActiveKeystoneInfo:           " .. tostring(hasActiveInfo))
+
+        -- Step 2: Try to enumerate maps and dump raw data from whatever works
+        local nameToLevel = {}  -- instanceName (lower) → highest known key level
+
+        -- Path A: GetMapTable + GetSeasonBestForMap
+        if hasMapTable and hasBestForMap then
+            print("  Trying Path A: GetMapTable + GetSeasonBestForMap...")
+            local ok, maps = pcall(C_ChallengeMode.GetMapTable)
+            if ok and maps then
+                for _, mapID in ipairs(maps) do
+                    local okN, name = pcall(C_ChallengeMode.GetMapUIInfo, mapID)
+                    local okB, best = pcall(C_MythicPlus.GetSeasonBestForMap, mapID)
+                    if okN and name and okB and best then
+                        local level = (type(best) == "table") and (best.level or best.keystoneLevel or 0)
+                                      or (type(best) == "number" and best or 0)
+                        if level > 0 then
+                            nameToLevel[name:lower()] = level
+                            print("    " .. name .. " -> M+" .. level)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Path B: GetPlayerMythicPlusRatingSummary
+        if hasRatingSummary and not next(nameToLevel) then
+            print("  Trying Path B: GetPlayerMythicPlusRatingSummary...")
+            local ok, summary = pcall(C_PlayerInfo.GetPlayerMythicPlusRatingSummary, "player")
+            if ok and summary then
+                print("  Summary type: " .. type(summary))
+                if type(summary) == "table" then
+                    for k, v in pairs(summary) do
+                        print("    key=" .. tostring(k) .. " val=" .. tostring(v))
+                    end
+                    local runs = summary.runs or summary.mapScores or {}
+                    for _, run in ipairs(runs) do
+                        local mapID = run.mapChallengeModeID or run.mapID
+                        local level = run.level or run.keystoneLevel or 0
+                        if mapID and level > 0 then
+                            local okN, name = pcall(C_ChallengeMode.GetMapUIInfo, mapID)
+                            if okN and name then
+                                nameToLevel[name:lower()] = math.max(nameToLevel[name:lower()] or 0, level)
+                                print("    " .. name .. " -> M+" .. level)
+                            end
+                        end
+                    end
+                end
+            else
+                print("  Path B failed: " .. tostring(summary))
+            end
+        end
+
+        -- Path C: GetMapTable + GetSeasonBestAffixScoreInfoForMap
+        if hasMapTable and hasSeasonBest and not next(nameToLevel) then
+            print("  Trying Path C: GetSeasonBestAffixScoreInfoForMap...")
+            local ok, maps = pcall(C_ChallengeMode.GetMapTable)
+            if ok and maps then
+                for _, mapID in ipairs(maps) do
+                    local okN, name   = pcall(C_ChallengeMode.GetMapUIInfo, mapID)
+                    local okS, scores = pcall(C_MythicPlus.GetSeasonBestAffixScoreInfoForMap, mapID)
+                    if okN and name and okS and scores then
+                        -- scores is a table of { score, level, ... } per affix combo
+                        local best = 0
+                        if type(scores) == "table" then
+                            for _, s in ipairs(scores) do
+                                best = math.max(best, s.level or 0)
+                            end
+                        end
+                        if best > 0 then
+                            nameToLevel[name:lower()] = best
+                            print("    " .. name .. " -> M+" .. best)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Step 3: Report what we gathered
+        local gathered = 0
+        for _ in pairs(nameToLevel) do gathered = gathered + 1 end
+        print("  Maps with level data: " .. gathered)
+
+        if gathered == 0 then
+            print("  |cffFF4444No M+ data could be retrieved from available APIs.|r")
+            print("  This build may require a different API. Raw probe data above may help.")
+            return
+        end
+
+        -- Step 4: Apply to history
+        local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
+        if not history or #history == 0 then
+            print("  No encounter history found.")
+            return
+        end
+        local candidates, patched, unmatched = 0, 0, 0
+        for i, enc in ipairs(history) do
+            if enc.encType == "dungeon"
+            and (enc.keystoneLevel == nil or enc.keystoneLevel == 0)
+            and (enc.diffLabel == "Mythic" or enc.diffLabel == "") then
+                candidates = candidates + 1
+                local instKey = enc.instanceName and enc.instanceName:lower() or ""
+                local level   = nameToLevel[instKey]
+                if level then
+                    enc.keystoneLevel = level
+                    enc.diffLabel     = "M+" .. level .. " (inferred)"
+                    patched = patched + 1
+                    print(string.format("  |cff00FF00Patched|r  [%d] %s -> M+%d (inferred)",
+                          i, enc.instanceName or "?", level))
+                else
+                    unmatched = unmatched + 1
+                    print(string.format("  |cff888888No match|r [%d] %s — not in season best data",
+                          i, enc.instanceName or "?"))
+                end
+            end
+        end
+        print("  Candidates: " .. candidates ..
+              "  Patched: " .. patched ..
+              "  Unmatched: " .. unmatched)
+        if patched > 0 then
+            print("  |cffFFD700Note:|r Levels inferred from season best — not the specific run.")
+            print("  To revert: |cffFFFFFF/ms debug backfill keys clear|r")
+            if MS.Leaderboard and MS.Leaderboard.RefreshUI then MS.Leaderboard.RefreshUI() end
+            if MS.UI and MS.UI.RefreshHistory then MS.UI.RefreshHistory() end
+        end
+
+    elseif msg == "debug backfill keys clear" then
+        -- Revert all encounters patched by the backfill — removes "(inferred)" labels
+        -- and clears keystoneLevel so they revert to plain "Mythic".
+        local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
+        if not history then
+            print("|cff00D1FFMidnight Sensei:|r No history found.")
+            return
+        end
+        local cleared = 0
+        for _, enc in ipairs(history) do
+            if enc.diffLabel and enc.diffLabel:find("%(inferred%)") then
+                enc.diffLabel     = "Mythic"
+                enc.keystoneLevel = nil
+                cleared = cleared + 1
+            end
+        end
+        print("|cff00D1FFMidnight Sensei:|r Cleared " .. cleared .. " inferred keystone patches.")
+        if MS.UI and MS.UI.RefreshHistory then MS.UI.RefreshHistory() end
+
     else
         print("|cff00D1FFMidnight Sensei:|r Unknown command. Type |cffFFFFFF/ms help|r for a list of commands.")
     end
