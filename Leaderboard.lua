@@ -1886,9 +1886,10 @@ local function GetRow(parent, idx)
     row.nameText  = TF(row,11,"LEFT");    row.nameText:SetPoint("LEFT",row,"LEFT",36,0);  row.nameText:SetWidth(108)
     row.specText  = TF(row,9,"LEFT");     row.specText:SetPoint("LEFT",row,"LEFT",148,0); row.specText:SetWidth(70)
     row.specText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    row.catText   = TF(row,9,"LEFT");     row.catText:SetPoint("LEFT",row,"LEFT",222,0);  row.catText:SetWidth(330)
+    row.catText   = TF(row,9,"LEFT");     row.catText:SetPoint("LEFT",row,"LEFT",222,0);  row.catText:SetWidth(302)
     row.catText:SetTextColor(COLOR.TEXT_DIM[1],COLOR.TEXT_DIM[2],COLOR.TEXT_DIM[3],1)
-    row.latestText = TF(row,11,"RIGHT");  row.latestText:SetPoint("RIGHT",row,"RIGHT",-86,0); row.latestText:SetWidth(80)
+    row.catText:SetWordWrap(false)
+    row.latestText = TF(row,11,"RIGHT");  row.latestText:SetPoint("RIGHT",row,"RIGHT",-84,0); row.latestText:SetWidth(80)
     row.weekText   = TF(row,11,"RIGHT");  row.weekText:SetPoint("RIGHT",row,"RIGHT",-2,0);    row.weekText:SetWidth(80)
 
     rowFrames[idx] = row
@@ -2112,9 +2113,18 @@ local function SortedEntries(dataTable)
     local list = {}
     for _, entry in pairs(dataTable) do table.insert(list, entry) end
 
-    -- "player" sorts alphabetically; "recent" sorts by last activity timestamp
+    -- "player" sorts alphabetically by name; "spec" by spec name; "recent" by timestamp
     if sortOrder == "player" then
         table.sort(list, function(a, b)
+            return (a.name or "") < (b.name or "")
+        end)
+        return list
+    end
+    if sortOrder == "spec" then
+        table.sort(list, function(a, b)
+            local as = (a.specName or "") .. (a.className or "")
+            local bs = (b.specName or "") .. (b.className or "")
+            if as ~= bs then return as < bs end
             return (a.name or "") < (b.name or "")
         end)
         return list
@@ -2387,12 +2397,12 @@ local function CreateLeaderboardFrame()
 
     Hdr("#",      "LEFT",  4,  20)
     lbFrame.hdrPlayer  = SortHdr("PLAYER",             "player", "LEFT",   36, 108)
-    Hdr("SPEC",   "LEFT", 148, 70)
-    lbFrame.hdrCat     = SortHdr("RECENT DIFF / BOSS", "recent", "LEFT",  222, 336)
-    lbFrame.hdrLatest  = SortHdr("LATEST",             "latest", "RIGHT",  -86, 80)
-    lbFrame.hdrWeek    = SortHdr("WK AVG",             "weekly", "RIGHT",   -2, 80)
+    lbFrame.hdrSpec    = SortHdr("SPEC",               "spec",   "LEFT",  148,  70)
+    lbFrame.hdrCat     = SortHdr("RECENT DIFF / BOSS", "recent", "LEFT",  222, 302)
+    lbFrame.hdrLatest  = SortHdr("LATEST",             "latest", "RIGHT",  -84,  80)
+    lbFrame.hdrWeek    = SortHdr("WK AVG",             "weekly", "RIGHT",   -2,  80)
 
-    lbFrame.sortBtns = { lbFrame.hdrPlayer, lbFrame.hdrCat, lbFrame.hdrLatest, lbFrame.hdrWeek }
+    lbFrame.sortBtns = { lbFrame.hdrPlayer, lbFrame.hdrSpec, lbFrame.hdrCat, lbFrame.hdrLatest, lbFrame.hdrWeek }
 
     -- ── Scroll (starts at y = -114) ──────────────────────────────────────────
     local sf = CreateFrame("ScrollFrame", "MidnightSenseiLBScroll", lbFrame, "UIPanelScrollFrameTemplate")
