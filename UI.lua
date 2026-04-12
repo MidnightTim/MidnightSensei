@@ -403,7 +403,6 @@ local function GetCurrentCharKey()
 end
 
 local function FilterEncounters(encounters)
-    if historyFilter.mode == "all" then return encounters end
     local result  = {}
     local charKey = GetCurrentCharKey()
     for _, enc in ipairs(encounters) do
@@ -615,8 +614,7 @@ function UI.ShowHistory()
 
         historyFrame.filterBtns = {}
         local filterDefs = {
-            { label = "This Character",  key = "current" },
-            { label = "All Characters",  key = "all"     },
+            { label = "This Character", key = "current" },
             { label = "[Boss] Only",    key = "boss"    },
         }
         -- Add per-spec filters dynamically when populating
@@ -1329,23 +1327,23 @@ function UI.ShowDebugWindow()
     f:SetScript("OnMouseDown", function(self, btn)
         if btn == "LeftButton" then self:StartMoving() end
     end)
-    f:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() end)
+    f:SetScript("OnMouseUp", function(self) f:StopMovingOrSizing() end)
     debugFrame = f
 
     -- Title
     local title = MakeFont(f, 13, "CENTER")
     title:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -12)
-    title:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -12)
+    title:SetPoint("TOPRIGHT", f, "TOPRIGHT", -26, -12)
     title:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
     title:SetText("Midnight Sensei - Debug Tools")
 
-    -- Close button
+    -- Close button — use plain "X", not Unicode (FRIZQT__.TTF has no Unicode coverage)
     local x = CreateFrame("Button", nil, f)
     x:SetSize(20, 20)
     x:SetPoint("TOPRIGHT", f, "TOPRIGHT", -6, -6)
     local xfs = MakeFont(x, 13, "CENTER")
     xfs:SetPoint("CENTER")
-    xfs:SetText("|cffFF4444✕|r")
+    xfs:SetText("|cffFF4444X|r")
     x:SetScript("OnClick", function() f:Hide() end)
 
     -- Separator
@@ -1360,14 +1358,31 @@ function UI.ShowDebugWindow()
         if MS.Core and MS.Core.SlashHandler then
             MS.Core.SlashHandler(cmd)
         else
-            -- Fallback: trigger via slash
             local handler = SlashCmdList["MIDNIGHTSENSEI"] or SlashCmdList["MS"]
             if handler then handler(cmd) end
         end
     end
 
-    -- Button builder
+    -- Shared vertical cursor — both helpers close over this
     local btnY = -40
+
+    -- Section label helper
+    local function AddSectionLabel(text, color)
+        local sep2 = f:CreateTexture(nil, "ARTWORK")
+        sep2:SetColorTexture(color[1], color[2], color[3], 0.3)
+        sep2:SetHeight(1)
+        sep2:SetPoint("TOPLEFT",  f, "TOPLEFT",  10, btnY - 4)
+        sep2:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, btnY - 4)
+
+        local lbl = MakeFont(f, 9, "CENTER")
+        lbl:SetPoint("TOPLEFT",  f, "TOPLEFT",  0, btnY - 6)
+        lbl:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, btnY - 6)
+        lbl:SetTextColor(color[1], color[2], color[3], 0.9)
+        lbl:SetText("-- " .. text .. " --")
+        btnY = btnY - 20
+    end
+
+    -- Button builder
     local function AddDebugBtn(label, desc, cmd)
         local row = CreateFrame("Frame", nil, f, "BackdropTemplate")
         row:SetSize(428, 42)
@@ -1394,33 +1409,24 @@ function UI.ShowDebugWindow()
         btnY = btnY - 48
     end
 
-    AddDebugBtn("Guild Routing",        "Show guild DB entries, roster status, score history",      "debug guild")
-    AddDebugBtn("Guild Broadcast",      "Re-broadcast all your best scores to guild (all types)",   "debug guild broadcast")
-    AddDebugBtn("Guild Inject",         "Send a synthetic test score to guild channel",             "debug guild inject")
-    AddDebugBtn("Guild Ping",           "Send PING to guild — ask a guildie to run Receive",        "debug guild ping")
-    AddDebugBtn("Guild Receive",        "Show last 5 SCORE messages received this session",         "debug guild receive")
-    AddDebugBtn("Self — Delve History", "Show your delve encounter history and boss count",         "debug self")
-    AddDebugBtn("Zone / Instance",      "Show current instance type, diffID, and encType",          "debug zone")
-    AddDebugBtn("Version",              "Show addon version from TOC and metadata APIs",            "debug version")
-    AddDebugBtn("Rotational Spells",    "Show tracked rotational spells for your current spec",     "debug rotational")
-    AddDebugBtn("Friends Detection",    "Show BNet friend API availability",                        "debug friends")
-    AddDebugBtn("Debug Log",            "Print the last 50 checksum/routing log entries",           "debuglog")
+    -- ── General debug ────────────────────────────────────────────────────────
+    AddDebugBtn("Self — Delve History", "Show your delve encounter history and boss count",     "debug self")
+    AddDebugBtn("Zone / Instance",      "Show current instance type, diffID, and encType",      "debug zone")
+    AddDebugBtn("Version",              "Show addon version from TOC and metadata APIs",        "debug version")
+    AddDebugBtn("Rotational Spells",    "Show tracked rotational spells for your current spec", "debug rotational")
+    AddDebugBtn("Debug Log",            "Print the last 50 checksum/routing log entries",       "debuglog")
 
-    -- Separator before recovery tools
-    local sep2 = f:CreateTexture(nil, "ARTWORK")
-    sep2:SetColorTexture(1, 0.5, 0, 0.3)
-    sep2:SetHeight(1)
-    sep2:SetPoint("TOPLEFT", f, "TOPLEFT", 10, btnY - 4)
-    sep2:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, btnY - 4)
+    -- ── Class Debugging ──────────────────────────────────────────────────────
+    AddSectionLabel("Class Debugging", {0.00, 0.82, 1.00})
 
-    local recLabel = MakeFont(f, 9, "CENTER")
-    recLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 0, btnY - 6)
-    recLabel:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, btnY - 6)
-    recLabel:SetTextColor(1, 0.5, 0, 0.9)
-    recLabel:SetText("-- Recovery Tools --")
-    btnY = btnY - 20
+    AddDebugBtn("Talent Export",        "Export active talent snapshot for spec DB cross-reference",  "debug talents")
+    AddDebugBtn("Spells Export",        "Export full spellbook snapshot for spec DB cross-reference", "debug spells")
 
-    AddDebugBtn("Clean Payload",        "Re-broadcast all your best scores with correct format",    "clean payload")
+    -- ── Recovery Tools ───────────────────────────────────────────────────────
+    AddSectionLabel("Recovery Tools", {1.0, 0.5, 0.0})
+
+    AddDebugBtn("Backfill M+ Keys",     "Patch Mythic dungeon history with season best key levels",  "debug backfill keys")
+    AddDebugBtn("Clean Payload",        "Re-broadcast all your best scores with correct format",      "clean payload")
 
     -- Resize frame to fit content
     f:SetHeight(math.abs(btnY) + 16)

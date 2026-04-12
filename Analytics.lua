@@ -255,6 +255,15 @@ local function OnCombatEnd(duration)
         return
     end
 
+    -- Level gate: only score Midnight content (level 80+)  [1.3.8]
+    -- Prevents leveling kills, old-world farming, and timewalking alts
+    -- from polluting history and averages.
+    local playerLevel = UnitLevel("player") or 0
+    if playerLevel < 80 then
+        SafeCall(MS.UI, "OnCombatEnd", nil)
+        return
+    end
+
     local result = Analytics.CalculateGrade()
     Analytics.LastResult = result
 
