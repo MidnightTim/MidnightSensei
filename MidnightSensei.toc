@@ -6,6 +6,7 @@
 ## IconTexture: Interface\AddOns\MidnightSensei\logo
 ## SavedVariables: MidnightSenseiDB
 ## SavedVariablesPerCharacter: MidnightSenseiCharDB
+## X-Wago-ID: E6gv7RN1
 
 libs\LibStub\LibStub.lua
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
