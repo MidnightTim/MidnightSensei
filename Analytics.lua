@@ -311,10 +311,11 @@ local function OnCombatEnd(duration)
                 if s > (bests.weeklyDelveBest or 0)    then bests.weeklyDelveBest    = s end
             end
 
-            -- Boss-level personal best tracking (player-facing only, future Boss Board feature).
+            -- Boss-level personal best tracking — powers the Boss Board feature.
             -- Keyed by bossID (ENCOUNTER_START encounter ID). Only boss kills recorded.
             -- Structure: bests.bossBests[bossID] = {
-            --   bossName, instanceName, encType, diffLabel,
+            --   bossName, instanceName, encType, diffLabel, keystoneLevel,
+            --   charName, specName, className,
             --   bestScore, bestGrade, bestTimestamp, bestWeekKey,
             --   killCount, firstSeen
             -- }
@@ -325,14 +326,18 @@ local function OnCombatEnd(duration)
                 local s = result.finalScore or 0
                 if not existing then
                     bests.bossBests[bid] = {
-                        bossName      = result.bossName     or "?",
-                        instanceName  = result.instanceName or "",
-                        encType       = result.encType      or "normal",
-                        diffLabel     = result.diffLabel    or "",
+                        bossName      = result.bossName      or "?",
+                        instanceName  = result.instanceName  or "",
+                        encType       = result.encType       or "normal",
+                        diffLabel     = result.diffLabel     or "",
+                        keystoneLevel = result.keystoneLevel or nil,
+                        charName      = result.charName      or (UnitName("player") or "?"),
+                        specName      = result.specName      or (Core.ActiveSpec and Core.ActiveSpec.name or "?"),
+                        className     = result.className     or (Core.ActiveSpec and Core.ActiveSpec.className or "?"),
                         bestScore     = s,
-                        bestGrade     = result.finalGrade   or "--",
+                        bestGrade     = result.finalGrade    or "--",
                         bestTimestamp = result.timestamp,
-                        bestWeekKey   = result.weekKey      or "",
+                        bestWeekKey   = result.weekKey       or "",
                         killCount     = 1,
                         firstSeen     = result.timestamp,
                     }
@@ -340,11 +345,15 @@ local function OnCombatEnd(duration)
                     existing.killCount = (existing.killCount or 0) + 1
                     if s > (existing.bestScore or 0) then
                         existing.bestScore     = s
-                        existing.bestGrade     = result.finalGrade or "--"
+                        existing.bestGrade     = result.finalGrade   or "--"
                         existing.bestTimestamp = result.timestamp
-                        existing.bestWeekKey   = result.weekKey or ""
+                        existing.bestWeekKey   = result.weekKey      or ""
                         existing.diffLabel     = result.diffLabel    or existing.diffLabel
+                        existing.keystoneLevel = result.keystoneLevel or existing.keystoneLevel
                         existing.instanceName  = result.instanceName or existing.instanceName
+                        existing.charName      = result.charName     or existing.charName
+                        existing.specName      = result.specName     or existing.specName
+                        existing.className     = result.className    or existing.className
                     end
                 end
             end

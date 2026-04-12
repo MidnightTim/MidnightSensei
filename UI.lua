@@ -906,15 +906,16 @@ function UI.ShowMainCtxMenu()
 
         AddItem("Grade History",  -34, function() UI.ShowHistory() end)
         AddItem("Leaderboard",    -58, function() Core.Call(MS.Leaderboard, "Toggle") end)
-        AddItem("Options",        -82, function() UI.OpenOptions() end)
-        AddItem("Help / FAQ",    -106, function() UI.ShowFAQ() end)
-        AddItem("Credits",       -130, function() UI.ShowCredits() end)
-        AddItem("Debug Tools",   -154, function() UI.ShowDebugWindow() end)
-        AddItem("Close HUD",     -178, function()
+        AddItem("Boss Board",     -82, function() Core.Call(MS.BossBoard, "Toggle") end)
+        AddItem("Options",       -106, function() UI.OpenOptions() end)
+        AddItem("Help / FAQ",    -130, function() UI.ShowFAQ() end)
+        AddItem("Credits",       -154, function() UI.ShowCredits() end)
+        AddItem("Debug Tools",   -178, function() UI.ShowDebugWindow() end)
+        AddItem("Close HUD",     -202, function()
             if mainFrame then mainFrame:Hide() end
         end)
 
-        mainCtxMenu:SetSize(164, 206)
+        mainCtxMenu:SetSize(164, 230)
         mainCtxMenu:SetScript("OnHide", CloseAllMenus)
     end
 
@@ -1425,8 +1426,9 @@ function UI.ShowDebugWindow()
     -- ── Recovery Tools ───────────────────────────────────────────────────────
     AddSectionLabel("Recovery Tools", {1.0, 0.5, 0.0})
 
-    AddDebugBtn("Backfill M+ Keys",     "Patch Mythic dungeon history with season best key levels",  "debug backfill keys")
-    AddDebugBtn("Clean Payload",        "Re-broadcast all your best scores with correct format",      "clean payload")
+    AddDebugBtn("Boss Board Ingest",  "Seed Boss Board from encounter history",                      "debug bossboard ingest")
+    AddDebugBtn("Backfill M+ Keys",   "Patch Mythic dungeon history with season best key levels",    "debug backfill keys")
+    AddDebugBtn("Clean Payload",      "Re-broadcast all your best scores with correct format",        "clean payload")
 
     -- Resize frame to fit content
     f:SetHeight(math.abs(btnY) + 16)
@@ -1969,6 +1971,11 @@ local function CreateMinimapButton()
             if btn == "RightButton" and IsShiftKeyDown() then
                 -- Shift+Right-click: open the HUD right-click context menu
                 UI.ShowMainCtxMenu()
+            elseif btn == "RightButton" and IsControlKeyDown() then
+                -- Ctrl+Right-click: Boss Board
+                if MS.BossBoard and MS.BossBoard.Toggle then
+                    MS.BossBoard.Toggle()
+                end
             elseif btn == "RightButton" then
                 if MS.Leaderboard and MS.Leaderboard.Toggle then
                     MS.Leaderboard.Toggle()
@@ -1981,6 +1988,7 @@ local function CreateMinimapButton()
             tip:SetText("Midnight Sensei", 1, 0.82, 0)
             tip:AddLine("Left-click: Toggle HUD", 0.8, 0.8, 0.8)
             tip:AddLine("Right-click: Leaderboard", 0.8, 0.8, 0.8)
+            tip:AddLine("Ctrl+Right-click: Boss Board", 0.8, 0.8, 0.8)
             tip:AddLine("Shift+Right-click: Options", 0.8, 0.8, 0.8)
         end,
     })

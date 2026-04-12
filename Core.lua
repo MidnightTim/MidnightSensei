@@ -12,6 +12,7 @@ MidnightSensei.UI          = MidnightSensei.UI          or {}
 MidnightSensei.Utils       = MidnightSensei.Utils       or {}
 MidnightSensei.CombatLog   = MidnightSensei.CombatLog   or {}
 MidnightSensei.Leaderboard = MidnightSensei.Leaderboard or {}
+MidnightSensei.BossBoard   = MidnightSensei.BossBoard   or {}
 
 local MS   = MidnightSensei
 local Core = MS.Core
@@ -32,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.3.8"
+    Core.VERSION = ver or "1.3.9"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -123,8 +124,11 @@ function Core.InitSavedVariables()
     -- Account-wide DB
     MidnightSenseiDB = MidnightSenseiDB or {}
     local db = MidnightSenseiDB
-    db.leaderboard = db.leaderboard or {}
-    db.debugLog    = db.debugLog    or {}
+    db.leaderboard      = db.leaderboard      or {}
+    db.debugLog         = db.debugLog         or {}
+    -- Shared Boss Board snapshots — guild/friend all-time bests, account-wide
+    -- Always stores the higher score when updated. Keyed by "Name-Realm|bossID"
+    db.bossBoardShared  = db.bossBoardShared  or {}
 
     -- Per-character DB — settings and encounters are character-specific
     MidnightSenseiCharDB = MidnightSenseiCharDB or {}
@@ -144,7 +148,6 @@ function Core.InitSavedVariables()
         weeklyDungeonBest  = 0,
         weeklyRaidBest     = 0,
         weeklyDelveBest    = 0,
-        -- TODO (future): bossBests = {} -- per-encounterID all-time best for boss view
     }
     -- Spell and talent snapshots — populated on SPELLS_CHANGED / PLAYER_TALENT_UPDATE
     -- nil until first snapshot is taken; no DB bloat until actually triggered
@@ -286,6 +289,42 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.3.9",
+        tagline = "Boss Board, Spell/Talent Snapshot System & Debug Overhaul",
+        date    = "April 2026",
+        changes = {
+            -- Boss Board
+            "Boss Board added — personal all-time boss best leaderboard with Dungeons, Raids, and Delves tabs",
+            "Boss Board columns: Date (MM/DD/YYYY), Character, Spec, Diff/Boss, Score — all five sortable, click again to toggle direction",
+            "Boss Board tracks highest score per boss encounter ID (bossID) — all-time only, never resets",
+            "Boss Board ingest: /ms debug bossboard ingest seeds bossBests from existing encounter history",
+            "Boss Board ingest: fallback identity resolution for legacy encounters missing charName/specName/className",
+            "Boss Board ingest: skipped entries now patched with identity data if previously stored as '?'",
+            "Boss Board: shared snapshot stored in MidnightSenseiDB.bossBoardShared keyed by Name-Realm|bossID — always keeps higher score, updated at login and after each boss fight",
+            "Boss Board: live refresh if board is open when a boss fight completes",
+            "Boss Board: per-row hover tooltip shows boss name, instance, grade, date, and kill count",
+            "Boss Board: class-coloured character names",
+            "Boss Board accessible via /ms bossboard, /ms bb, right-click HUD context menu, Ctrl+Right-click minimap",
+            -- Context menu
+            "HUD right-click context menu: Boss Board added between Leaderboard and Options",
+            -- Minimap
+            "Minimap: Ctrl+Right-click opens Boss Board",
+            "Minimap: tooltip updated to document Ctrl+Right-click binding",
+            -- Analytics
+            "Analytics: bossBests entries now store charName, specName, className, keystoneLevel — previously missing, required for Boss Board display",
+            -- Debug window
+            "Debug Tools: Boss Board Ingest button added to Recovery Tools section",
+            -- Spell/talent snapshots (carried forward from 1.3.8 development)
+            "Debug: persistent spell snapshot built on SPELLS_CHANGED and login — reads from CharDB via Spells Export button",
+            "Debug: persistent talent snapshot built on PLAYER_TALENT_UPDATE and login — reads from CharDB via Talent Export button",
+            "Debug Tools: Talent Export and Spells Export added under Class Debugging section",
+            "Debug Tools: X button rendering fixed — was a box due to Unicode outside FRIZQT__.TTF coverage",
+            "Debug Tools: section labels added — Class Debugging (cyan) and Recovery Tools (orange)",
+            -- Grade history
+            "Grade History: All Characters filter removed — was silently identical to This Character due to per-character SavedVariables split",
+        },
+    },
     {
         version = "1.3.8",
         tagline = "Shaman Pass, Spell/Talent Snapshots, Debug Overhaul & Level Gate",
@@ -2376,6 +2415,7 @@ local function MSSlashHandler(msg)
         print("  /ms hide          Hide the HUD")
         print("  /ms history       Grade history & trends")
         print("  /ms lb            Social leaderboard")
+        print("  /ms bossboard     Personal boss best leaderboard  (alias: /ms bb)")
         print("  /ms options       Settings panel")
         print("  /ms faq           Help & FAQ panel")
         print("  /ms credits       Credits & about")
@@ -3199,6 +3239,20 @@ local function MSSlashHandler(msg)
         end
         print("|cff00D1FFMidnight Sensei:|r Cleared " .. cleared .. " inferred keystone patches.")
         if MS.UI and MS.UI.RefreshHistory then MS.UI.RefreshHistory() end
+
+    elseif msg == "bossboard" or msg == "bb" then
+        if MS.BossBoard and MS.BossBoard.Toggle then
+            MS.BossBoard.Toggle()
+        else
+            print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
+        end
+
+    elseif msg == "debug bossboard ingest" then
+        if MS.BossBoard and MS.BossBoard.IngestFromHistory then
+            MS.BossBoard.IngestFromHistory()
+        else
+            print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
+        end
 
     else
         print("|cff00D1FFMidnight Sensei:|r Unknown command. Type |cffFFFFFF/ms help|r for a list of commands.")
