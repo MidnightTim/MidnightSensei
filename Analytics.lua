@@ -326,34 +326,42 @@ local function OnCombatEnd(duration)
                 local s = result.finalScore or 0
                 if not existing then
                     bests.bossBests[bid] = {
-                        bossName      = result.bossName      or "?",
-                        instanceName  = result.instanceName  or "",
-                        encType       = result.encType       or "normal",
-                        diffLabel     = result.diffLabel     or "",
-                        keystoneLevel = result.keystoneLevel or nil,
-                        charName      = result.charName      or (UnitName("player") or "?"),
-                        specName      = result.specName      or (Core.ActiveSpec and Core.ActiveSpec.name or "?"),
-                        className     = result.className     or (Core.ActiveSpec and Core.ActiveSpec.className or "?"),
-                        bestScore     = s,
-                        bestGrade     = result.finalGrade    or "--",
-                        bestTimestamp = result.timestamp,
-                        bestWeekKey   = result.weekKey       or "",
-                        killCount     = 1,
-                        firstSeen     = result.timestamp,
+                        bossName        = result.bossName      or "?",
+                        instanceName    = result.instanceName  or "",
+                        encType         = result.encType       or "normal",
+                        diffLabel       = result.diffLabel     or "",
+                        keystoneLevel   = result.keystoneLevel or nil,
+                        charName        = result.charName      or (UnitName("player") or "?"),
+                        specName        = result.specName      or (Core.ActiveSpec and Core.ActiveSpec.name or "?"),
+                        className       = result.className     or (Core.ActiveSpec and Core.ActiveSpec.className or "?"),
+                        bestScore       = s,
+                        bestGrade       = result.finalGrade    or "--",
+                        bestGradeLabel  = result.gradeLabel    or "",
+                        bestTimestamp   = result.timestamp,
+                        bestWeekKey     = result.weekKey       or "",
+                        bestFeedback    = result.feedback      or {},
+                        bestComponents  = result.componentScores or {},
+                        bestDuration    = result.duration      or 0,
+                        killCount       = 1,
+                        firstSeen       = result.timestamp,
                     }
                 else
                     existing.killCount = (existing.killCount or 0) + 1
                     if s > (existing.bestScore or 0) then
-                        existing.bestScore     = s
-                        existing.bestGrade     = result.finalGrade   or "--"
-                        existing.bestTimestamp = result.timestamp
-                        existing.bestWeekKey   = result.weekKey      or ""
-                        existing.diffLabel     = result.diffLabel    or existing.diffLabel
-                        existing.keystoneLevel = result.keystoneLevel or existing.keystoneLevel
-                        existing.instanceName  = result.instanceName or existing.instanceName
-                        existing.charName      = result.charName     or existing.charName
-                        existing.specName      = result.specName     or existing.specName
-                        existing.className     = result.className    or existing.className
+                        existing.bestScore      = s
+                        existing.bestGrade      = result.finalGrade   or "--"
+                        existing.bestGradeLabel = result.gradeLabel   or ""
+                        existing.bestTimestamp  = result.timestamp
+                        existing.bestWeekKey    = result.weekKey      or ""
+                        existing.bestFeedback   = result.feedback     or {}
+                        existing.bestComponents = result.componentScores or {}
+                        existing.bestDuration   = result.duration     or 0
+                        existing.diffLabel      = result.diffLabel    or existing.diffLabel
+                        existing.keystoneLevel  = result.keystoneLevel or existing.keystoneLevel
+                        existing.instanceName   = result.instanceName or existing.instanceName
+                        existing.charName       = result.charName     or existing.charName
+                        existing.specName       = result.specName     or existing.specName
+                        existing.className      = result.className    or existing.className
                     end
                 end
             end

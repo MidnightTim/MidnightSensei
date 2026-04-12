@@ -581,7 +581,7 @@ function UI.ShowHistory()
     if not historyFrame then
         historyFrame = CreateFrame("Frame", "MidnightSenseiHistory", UIParent, "BackdropTemplate")
         historyFrame:SetSize(490, 520)
-        historyFrame:SetPoint("CENTER", UIParent, "CENTER", -80, 0)
+        historyFrame:SetPoint("CENTER", UIParent, "CENTER", -340, 0)
         historyFrame:SetFrameStrata("HIGH")
         historyFrame:SetMovable(true)
         historyFrame:SetClampedToScreen(true)
@@ -667,15 +667,6 @@ function UI.ShowHistory()
         historyFrame.rowFrames   = {}
 
         -- Footer
-        local clearBtn = MakeButton(historyFrame, 90, 22, "Clear History")
-        clearBtn:SetPoint("BOTTOMLEFT", historyFrame, "BOTTOMLEFT", 10, 10)
-        clearBtn:SetScript("OnClick", function()
-            if MidnightSenseiDB then
-                MidnightSenseiCharDB.encounters = {}
-                RefreshHistoryContent()
-            end
-        end)
-
         local lbBtn = MakeButton(historyFrame, 110, 22, "Leaderboard ->")
         lbBtn:SetPoint("BOTTOMRIGHT", historyFrame, "BOTTOMRIGHT", -10, 10)
         lbBtn:SetScript("OnClick", function() Core.Call(MS.Leaderboard, "Toggle") end)
@@ -803,11 +794,50 @@ local function CreateMainFrame()
     mainFrame.specText:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
     mainFrame.specText:SetText(Core.GetSpecInfoString())
 
-    -- Fight timer (top-right)
+    -- Fight timer (top-right) — shifted left to make room for X and cog
     mainFrame.timerText = MakeFont(mainFrame, 9, "RIGHT")
-    mainFrame.timerText:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -6, -6)
+    mainFrame.timerText:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -38, -6)
     mainFrame.timerText:SetWidth(70)
     mainFrame.timerText:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+
+    -- Cog button — opens context menu (replaces right-click)
+    local cogBtn = CreateFrame("Button", nil, mainFrame)
+    cogBtn:SetSize(12, 12)
+    cogBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -22, -5)
+    cogBtn:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+    cogBtn:GetNormalTexture():SetVertexColor(0.8, 0.8, 0.8, 1)
+    cogBtn:SetHighlightTexture("Interface\\Buttons\\UI-OptionsButton")
+    cogBtn:GetHighlightTexture():SetVertexColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
+    cogBtn:SetScript("OnClick", function() UI.ShowMainCtxMenu() end)
+    cogBtn:SetScript("OnEnter", function()
+        cogBtn:GetNormalTexture():SetVertexColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
+        GameTooltip:SetOwner(cogBtn, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Menu", 0, 0.82, 1)
+        GameTooltip:Show()
+    end)
+    cogBtn:SetScript("OnLeave", function()
+        cogBtn:GetNormalTexture():SetVertexColor(0.8, 0.8, 0.8, 1)
+        GameTooltip:Hide()
+    end)
+
+    -- X button — closes/hides the HUD
+    local xBtn = CreateFrame("Button", nil, mainFrame)
+    xBtn:SetSize(16, 16)
+    xBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -4, -3)
+    local xFs = MakeFont(xBtn, 11, "CENTER")
+    xFs:SetPoint("CENTER")
+    xFs:SetText("|cffaaaaaaX|r")
+    xBtn:SetScript("OnClick", function() mainFrame:Hide() end)
+    xBtn:SetScript("OnEnter", function()
+        xFs:SetTextColor(1, 0.3, 0.3, 1)
+        GameTooltip:SetOwner(xBtn, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Hide HUD", 1, 0.3, 0.3)
+        GameTooltip:Show()
+    end)
+    xBtn:SetScript("OnLeave", function()
+        xFs:SetTextColor(0.67, 0.67, 0.67, 1)
+        GameTooltip:Hide()
+    end)
 
     -- Separator
     local sep = mainFrame:CreateTexture(nil, "ARTWORK")
@@ -816,18 +846,42 @@ local function CreateMainFrame()
     sep:SetHeight(1)
     sep:SetColorTexture(C.SEP[1], C.SEP[2], C.SEP[3], C.SEP[4])
 
-    -- Review button - hidden until a fight completes
-    local reviewBtn = MakeButton(mainFrame, 108, 22, ">> Review Fight")
-    reviewBtn:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 4, 4)
+    -- Review Fight — sits in the middle content area, hidden until a fight completes
+    local reviewBtn = MakeButton(mainFrame, 90, 18, "Review Fight")
+    reviewBtn:SetPoint("BOTTOM", mainFrame, "BOTTOM", 0, 30)
     reviewBtn:SetScript("OnClick", function()
-        -- GetLastEncounter falls back to DB on login/reload; LastResult is session-only
         local enc = (MS.Analytics and MS.Analytics.GetLastEncounter
                      and MS.Analytics.GetLastEncounter())
                     or (MS.Analytics and MS.Analytics.LastResult)
-        if enc then ShowResultPanel(enc) end
+        if enc then
+            -- Use _G reference so we get the current resultFrame value at click
+            -- time regardless of declaration order in the file
+            local rf = _G["MidnightSenseiResult"]
+            if rf and rf:IsShown() then
+                rf:Hide()
+            else
+                ShowResultPanel(enc)
+            end
+        end
     end)
     reviewBtn:Hide()
     mainFrame.reviewBtn = reviewBtn
+
+    -- Boss Board button — bottom left, always visible
+    local bbBtn = MakeButton(mainFrame, 108, 22, "Boss Board")
+    bbBtn:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 4, 4)
+    bbBtn:SetScript("OnClick", function()
+        if MS.BossBoard and MS.BossBoard.Toggle then
+            MS.BossBoard.Toggle()
+        end
+    end)
+    bbBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Boss Board", 0, 0.82, 1)
+        GameTooltip:AddLine("Personal all-time boss best scores", 0.8, 0.8, 0.8)
+        GameTooltip:Show()
+    end)
+    bbBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -- Leaderboard button — always visible in bottom right
     local lbBtn = MakeButton(mainFrame, 90, 22, "Leaderboard")
@@ -844,11 +898,6 @@ local function CreateMainFrame()
         GameTooltip:Show()
     end)
     lbBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-    -- Right-click: context menu
-    mainFrame:SetScript("OnMouseDown", function(_, btn)
-        if btn == "RightButton" then UI.ShowMainCtxMenu() end
-    end)
 
     -- Timer tick
     Core.RegisterTick("hud_timer", 0.5, function()
@@ -940,8 +989,13 @@ ShowResultPanel = function(result)
     if not resultFrame then
         resultFrame = CreateFrame("Frame", "MidnightSenseiResult", UIParent, "BackdropTemplate")
         resultFrame:SetSize(320, 400)
-        resultFrame:SetPoint("CENTER", UIParent, "CENTER", 120, 0)
-        resultFrame:SetFrameStrata("HIGH")
+        -- Anchor to the right of the HUD so it never overlaps it
+        if mainFrame and mainFrame:IsShown() then
+            resultFrame:SetPoint("TOPLEFT", mainFrame, "TOPRIGHT", 8, 0)
+        else
+            resultFrame:SetPoint("CENTER", UIParent, "CENTER", 160, 60)
+        end
+        resultFrame:SetFrameStrata("DIALOG")
         resultFrame:SetMovable(true)
         resultFrame:SetClampedToScreen(true)
         resultFrame:EnableMouse(true)
@@ -989,11 +1043,17 @@ ShowResultPanel = function(result)
 
         local histBtn = MakeButton(resultFrame, 90, 22, "History")
         histBtn:SetPoint("BOTTOMLEFT", resultFrame, "BOTTOMLEFT", 10, 8)
-        histBtn:SetScript("OnClick", function() UI.ShowHistory() end)
+        histBtn:SetScript("OnClick", function()
+            resultFrame:Hide()
+            UI.ShowHistory()
+        end)
 
         local lbBtn = MakeButton(resultFrame, 90, 22, "Leaderboard")
         lbBtn:SetPoint("BOTTOM", resultFrame, "BOTTOM", 0, 8)
-        lbBtn:SetScript("OnClick", function() Core.Call(MS.Leaderboard, "Toggle") end)
+        lbBtn:SetScript("OnClick", function()
+            resultFrame:Hide()
+            Core.Call(MS.Leaderboard, "Toggle")
+        end)
 
         local closeBtn = MakeButton(resultFrame, 70, 22, "Close")
         closeBtn:SetPoint("BOTTOMRIGHT", resultFrame, "BOTTOMRIGHT", -10, 8)
@@ -1429,6 +1489,68 @@ function UI.ShowDebugWindow()
     AddDebugBtn("Boss Board Ingest",  "Seed Boss Board from encounter history",                      "debug bossboard ingest")
     AddDebugBtn("Backfill M+ Keys",   "Patch Mythic dungeon history with season best key levels",    "debug backfill keys")
     AddDebugBtn("Clean Payload",      "Re-broadcast all your best scores with correct format",        "clean payload")
+
+    -- Clear History — buried here intentionally, requires confirmation
+    local clearRow = CreateFrame("Frame", nil, f, "BackdropTemplate")
+    clearRow:SetSize(428, 42)
+    clearRow:SetPoint("TOPLEFT", f, "TOPLEFT", 16, btnY)
+    ApplyBackdrop(clearRow, {0.12,0.04,0.04,0.7}, {0.6,0.1,0.1,0.6})
+
+    local clearLbl = MakeFont(clearRow, 11, "LEFT")
+    clearLbl:SetPoint("TOPLEFT", clearRow, "TOPLEFT", 8, -5)
+    clearLbl:SetTextColor(1, 0.35, 0.35, 1)
+    clearLbl:SetText("Clear Fight History")
+
+    local clearDesc = MakeFont(clearRow, 9, "LEFT")
+    clearDesc:SetPoint("BOTTOMLEFT", clearRow, "BOTTOMLEFT", 8, 5)
+    clearDesc:SetTextColor(0.7, 0.4, 0.4, 1)
+    clearDesc:SetText("Permanently deletes all recorded encounters — this cannot be undone")
+
+    local clearBtn = CreateFrame("Button", nil, clearRow, "BackdropTemplate")
+    clearBtn:SetSize(70, 28)
+    clearBtn:SetPoint("RIGHT", clearRow, "RIGHT", -6, 0)
+    ApplyBackdrop(clearBtn, {0.20,0.04,0.04,0.9}, {0.6,0.1,0.1,0.8})
+    local clearFs = MakeFont(clearBtn, 10, "CENTER")
+    clearFs:SetPoint("CENTER")
+    clearFs:SetText("|cffFF4444Run|r")
+    clearBtn:SetScript("OnClick", function()
+        -- Confirmation dialog
+        local dialog = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+        dialog:SetSize(340, 130)
+        dialog:SetPoint("CENTER")
+        dialog:SetFrameStrata("DIALOG")
+        dialog:SetMovable(false)
+        ApplyBackdrop(dialog, {0.08,0.04,0.04,0.98}, {0.8,0.1,0.1,0.9})
+
+        local msg = MakeFont(dialog, 11, "CENTER")
+        msg:SetPoint("TOPLEFT",  dialog, "TOPLEFT",  10, -18)
+        msg:SetPoint("TOPRIGHT", dialog, "TOPRIGHT", -10, -18)
+        msg:SetWordWrap(true)
+        msg:SetText("|cffFF4444This will permanently delete all fight history.|r\nThis action cannot be undone.")
+
+        local confirmBtn = MakeButton(dialog, 120, 26, "Yes, Delete All")
+        confirmBtn:SetPoint("BOTTOMLEFT", dialog, "BOTTOMLEFT", 16, 12)
+        confirmBtn:SetScript("OnClick", function()
+            if MidnightSenseiCharDB then
+                MidnightSenseiCharDB.encounters = {}
+                if MS.Analytics then MS.Analytics.LastResult = nil end
+                print("|cffFF4444Midnight Sensei:|r Fight history cleared.")
+            end
+            dialog:Hide()
+            f:Hide()
+            if historyFrame and historyFrame:IsShown() then
+                RefreshHistoryContent()
+            end
+        end)
+
+        local cancelBtn = MakeButton(dialog, 100, 26, "Cancel")
+        cancelBtn:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -16, 12)
+        cancelBtn:SetScript("OnClick", function() dialog:Hide() end)
+
+        dialog:Show()
+    end)
+
+    btnY = btnY - 48
 
     -- Resize frame to fit content
     f:SetHeight(math.abs(btnY) + 16)

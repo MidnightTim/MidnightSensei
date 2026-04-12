@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.3.9"
+    Core.VERSION = ver or "1.3.10"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,54 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.3.10",
+        tagline = "HUD Overhaul, Boss Board Feedback, Demonology Pass & Quality of Life",
+        date    = "April 2026",
+        changes = {
+            -- HUD
+            "HUD: gear icon added to title strip using WoW native UI-OptionsButton texture — opens context menu on click, replaces right-click handler",
+            "HUD: X button added to title strip — hides HUD on click, turns red on hover",
+            "HUD: Review Fight button moved to center zone above separator, appears only after a fight completes, centered at 90px wide",
+            "HUD: Review Fight now toggles — first click opens Fight Complete panel, second click closes it",
+            "HUD: Boss Board button added to bottom-left permanent position replacing Review Fight",
+            "HUD: bottom row is now Boss Board (left) and Leaderboard (right) — both always visible",
+            -- Boss Board
+            "Boss Board: description text added below title — explains individual highest scores per boss in Midnight",
+            "Boss Board: rows are now clickable — left-click opens Encounter Detail popup showing feedback and component scores for that best run",
+            "Boss Board: bestFeedback, bestComponents, bestDuration, bestGradeLabel now stored permanently in bossBests — never lost to encounter cap rollover",
+            "Boss Board: feedback stored at fight time in Analytics, not just on ingest — new bests always capture feedback permanently",
+            "Boss Board: ingest backfills feedback from existing encounters; updated and skipped paths both store feedback fields",
+            "Boss Board: BB.RepairIdentity() added — /ms debug bossboard repair patches ? identity on all entries without score comparison",
+            "Boss Board: Core.DetectSpec() called at ingest start to ensure spec fallback is populated before identity resolution",
+            "Boss Board: updated path now applies identity fallback for nil fields (was only applying for explicit enc values)",
+            -- Window behaviour
+            "Windows: Fight Complete strata raised to DIALOG — now always renders above Grade History and Leaderboard",
+            "Windows: Fight Complete anchors to right of HUD frame on first open, falls back to CENTER +160, +60 if HUD hidden",
+            "Windows: default positions spread across screen — History CENTER -340, BossBoard CENTER +80, Leaderboard CENTER +380",
+            "Windows: History and Leaderboard buttons inside Fight Complete now close it before opening the target panel",
+            -- Toggle fixes
+            "Fix: Boss Board and Leaderboard required two clicks to open — explicit f:Hide() added to CreateBossBoardFrame, Toggle rewired to reference module-level frame directly",
+            "Fix: Leaderboard Toggle had same double-call pattern as Boss Board — same fix applied",
+            "Fix: Review Fight toggle used a permanently-nil upvalue due to Lua declaration order — replaced with _G[\"MidnightSenseiResult\"] lookup at click time",
+            -- Clear History
+            "Clear History button removed from Grade History panel — was too easy to misclick with no confirmation",
+            "Clear Fight History moved to Debug Tools Recovery Tools section with red-tinted styling and blocking confirmation dialog",
+            -- Demonology Warlock
+            "Demonology: Malevolence ID corrected 458355 to 442726 — confirmed in Midnight 12.0 spell list",
+            "Demonology: Summon Vilefiend (264119) removed — not present in Midnight 12.0",
+            "Demonology: Power Siphon (264170) removed — not present in Midnight 12.0",
+            "Demonology: Summon Doomguard (1276672) added to majorCooldowns — confirmed nodeID 101917",
+            "Demonology: Grimoire: Fel Ravager (1276467) added as talentGated cooldown — confirmed nodeID 110197",
+            "Demonology: Diabolic Ritual (428514) added as talentGated cooldown — confirmed nodeID 94855",
+            "Demonology: Hand of Gul'dan (172) added to rotationalSpells — core shard spender was missing entirely",
+            "Demonology: Demonbolt (264178) added to rotationalSpells — Demonic Core consumer",
+            "Demonology: Doom (460551) added as talentGated rotational — confirmed nodeID 110200",
+            "Demonology: Dark Harvest (1257052) added as talentGated rotational",
+            -- Level gate notification
+            "Login: sub-level 80 characters now receive a warning that fight tracking is disabled until level 80",
+        },
+    },
     {
         version = "1.3.9",
         tagline = "Boss Board, Spell/Talent Snapshot System & Debug Overhaul",
@@ -1499,43 +1547,49 @@ Core.SPEC_DATABASE = {
             sourceNote = "Adapted from Icy Veins Affliction Warlock guide",
         },
 
-        -- Demonology
-        -- Added:    Malevolence (458355) to majorCooldowns
-        --           rotationalSpells: Implosion (196277), Power Siphon (264170)
-        -- Removed:  Implosion from majorCooldowns — it has no cooldown and does not belong
-        --           in the cooldown scoring bucket. Moved to rotationalSpells for presence tracking.
-        -- Kept:     Demonic Core in procBuffs (real player self-buff, ID 267102)
-        -- Reason:   rotationalSpells tracks usage via ABILITY_USED without frequency-penalising
-        --           spells that have no static CD. Feedback fires only if never used in 60s+ fights.
+        -- Demonology (Midnight 12.0 pass — April 2026)
+        -- Fixed:    Malevolence ID corrected 458355 → 442726 (confirmed Spell List)
+        -- Removed:  Summon Vilefiend (264119) — not present in Midnight 12.0 spell or talent files
+        -- Removed:  Power Siphon (264170) from rotationalSpells — not in Midnight 12.0 files
+        -- Added:    Summon Doomguard (1276672) to majorCooldowns — confirmed nodeID 101917
+        -- Added:    Grimoire: Fel Ravager (1276467) as talentGated CD — confirmed nodeID 110197
+        -- Added:    Diabolic Ritual (428514) as talentGated CD — confirmed nodeID 94855
+        -- Added:    Hand of Gul'dan (172) to rotationalSpells — confirmed Spell List; core shard spender
+        -- Added:    Demonbolt (264178) to rotationalSpells — confirmed Spell List; Demonic Core spender
+        -- Added:    Doom (460551) as talentGated rotational — confirmed nodeID 110200
+        -- Added:    Dark Harvest (1257052) as talentGated rotational — confirmed Spell List
         [2] = {
             name = "Demonology", role = "DPS",
             resourceType = 7, resourceLabel = "SOUL SHARDS", overcapAt = 5,
             majorCooldowns = {
-                { id = 265187, label = "Summon Demonic Tyrant", expectedUses = "on CD"          },
-                { id = 458355, label = "Malevolence",           expectedUses = "on CD"          },
-                { id = 104316, label = "Call Dreadstalkers",    expectedUses = "on CD"          },
-                { id = 264119, label = "Summon Vilefiend",      expectedUses = "on CD (talent)" },
+                { id = 265187, label = "Summon Demonic Tyrant", expectedUses = "on CD"          },  -- confirmed nodeID 101905
+                { id = 442726, label = "Malevolence",           expectedUses = "on CD"          },  -- confirmed Spell List (was 458355)
+                { id = 104316, label = "Call Dreadstalkers",    expectedUses = "on CD"          },  -- confirmed nodeID 101894
+                { id = 1276672, label = "Summon Doomguard",     expectedUses = "on CD (talent)", talentGated = true },  -- confirmed nodeID 101917
+                { id = 1276467, label = "Grimoire: Fel Ravager", expectedUses = "on CD (talent)", talentGated = true }, -- confirmed nodeID 110197
+                { id = 428514, label = "Diabolic Ritual",       expectedUses = "on CD (talent)", talentGated = true },  -- confirmed nodeID 94855
             },
             rotationalSpells = {
-                -- Tracked via ABILITY_USED; only flagged unused in fights >= minFightSeconds.
-                -- IsPlayerSpell gates talent-dependent entries at fight start.
-                { id = 196277, label = "Implosion",     minFightSeconds = 15 },              -- any fight with imps
-                { id = 264170, label = "Power Siphon",  minFightSeconds = 60, talentGated = true }, -- talent
+                { id = 196277, label = "Implosion",     minFightSeconds = 15 },                          -- confirmed nodeID 101893
+                { id = 172,    label = "Hand of Gul'dan", minFightSeconds = 15 },                        -- confirmed Spell List; core shard spender
+                { id = 264178, label = "Demonbolt",     minFightSeconds = 20 },                          -- confirmed Spell List; Demonic Core spender
+                { id = 460551, label = "Doom",          minFightSeconds = 30, talentGated = true },      -- confirmed nodeID 110200
+                { id = 1257052, label = "Dark Harvest", minFightSeconds = 30, talentGated = true },      -- confirmed Spell List
             },
             procBuffs = {
-                { id = 267102, label = "Demonic Core", maxStackTime = 20 },
+                { id = 267102, label = "Demonic Core", maxStackTime = 20 },  -- confirmed Spell List
             },
             priorityNotes = {
                 "Stack demons before Demonic Tyrant — Tyrant extends all active pet durations",
                 "Use Implosion at 6+ Wild Imps for maximum damage",
-                "Use Power Siphon when Demonic Core stacks are low and imps are active",
                 "Call Dreadstalkers on cooldown — core damage and imp generation",
+                "Hand of Gul'dan to summon imps and enable Implosion windows — primary shard spender",
                 "Spend Demonic Core procs on Demonbolt — don't sit on stacks",
-                "Hand of Gul'dan to summon imps and enable Implosion windows",
+                "Summon Doomguard on cooldown — major burst CD when talented",
                 "Avoid Soul Shard overcap — spend with Hand of Gul'dan",
             },
             scoreWeights = { cooldownUsage = 35, procUsage = 25, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Demonology Warlock guide",
+            sourceNote = "Midnight 12.0 verified against Demonology Spell List and Talent tree (April 2026)",
         },
 
         -- Destruction
@@ -2121,11 +2175,18 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         Core.InitSavedVariables()
         DetectSpec()
         C_Timer.After(3.0, BroadcastVersion)
-        -- Run migration after a short delay so UnitName/GetRealmName are available
         C_Timer.After(1.0, function() Core.MigrateEncounters() end)
         Core.Emit(Core.EVENTS.SESSION_READY)
         print("|cff00D1FFMidnight Sensei|r v" .. Core.VERSION ..
               " loaded.  Type |cffFFD700/ms|r for commands.")
+        -- Level check — delayed so UnitLevel is accurate after world load
+        C_Timer.After(2.0, function()
+            local level = UnitLevel("player") or 0
+            if level > 0 and level < 80 then
+                print("|cffFFAA00Midnight Sensei:|r This addon is designed for level 80+ content." ..
+                      " Fight tracking and grading are |cffFF4444disabled|r until you reach level 80.")
+            end
+        end)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         DetectSpec()
@@ -3250,6 +3311,13 @@ local function MSSlashHandler(msg)
     elseif msg == "debug bossboard ingest" then
         if MS.BossBoard and MS.BossBoard.IngestFromHistory then
             MS.BossBoard.IngestFromHistory()
+        else
+            print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
+        end
+
+    elseif msg == "debug bossboard repair" then
+        if MS.BossBoard and MS.BossBoard.RepairIdentity then
+            MS.BossBoard.RepairIdentity()
         else
             print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
         end

@@ -2279,7 +2279,7 @@ local function CreateLeaderboardFrame()
     local FW, FH = 720, 480
     lbFrame = CreateFrame("Frame","MidnightSenseiLeaderboard",UIParent,"BackdropTemplate")
     lbFrame:SetSize(FW,FH)
-    lbFrame:SetPoint("CENTER",UIParent,"CENTER",240,0)
+    lbFrame:SetPoint("CENTER",UIParent,"CENTER",380,0)
     lbFrame:SetFrameStrata("HIGH")
     lbFrame:SetMovable(true); lbFrame:SetClampedToScreen(true); lbFrame:EnableMouse(true)
     BD(lbFrame)
@@ -2518,16 +2518,23 @@ local function CreateLeaderboardFrame()
 end
 
 function LB.Show()
-    local frame = CreateLeaderboardFrame()
-    SeedPartyFromGroup()   -- ensure current group is always shown when opening
+    CreateLeaderboardFrame()
+    SeedPartyFromGroup()
     SetActiveTab(activeTab)
-    frame:Show()
+    lbFrame:Show()
     RefreshContent()
 end
 
 function LB.Toggle()
-    local frame = CreateLeaderboardFrame()
-    if frame:IsShown() then frame:Hide() else LB.Show() end
+    CreateLeaderboardFrame()
+    if lbFrame:IsShown() then
+        lbFrame:Hide()
+    else
+        SeedPartyFromGroup()
+        SetActiveTab(activeTab)
+        lbFrame:Show()
+        RefreshContent()
+    end
 end
 
 function LB.HideFrame()

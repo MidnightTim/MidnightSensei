@@ -232,6 +232,10 @@ function BB.IngestFromHistory()
     cdb.bests.bossBests = cdb.bests.bossBests or {}
     local bossBests = cdb.bests.bossBests
 
+    -- Force spec detection so fallback identity is accurate even if ingest
+    -- runs early in the session before Core.ActiveSpec is populated
+    if Core.DetectSpec then Core.DetectSpec() end
+
     -- Resolve current character identity once — used as fallback for legacy
     -- encounters that predate specName/className/charName fields on the result struct.
     -- Since this is CharDB (per-character), charName is always the current player.
@@ -239,6 +243,11 @@ function BB.IngestFromHistory()
     local fallbackChar  = UnitName("player") or "?"
     local fallbackSpec  = Core.ActiveSpec and Core.ActiveSpec.name      or "?"
     local fallbackClass = Core.ActiveSpec and Core.ActiveSpec.className or "?"
+
+    -- Warn if spec still unresolved so the user knows identity may be incomplete
+    if fallbackSpec == "?" then
+        print("|cffFFAA00Midnight Sensei Boss Board:|r Could not detect active spec — character/spec fields may be incomplete. Try again after fully loading in.")
+    end
 
     local added, updated, skipped = 0, 0, 0
 
@@ -257,37 +266,43 @@ function BB.IngestFromHistory()
 
             if not existing then
                 bossBests[bid] = {
-                    bossName      = enc.bossName      or "?",
-                    instanceName  = enc.instanceName  or "",
-                    encType       = enc.encType       or "normal",
-                    diffLabel     = enc.diffLabel     or "",
-                    keystoneLevel = enc.keystoneLevel or nil,
-                    charName      = charName,
-                    specName      = specName,
-                    className     = className,
-                    bestScore     = s,
-                    bestGrade     = enc.finalGrade    or "--",
-                    bestTimestamp = enc.timestamp     or 0,
-                    bestWeekKey   = enc.weekKey       or "",
-                    killCount     = 1,
-                    firstSeen     = enc.timestamp     or 0,
+                    bossName        = enc.bossName      or "?",
+                    instanceName    = enc.instanceName  or "",
+                    encType         = enc.encType       or "normal",
+                    diffLabel       = enc.diffLabel     or "",
+                    keystoneLevel   = enc.keystoneLevel or nil,
+                    charName        = charName,
+                    specName        = specName,
+                    className       = className,
+                    bestScore       = s,
+                    bestGrade       = enc.finalGrade    or "--",
+                    bestGradeLabel  = enc.gradeLabel    or "",
+                    bestTimestamp   = enc.timestamp     or 0,
+                    bestWeekKey     = enc.weekKey       or "",
+                    bestFeedback    = enc.feedback      or {},
+                    bestComponents  = enc.componentScores or {},
+                    bestDuration    = enc.duration      or 0,
+                    killCount       = 1,
+                    firstSeen       = enc.timestamp     or 0,
                 }
                 added = added + 1
             else
                 existing.killCount = (existing.killCount or 0) + 1
                 if s > (existing.bestScore or 0) then
-                    existing.bestScore     = s
-                    existing.bestGrade     = enc.finalGrade   or "--"
-                    existing.bestTimestamp = enc.timestamp    or 0
-                    existing.bestWeekKey   = enc.weekKey      or ""
-                    existing.diffLabel     = enc.diffLabel    or existing.diffLabel
-                    existing.keystoneLevel = enc.keystoneLevel or existing.keystoneLevel
-                    existing.instanceName  = enc.instanceName or existing.instanceName
-                    -- Only update identity fields if the encounter has them explicitly —
-                    -- don't overwrite a known value with a fallback
-                    if enc.charName  then existing.charName  = enc.charName  end
-                    if enc.specName  then existing.specName  = enc.specName  end
-                    if enc.className then existing.className = enc.className end
+                    existing.bestScore      = s
+                    existing.bestGrade      = enc.finalGrade   or "--"
+                    existing.bestGradeLabel = enc.gradeLabel   or ""
+                    existing.bestTimestamp  = enc.timestamp    or 0
+                    existing.bestWeekKey    = enc.weekKey      or ""
+                    existing.bestFeedback   = enc.feedback     or {}
+                    existing.bestComponents = enc.componentScores or {}
+                    existing.bestDuration   = enc.duration     or 0
+                    existing.diffLabel      = enc.diffLabel    or existing.diffLabel
+                    existing.keystoneLevel  = enc.keystoneLevel or existing.keystoneLevel
+                    existing.instanceName   = enc.instanceName or existing.instanceName
+                    existing.charName  = enc.charName  or fallbackChar  or existing.charName
+                    existing.specName  = enc.specName  or fallbackSpec  or existing.specName
+                    existing.className = enc.className or fallbackClass or existing.className
                     updated = updated + 1
                 else
                     -- Even if score isn't better, patch in identity if missing
@@ -309,9 +324,45 @@ function BB.IngestFromHistory()
 end
 
 --------------------------------------------------------------------------------
--- UI
+-- Debug: repair identity fields on existing bossBests entries
+-- Stamps charName/specName/className onto every entry that has "?" values.
+-- Ignores score comparison entirely — identity only.
 --------------------------------------------------------------------------------
-local FW, FH = 620, 520
+function BB.RepairIdentity()
+    local cdb = MidnightSenseiCharDB
+    if not cdb or not cdb.bests or not cdb.bests.bossBests then
+        print("|cffFF4444Midnight Sensei:|r No bossBests data found.")
+        return
+    end
+
+    if Core.DetectSpec then Core.DetectSpec() end
+
+    local charName  = UnitName("player") or "?"
+    local specName  = Core.ActiveSpec and Core.ActiveSpec.name      or "?"
+    local className = Core.ActiveSpec and Core.ActiveSpec.className or "?"
+
+    if specName == "?" then
+        print("|cffFFAA00Midnight Sensei Boss Board:|r Spec not detected yet — try again after fully loading in.")
+        return
+    end
+
+    local patched = 0
+    for _, entry in pairs(cdb.bests.bossBests) do
+        local changed = false
+        if not entry.charName  or entry.charName  == "?" then entry.charName  = charName  ; changed = true end
+        if not entry.specName  or entry.specName  == "?" then entry.specName  = specName  ; changed = true end
+        if not entry.className or entry.className == "?" then entry.className = className ; changed = true end
+        if changed then patched = patched + 1 end
+    end
+
+    UpdateSharedSnapshot()
+    BB.RefreshUI()
+
+    print(string.format(
+        "|cff00D1FFMidnight Sensei Boss Board:|r Identity repair complete — patched: %d entr%s",
+        patched, patched == 1 and "y" or "ies"))
+end
+local FW, FH = 620, 540
 
 local function CreateRow(parent, idx)
     if rowFrames[idx] then return rowFrames[idx] end
@@ -405,11 +456,37 @@ local function PopulateRows(scrollChild, entries)
         local g = entry.bestGrade or "?"
         row.scoreText:SetText("|cff"..GHex(s)..g.."  "..s.."|r")
 
-        -- Hover highlight
+        -- Click to view best performance feedback
         row:EnableMouse(true)
+        row:SetScript("OnMouseUp", function(r, btn)
+            if btn == "LeftButton" then
+                -- Build a synthetic enc table that ShowEncounterDetail understands
+                local syntheticEnc = {
+                    finalScore      = entry.bestScore,
+                    finalGrade      = entry.bestGrade,
+                    gradeLabel      = entry.bestGradeLabel or "",
+                    gradeColor      = nil,
+                    specName        = entry.specName,
+                    className       = entry.className,
+                    charName        = entry.charName,
+                    bossName        = entry.bossName,
+                    instanceName    = entry.instanceName,
+                    diffLabel       = entry.diffLabel,
+                    keystoneLevel   = entry.keystoneLevel,
+                    encType         = entry.encType,
+                    isBoss          = true,
+                    duration        = entry.bestDuration or 0,
+                    timestamp       = entry.bestTimestamp,
+                    feedback        = entry.bestFeedback or {},
+                    componentScores = entry.bestComponents or {},
+                }
+                if MS.UI and MS.UI.ShowEncounterDetail then
+                    MS.UI.ShowEncounterDetail(syntheticEnc)
+                end
+            end
+        end)
         row:SetScript("OnEnter", function(r)
             r:SetBackdropColor(COLOR.ROW_HOVER[1], COLOR.ROW_HOVER[2], COLOR.ROW_HOVER[3], COLOR.ROW_HOVER[4])
-            -- Tooltip with full details
             GameTooltip:SetOwner(r, "ANCHOR_RIGHT")
             GameTooltip:SetText((entry.bossName or "?"), 1, 0.82, 0)
             if entry.instanceName and entry.instanceName ~= "" then
@@ -419,6 +496,9 @@ local function PopulateRows(scrollChild, entries)
             GameTooltip:AddLine("Date: " .. FmtDate(entry.bestTimestamp), 0.6, 0.6, 0.6)
             if (entry.killCount or 0) > 0 then
                 GameTooltip:AddLine("Kills tracked: " .. entry.killCount, 0.6, 0.6, 0.6)
+            end
+            if entry.bestFeedback and #entry.bestFeedback > 0 then
+                GameTooltip:AddLine("Click to view feedback", 0.0, 0.82, 1.0)
             end
             GameTooltip:Show()
         end)
@@ -478,7 +558,7 @@ local function CreateBossBoardFrame()
 
     local f = CreateFrame("Frame", "MidnightSenseiBossBoard", UIParent, "BackdropTemplate")
     f:SetSize(FW, FH)
-    f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    f:SetPoint("CENTER", UIParent, "CENTER", 80, 0)
     f:SetFrameStrata("HIGH")
     f:SetMovable(true)
     f:SetClampedToScreen(true)
@@ -487,6 +567,7 @@ local function CreateBossBoardFrame()
     f:SetScript("OnDragStart", function(self) self:StartMoving() end)
     f:SetScript("OnDragStop",  function(self) self:StopMovingOrSizing() end)
     BD(f, COLOR.BG, COLOR.BORDER_GOLD)
+    f:Hide()  -- explicit initial state so Toggle is unambiguous on first call
 
     -- ── Title bar ────────────────────────────────────────────────────────────
     local tBar = CreateFrame("Frame", nil, f, "BackdropTemplate")
@@ -508,7 +589,14 @@ local function CreateBossBoardFrame()
     xFs:SetText("|cffFF4444X|r")
     xBtn:SetScript("OnClick", function() f:Hide() end)
 
-    -- ── Tab row (y = -30) ────────────────────────────────────────────────────
+    -- ── Description ──────────────────────────────────────────────────────────
+    local descText = TF(f, 9, "CENTER")
+    descText:SetPoint("TOPLEFT",  f, "TOPLEFT",  8, -30)
+    descText:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -30)
+    descText:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+    descText:SetText("Your all-time highest score per boss in Midnight — click any row to review your best performance feedback")
+
+    -- ── Tab row (y = -44) ────────────────────────────────────────────────────
     local tabDefs = {
         { key="dungeon", label="Dungeons" },
         { key="raid",    label="Raids"    },
@@ -519,7 +607,7 @@ local function CreateBossBoardFrame()
     for i, td in ipairs(tabDefs) do
         local tb = CreateFrame("Button", nil, f, "BackdropTemplate")
         tb:SetSize(tabW, 24)
-        tb:SetPoint("TOPLEFT", f, "TOPLEFT", (i-1)*tabW, -28)
+        tb:SetPoint("TOPLEFT", f, "TOPLEFT", (i-1)*tabW, -44)
         BD(tb, COLOR.TAB_IDLE, COLOR.BORDER)
         tb.tabKey = td.key
         tb.fs = TF(tb, 10, "CENTER") ; tb.fs:SetPoint("CENTER")
@@ -532,10 +620,10 @@ local function CreateBossBoardFrame()
         table.insert(f.tabBtns, tb)
     end
 
-    -- ── Sort header row (y = -52) ─────────────────────────────────────────────
+    -- ── Sort header row (y = -68) ─────────────────────────────────────────────
     local hdr = CreateFrame("Frame", nil, f)
-    hdr:SetPoint("TOPLEFT",  f, "TOPLEFT",   4, -52)
-    hdr:SetPoint("TOPRIGHT", f, "TOPRIGHT", -20, -52)
+    hdr:SetPoint("TOPLEFT",  f, "TOPLEFT",   4, -68)
+    hdr:SetPoint("TOPRIGHT", f, "TOPRIGHT", -20, -68)
     hdr:SetHeight(22)
 
     f.sortBtns = {}
@@ -580,10 +668,10 @@ local function CreateBossBoardFrame()
     SortHdr("DIFF / BOSS","boss",  "LEFT", 296, 240)
     SortHdr("SCORE",      "score", "RIGHT", -4,  60)
 
-    -- ── Scroll frame (starts at y = -74) ─────────────────────────────────────
+    -- ── Scroll frame (starts at y = -90) ─────────────────────────────────────
     local sf = CreateFrame("ScrollFrame", "MidnightSenseiBBScroll", f,
                             "UIPanelScrollFrameTemplate")
-    sf:SetPoint("TOPLEFT",     f, "TOPLEFT",   4, -74)
+    sf:SetPoint("TOPLEFT",     f, "TOPLEFT",   4, -90)
     sf:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -22, 34)
 
     local sc = CreateFrame("Frame", nil, sf)
@@ -622,14 +710,19 @@ local function CreateBossBoardFrame()
 end
 
 function BB.Show()
-    local f = CreateBossBoardFrame()
+    CreateBossBoardFrame()
     RefreshContent()
-    f:Show()
+    bbFrame:Show()
 end
 
 function BB.Toggle()
-    local f = CreateBossBoardFrame()
-    if f:IsShown() then f:Hide() else BB.Show() end
+    CreateBossBoardFrame()
+    if bbFrame:IsShown() then
+        bbFrame:Hide()
+    else
+        RefreshContent()
+        bbFrame:Show()
+    end
 end
 
 --------------------------------------------------------------------------------
