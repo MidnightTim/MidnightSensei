@@ -214,8 +214,8 @@ local function BroadcastToAll(payload, whisperGuild)
         WhisperOnlineGuildMembers(payload)
     end
 
-    -- Group channels
-    if IsInRaid() then
+    -- Group channels — skip LFG/LFR instance groups (WoW prints system error for those)
+    if IsInRaid() and not IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
         SafeSend(LB_PREFIX, payload, "RAID")
     elseif IsInGroup() and not IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
         SafeSend(LB_PREFIX, payload, "PARTY")
@@ -466,10 +466,13 @@ end
 
 function LB.QueryAllFriends()
     if #friendList == 0 then return end
-    -- Stagger 0.5s apart — 20 friends = 10s total, well within WoW addon message limits
+    local myFullName = UnitName("player") .. "-" .. (GetRealmName() or "")
+    local payload = table.concat({ "REQD", Core.VERSION, myFullName }, "|")
+    -- Send silently — no chat output. Players see online/offline status
+    -- in the leaderboard window itself. Only /ms friend <name> prints to chat.
     for i, name in ipairs(friendList) do
         C_Timer.After((i - 1) * 0.5, function()
-            LB.QueryFriend(name)
+            pcall(C_ChatInfo.SendAddonMessage, LB_PREFIX, payload, "WHISPER", name)
         end)
     end
 end
@@ -734,10 +737,6 @@ Core.On(Core.EVENTS.SESSION_READY, function()
             end
         end
         LB.RefreshUI()
-    end)
-    -- Query all manual friends after a short delay so they're loaded first
-    C_Timer.After(6.0, function()
-        LB.QueryAllFriends()
     end)
 end)
 Core.On(Core.EVENTS.SPEC_CHANGED,  function() C_Timer.After(1.0, BroadcastHello) end)
@@ -2254,6 +2253,8 @@ function LB.RefreshUI()
     if lbFrame and lbFrame:IsShown() then RefreshContent() end
 end
 
+local friendsQueried = false  -- only query once per session, on first Friends tab open
+
 local function SetActiveTab(key)
     activeTab = key
     if lbFrame and lbFrame.socialTabs then
@@ -2261,6 +2262,12 @@ local function SetActiveTab(key)
             local isActive = (tab.key == key)
             BD(tab, isActive and COLOR.TAB_ACTIVE or COLOR.TAB_IDLE, COLOR.BORDER)
         end
+    end
+    -- Defer friend queries until the player actually opens the Friends tab.
+    -- This avoids flooding chat with "No player named X" system messages on login.
+    if key == "friends" and not friendsQueried and #friendList > 0 then
+        friendsQueried = true
+        LB.QueryAllFriends()
     end
     RefreshContent()
 end

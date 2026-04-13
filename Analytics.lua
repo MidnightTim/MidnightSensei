@@ -816,13 +816,20 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
     local neverUsed = {}
     local underused = {}
 
+    local interruptNeverUsed = {}  -- informational only, not penalised
+
     if next(cdTracking) then
         for _, cd in ipairs(spec.majorCooldowns or {}) do
             local data = cdTracking[cd.id]
             if data then
                 local minSecs = cd.minFightSeconds or 30
                 local label = data.label or cd.label or ("Spell "..cd.id)
-                if data.useCount == 0 and duration >= minSecs then
+                if cd.isInterrupt then
+                    -- Interrupts: track but never penalise — collect for informational note only
+                    if data.useCount == 0 and duration >= minSecs then
+                        table.insert(interruptNeverUsed, label)
+                    end
+                elseif data.useCount == 0 and duration >= minSecs then
                     table.insert(neverUsed, label)
                 elseif data.useCount < expectedMult and duration >= minSecs then
                     table.insert(underused,
@@ -833,7 +840,9 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
     else
         if duration >= 30 then
             for _, cd in ipairs(spec.majorCooldowns or {}) do
-                if cd.label then table.insert(neverUsed, cd.label) end
+                if not cd.isInterrupt and cd.label then
+                    table.insert(neverUsed, cd.label)
+                end
             end
         end
     end
@@ -852,6 +861,8 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
                 table.concat(neverUsed, ", ") .. " — " .. action .. ".")
         end
     end
+
+    -- Interrupt note appended at the very bottom after all feedback — see end of function
 
     -- ── Activity / Downtime ──────────────────────────────────────────────────
     if actScore < 85 and totalGCDs > 0 then
@@ -1090,6 +1101,12 @@ function Analytics.GenerateFeedback(scores, duration, inferSimplified)
 
     -- Cap at 8 — enough room for Biggest Gain + all meaningful coaching points
     while #feedback > 8 do table.remove(feedback) end
+
+    -- Interrupt note always appended last — friendly reminder, never penalised, never buried
+    if #interruptNeverUsed > 0 then
+        table.insert(feedback, "Note: " .. table.concat(interruptNeverUsed, ", ") ..
+            " — this is your interrupt. Not used this fight — no penalty.")
+    end
 
     return feedback
 end

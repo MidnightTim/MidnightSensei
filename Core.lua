@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.3.10"
+    Core.VERSION = ver or "1.4.0"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,70 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.0",
+        tagline = "Class Tuning & Refinement — Full Spec Database Audit",
+        date    = "April 2026",
+        changes = {
+            -- Spec DB methodology
+            "Full talent tree PASSIVE audit completed across all 13 classes — passive spells can no longer be accidentally tracked as castable abilities",
+            "Talent snapshot tool upgraded — now captures ALL nodes (ACTIVE and INACTIVE), adds PASSIVE column, entryID, rank/maxRank, and summary counts",
+            "Debug talent export now shows Total/ACTIVE/INACTIVE/PASSIVE counts in header — passive entries flagged inline to prevent future spec DB errors",
+            "Cross-spec contamination check run against all uploaded snapshots — one misattribution (Red Moon in Guardian) found and corrected",
+            "isInterrupt flag added to spec DB — interrupt abilities tracked but never penalised; informational note appended at bottom of feedback",
+            -- Warlock
+            "Affliction: Malevolence corrected to 442726, Dark Harvest corrected to 1257052, Phantom Singularity and Vile Taint removed (pruned in Midnight 12.0)",
+            "Affliction: Wither (445468) added as talentGated CD — confirmed non-PASSIVE nodeID 94840",
+            "Affliction: Unstable Affliction, Drain Soul (686), Seed of Corruption added to rotational",
+            "Affliction: Drain Soul 388667 removed — confirmed PASSIVE nodeID 72045; 686 baseline covers tracking",
+            "Affliction: Nightfall added to procBuffs (VERIFY C_UnitAuras)",
+            "Demonology: Full PASSIVE audit — Diabolic Ritual, Summon Vilefiend, Reign of Tyranny, Doom all confirmed PASSIVE and removed",
+            "Demonology: Hand of Gul'dan corrected to 105174 (talent cast ID); 172 baseline removed — was silently never matching",
+            "Demonology: Grimoire: Fel Ravager marked isInterrupt — DPS summon + interrupt, not penalised if unused",
+            "Demonology: Demonbolt, Dark Harvest added to rotational; Summon Doomguard added to majorCooldowns",
+            "Destruction: Malevolence corrected to 442726, Havoc removed (not in Destruction tree), Immolate removed (not in spell list)",
+            "Destruction: Incinerate corrected to 686 (spec-variant baseline), Diabolic Ritual and Devastation removed (confirmed PASSIVE)",
+            "Destruction: Conflagrate, Shadowburn, Rain of Fire added to rotational",
+            -- Demon Hunter
+            "Havoc: Fel Barrage removed (not in Midnight 12.0), Chaos Strike corrected to 344862 (spec-variant)",
+            "Havoc: Essence Break and Felblade added to rotational — confirmed non-PASSIVE ACTIVE",
+            "Havoc: Furious Gaze and Unbound Chaos proc buffs flagged VERIFY — not confirmed in any snapshot",
+            "Vengeance: Metamorphosis corrected to 191427, Demon Spikes corrected to 203720, Fracture to 344859, Soul Cleave to 344862",
+            "Vengeance: Soul Barrier removed (not in Midnight 12.0), Spirit Bomb and Felblade added to rotational",
+            "Vengeance: Sigil of Spite added to majorCooldowns — confirmed non-PASSIVE ACTIVE",
+            "Devourer: Full PASSIVE audit — Impending Apocalypse, Demonsurge, Midnight, Eradicate all confirmed PASSIVE and removed",
+            "Devourer: Soul Immolation retained as sole majorCooldown — only confirmed non-PASSIVE trackable CD in the tree",
+            "Devourer: scoreWeights adjusted to reflect reduced CD tracking (cooldownUsage 30 -> 25, activity 35 -> 40)",
+            "Lua brace error fixed — duplicate unclosed stub in Havoc entry caused entire Demon Hunter class to be one depth level too deep",
+            -- Shaman
+            "Elemental: Tempest removed — confirmed PASSIVE nodeID 94892",
+            "Enhancement: Feral Spirit, Ascendance, Primordial Wave all removed — confirmed PASSIVE or not in Midnight 12.0",
+            "Enhancement: Maelstrom Weapon procBuff corrected to 187880 (was 344179 — wrong ID)",
+            "Enhancement: Surging Totem added to majorCooldowns, Crash Lightning, Lava Lash, Voltaic Blaze added to rotational",
+            "Restoration Shaman: Call of the Ancestors removed — confirmed PASSIVE nodeID 94888",
+            -- Evoker
+            "Devastation: Pyre added to rotational, Quell added as isInterrupt",
+            "Preservation: Emerald Communion removed (not in tree), Tip the Scales corrected to 370553 (was 374348 — Renewing Blaze)",
+            "Preservation: Time Dilation added to majorCooldowns, Temporal Anomaly and Echo added to rotational",
+            "Augmentation: Eruption corrected to 395160 (was 359618 — wrong ID), Time Skip and Blistering Scales added to majorCooldowns",
+            "Augmentation: Quell added as isInterrupt",
+            -- Druid
+            "Balance: Starfall moved from majorCooldowns to rotational (spender not a burst CD), Force of Nature and Fury of Elune added",
+            "Balance: Wrath added to rotational — primary AP generator filler was missing",
+            "Feral: Shred added to rotational (primary CP builder was missing), Convoke the Spirits added as talentGated CD",
+            "Feral: Incarnation: Avatar of Ashamane removed (not in Feral talent tree), Predatory Swiftness removed (unconfirmed)",
+            "Feral: Frantic Frenzy, Feral Frenzy added as talentGated CDs, Primal Wrath added to rotational",
+            "Guardian: Moonfire added to rotational (priority #1), Maul added to rotational, Lunar Beam added to majorCooldowns",
+            "Guardian: Survival Instincts removed (not in rotation guide priority list)",
+            "Guardian: Red Moon correctly identified as Balance-only — removed from Guardian after cross-spec audit",
+            "Restoration Druid: Incarnation: Tree of Life and Flourish removed (not in talent tree or spell list)",
+            "Restoration Druid: Wild Growth moved from majorCooldowns to rotational, Convoke the Spirits added as talentGated CD",
+            "Restoration Druid: Ironbark, Nature's Swiftness, Innervate added to majorCooldowns, Lifebloom added to rotational",
+            -- Feedback
+            "Interrupt note moved to always appear at the very bottom of feedback — never competes with scored items",
+            "Interrupt note appended after the 8-item cap so it is always visible regardless of feedback volume",
+        },
+    },
     {
         version = "1.3.10",
         tagline = "HUD Overhaul, Boss Board Feedback, Demonology Pass & Quality of Life",
@@ -1300,12 +1364,12 @@ Core.SPEC_DATABASE = {
             -- not detectable via C_UnitAuras.GetPlayerAuraBySpellID.
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 470411, label = "Flame Shock",     minFightSeconds = 15 },                          -- confirmed Elemental Spell List; opener DoT
-                { id = 51505,  label = "Lava Burst",      minFightSeconds = 15 },                          -- confirmed Elemental Talent nodeID 103598
-                { id = 462620, label = "Earthquake",      minFightSeconds = 30, talentGated = true },      -- confirmed nodeID 80985; AoE Maelstrom spender
-                { id = 117014, label = "Elemental Blast", minFightSeconds = 20, talentGated = true },      -- confirmed nodeID 80984; ST Maelstrom spender
-                { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true },      -- confirmed nodeID 81007; AoE Flame Shock, replaces Primordial Wave role
-                { id = 454009, label = "Tempest",         minFightSeconds = 30, talentGated = true },      -- confirmed nodeID 94892 -- VERIFY cast ID vs aura ID
+                { id = 470411, label = "Flame Shock",     minFightSeconds = 15 },                          -- confirmed spell list; opener DoT
+                { id = 51505,  label = "Lava Burst",      minFightSeconds = 15 },                          -- non-PASSIVE ACTIVE nodeID 103598
+                { id = 462620, label = "Earthquake",      minFightSeconds = 30, talentGated = true },      -- non-PASSIVE ACTIVE nodeID 80985
+                { id = 117014, label = "Elemental Blast", minFightSeconds = 20, talentGated = true },      -- non-PASSIVE ACTIVE nodeID 80984
+                { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true },      -- non-PASSIVE ACTIVE nodeID 81007
+                -- Tempest (454009) removed — confirmed PASSIVE nodeID 94892
             },
             priorityNotes = {
                 "Maintain Flame Shock on all targets for Lava Surge procs (not directly tracked)",
@@ -1313,39 +1377,40 @@ Core.SPEC_DATABASE = {
                 "Stormkeeper before empowered Lightning Bolt casts for maximum burst",
                 "Spend Maelstrom with Earth Shock (single target) or Earthquake (AoE) — avoid overcap at 90",
                 "Ascendance for burst — automatically summons Fire Elemental in Midnight 12.0",
-                "Voltaic Blaze for AoE Flame Shock spread when talented — replaces Primordial Wave role",
-                "Tempest for burst windows when talented — high priority during Stormkeeper",
+                "Voltaic Blaze for AoE Flame Shock spread when talented",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Midnight 12.0 verified against Elemental Spell List and Talent tree (April 2026)",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Elemental talent tree 108 nodes (April 2026)",
         },
 
-        -- Enhancement
-        -- Added:    Primordial Wave (375982), Sundering (197214) to majorCooldowns
-        -- Removed:  Flame Shock (188389) from uptimeBuffs — target debuff, not trackable
-        -- Removed:  debuffUptime from scoreWeights (no trackable uptimeBuffs remain)
-        -- Kept:     Maelstrom Weapon (344179) in procBuffs (confirmed player self-buff)
-        --           Feral Spirit (51533), Ascendance (114051), Doom Winds (384352) in majorCooldowns
-        -- Moved to priorityNotes: Flame Shock with "not directly tracked" caveat, expanded
-        --           Maelstrom spending guidance, Crash Lightning, Primordial Wave, Doom Winds burst
-        -- Not added: Hot Hand — player aura exists but needs in-game C_UnitAuras verification.
-        --            Legacy of the Frost Witch — same, needs verification. Omitted until confirmed.
-        -- Reason:   Aligns spec with player-aura-only tracking model.
+        -- Enhancement (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Feral Spirit: was 51533 — talent tree confirms 469314 PASSIVE. Removed entirely.
+        -- Ascendance: was 114051 — not in Enhancement talent tree at all. Removed.
+        -- Primordial Wave (375982): not in Enhancement talent tree or spell list. Removed.
+        -- Maelstrom Weapon procBuff: was 344179 — spell list confirms 187880. Corrected.
+        -- Surging Totem (444995) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 94877
+        -- Crash Lightning (187874) added to rotational — non-PASSIVE ACTIVE nodeID 80974
+        -- Lava Lash (60103) added to rotational — non-PASSIVE ACTIVE nodeID 109389
+        -- Voltaic Blaze (470057) added as talentGated rotational — non-PASSIVE ACTIVE nodeID 80954
         [2] = {
             name = "Enhancement", role = "DPS",
             resourceType = 11, resourceLabel = "MAELSTROM", overcapAt = 140,
             majorCooldowns = {
-                { id = 51533,  label = "Feral Spirit",    expectedUses = "on CD"          },
-                { id = 114051, label = "Ascendance",      expectedUses = "burst windows"  },
-                { id = 375982, label = "Primordial Wave", expectedUses = "on CD (talent)" },
-                { id = 197214, label = "Sundering",       expectedUses = "on CD (talent)" },
-                { id = 384352, label = "Doom Winds",      expectedUses = "on CD (talent)" },
+                { id = 384352, label = "Doom Winds",    expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 80959
+                { id = 197214, label = "Sundering",     expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 80975
+                { id = 444995, label = "Surging Totem", expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 94877
+                -- Feral Spirit (51533/469314) removed — PASSIVE
+                -- Ascendance (114051) removed — not in Enhancement talent tree
+                -- Primordial Wave (375982) removed — not in Midnight 12.0
             },
-            -- uptimeBuffs intentionally empty: Flame Shock is a target debuff,
-            -- not detectable via C_UnitAuras.GetPlayerAuraBySpellID.
             uptimeBuffs = {},
             procBuffs = {
-                { id = 344179, label = "Maelstrom Weapon", maxStackTime = 20 },
+                { id = 187880, label = "Maelstrom Weapon", maxStackTime = 20 },  -- confirmed spell list (was 344179)
+            },
+            rotationalSpells = {
+                { id = 187874, label = "Crash Lightning", minFightSeconds = 15 },                     -- non-PASSIVE ACTIVE nodeID 80974
+                { id = 60103,  label = "Lava Lash",       minFightSeconds = 15 },                     -- non-PASSIVE ACTIVE nodeID 109389
+                { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 80954
             },
             priorityNotes = {
                 "Maintain Flame Shock on targets for Hot Hand procs and Lava Lash damage (not directly tracked)",
@@ -1353,12 +1418,12 @@ Core.SPEC_DATABASE = {
                 "Stormstrike on cooldown — primary builder and damage source",
                 "Lava Lash to spread Flame Shock in multi-target and spend Maelstrom stacks",
                 "Crash Lightning before AoE pulls to apply the ground effect",
-                "Use Primordial Wave before Lightning Bolt for overloaded hits if talented",
-                "Doom Winds: use at peak Maelstrom / Feral Spirit window for burst if talented",
+                "Doom Winds at peak Maelstrom / burst window when talented",
+                "Surging Totem on cooldown when talented — significant throughput increase",
                 "Avoid Maelstrom Weapon overcap — spend with Lightning Bolt or Elemental Blast",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 30, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Enhancement Shaman guide",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Enhancement talent tree 102 nodes (April 2026)",
         },
 
         -- Restoration (Midnight 12.0 pass — April 2026)
@@ -1382,11 +1447,11 @@ Core.SPEC_DATABASE = {
             name = "Restoration", role = "HEALER",
             resourceType = 0,
             majorCooldowns = {
-                { id = 98008,  label = "Spirit Link Totem",  expectedUses = "dangerous health disparities" },  -- confirmed nodeID 81041
-                { id = 444995, label = "Surging Totem",      expectedUses = "before damage windows"        },  -- confirmed nodeID 94877; replaces Cloudburst
-                { id = 73685,  label = "Unleash Life",       expectedUses = "on CD — pre-heal amplifier"   },  -- confirmed nodeID 92677
-                { id = 114052, label = "Ascendance",         expectedUses = "emergency throughput"         },  -- confirmed nodeID 81032
-                { id = 443450, label = "Call of the Ancestors", expectedUses = "on CD", talentGated = true },  -- confirmed nodeID 94888 -- VERIFY
+                { id = 98008,  label = "Spirit Link Totem", expectedUses = "dangerous health disparities" },  -- non-PASSIVE ACTIVE nodeID 81041
+                { id = 444995, label = "Surging Totem",     expectedUses = "before damage windows"        },  -- non-PASSIVE ACTIVE nodeID 94877
+                { id = 73685,  label = "Unleash Life",      expectedUses = "on CD — pre-heal amplifier"   },  -- non-PASSIVE ACTIVE nodeID 92675
+                { id = 114052, label = "Ascendance",        expectedUses = "emergency throughput"         },  -- non-PASSIVE ACTIVE nodeID 81032
+                -- Call of the Ancestors (443450) removed — confirmed PASSIVE nodeID 94888
             },
             uptimeBuffs = {},
             rotationalSpells = {
@@ -1406,7 +1471,7 @@ Core.SPEC_DATABASE = {
                 "Avoid excessive overheal — cast slightly later on targets above 70% health",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Midnight 12.0 verified against Restoration Spell List and Talent tree (April 2026)",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Restoration talent tree 110 nodes (April 2026)",
         },
     },
 
@@ -1506,78 +1571,78 @@ Core.SPEC_DATABASE = {
     [9] = {
         className = "Warlock",
 
-        -- Affliction
-        -- Added:    Malevolence (458355), Dark Harvest (387166) to majorCooldowns
-        --           rotationalSpells: Haunt (48181) — short-CD rotation-priority spell,
-        --           tracked for presence via rotationalSpells bucket.
-        -- Removed:  Agony, Corruption, Unstable Affliction from uptimeBuffs (enemy debuffs,
-        --           not detectable via C_UnitAuras.GetPlayerAuraBySpellID)
-        -- Removed:  debuffUptime from scoreWeights (no trackable uptimeBuffs remain)
-        -- Moved to priorityNotes: DoT maintenance, shard pooling, burst alignment
-        -- Note:     Nightfall (264571) is a real player aura but needs in-game verification
-        --           via C_UnitAuras before adding to procBuffs — omitted until confirmed.
-        -- Reason:   Aligns spec with addon's player-aura-only tracking model.
+        -- Affliction (PASSIVE audit complete — April 2026)
+        -- Verified against full Affliction talent tree snapshot 103 nodes
+        -- Wither (445468): nodeID 94840 confirmed non-PASSIVE ACTIVE ✅
+        -- Drain Soul 388667: nodeID 72045 confirmed PASSIVE — removed from rotational
+        --   686 (baseline) remains as the trackable cast ID
+        -- All other entries confirmed non-PASSIVE from talent snapshot
         [1] = {
             name = "Affliction", role = "DPS",
             resourceType = 7, resourceLabel = "SOUL SHARDS", overcapAt = 5,
             majorCooldowns = {
-                { id = 205180, label = "Summon Darkglare",     expectedUses = "on CD"          },
-                { id = 458355, label = "Malevolence",          expectedUses = "on CD"          },
-                { id = 387166, label = "Dark Harvest",         expectedUses = "on CD (talent)" },
-                { id = 205179, label = "Phantom Singularity",  expectedUses = "on CD (talent)" },
-                { id = 278350, label = "Vile Taint",           expectedUses = "on CD (talent)" },
+                { id = 205180,  label = "Summon Darkglare", expectedUses = "on CD"           },  -- nodeID 72034 non-PASSIVE ACTIVE
+                { id = 442726,  label = "Malevolence",      expectedUses = "on CD"           },  -- nodeID 94842 non-PASSIVE ACTIVE
+                { id = 1257052, label = "Dark Harvest",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 109860 non-PASSIVE ACTIVE
+                { id = 445468,  label = "Wither",           expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94840 non-PASSIVE ACTIVE confirmed
             },
             rotationalSpells = {
-                -- Haunt has a ~15s CD making it rotation-priority rather than burst-window.
-                -- Tracked via ABILITY_USED; flagged only if never used in fights >= 45s.
-                { id = 48181, label = "Haunt", minFightSeconds = 20 },  -- 15s CD, should appear early
+                { id = 48181,   label = "Haunt",               minFightSeconds = 20 },  -- nodeID 72032 non-PASSIVE ACTIVE
+                { id = 1259790, label = "Unstable Affliction",  minFightSeconds = 15 },  -- nodeID 109862 non-PASSIVE ACTIVE
+                { id = 686,     label = "Drain Soul",           minFightSeconds = 15 },  -- baseline spell list; 388667 removed (PASSIVE nodeID 72045)
+                { id = 27243,   label = "Seed of Corruption",   minFightSeconds = 30 },  -- nodeID 72050 non-PASSIVE ACTIVE
             },
-            -- uptimeBuffs intentionally empty: Agony, Corruption, UA are enemy debuffs
-            -- and cannot be tracked via C_UnitAuras.GetPlayerAuraBySpellID.
             uptimeBuffs = {},
+            procBuffs = {
+                { id = 108558, label = "Nightfall", maxStackTime = 12 },  -- nodeID 72047 PASSIVE ACTIVE — proc aura, VERIFY C_UnitAuras
+            },
             priorityNotes = {
                 "Maintain Agony, Corruption, and Unstable Affliction on all targets (not directly tracked)",
                 "Haunt on cooldown for the damage amp window",
+                "Drain Soul as primary filler — generates Soul Shards on kill",
                 "Pool Soul Shards before burst windows — avoid overcapping",
                 "Align Malevolence and Dark Harvest with Darkglare for stacked burst",
                 "Malefic Rapture to spend Soul Shards during Darkglare windows",
-                "Phantom Singularity and Vile Taint on cooldown if talented",
+                "Seed of Corruption for AoE — spreads Corruption to all nearby targets",
+                "Spend Nightfall procs immediately on Shadow Bolt",
             },
-            scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Adapted from Icy Veins Affliction Warlock guide",
+            scoreWeights = { cooldownUsage = 35, procUsage = 15, activity = 30, resourceMgmt = 20 },
+            sourceNote = "Midnight 12.0 verified against full Affliction talent tree snapshot 103 nodes (April 2026)",
         },
 
-        -- Demonology (Midnight 12.0 pass — April 2026)
-        -- Fixed:    Malevolence ID corrected 458355 → 442726 (confirmed Spell List)
-        -- Removed:  Summon Vilefiend (264119) — not present in Midnight 12.0 spell or talent files
-        -- Removed:  Power Siphon (264170) from rotationalSpells — not in Midnight 12.0 files
-        -- Added:    Summon Doomguard (1276672) to majorCooldowns — confirmed nodeID 101917
-        -- Added:    Grimoire: Fel Ravager (1276467) as talentGated CD — confirmed nodeID 110197
-        -- Added:    Diabolic Ritual (428514) as talentGated CD — confirmed nodeID 94855
-        -- Added:    Hand of Gul'dan (172) to rotationalSpells — confirmed Spell List; core shard spender
-        -- Added:    Demonbolt (264178) to rotationalSpells — confirmed Spell List; Demonic Core spender
-        -- Added:    Doom (460551) as talentGated rotational — confirmed nodeID 110200
-        -- Added:    Dark Harvest (1257052) as talentGated rotational — confirmed Spell List
+        -- Demonology (Full talent tree pass — April 2026)
+        -- Verified against full talent tree snapshot (104 nodes, ACTIVE + INACTIVE)
+        -- Hand of Gul'dan: talent version is 105174 (nodeID 101891) — tracking both
+        --   172 (baseline) and 105174 (talent empowered) for full coverage
+        -- Summon Vilefiend: correct Midnight 12.0 ID confirmed as 1251778 (nodeID 109252)
+        --   was previously 264119 (wrong) then removed — now restored with correct ID
+        -- Reign of Tyranny: INACTIVE in this build — added as talentGated CD (nodeID 110201)
+        -- Dark Harvest 1257052: not in talent tree — baseline/granted spell, no change
+        -- Demonbolt 264178: not in talent tree — baseline spell, no change
         [2] = {
             name = "Demonology", role = "DPS",
             resourceType = 7, resourceLabel = "SOUL SHARDS", overcapAt = 5,
             majorCooldowns = {
-                { id = 265187, label = "Summon Demonic Tyrant", expectedUses = "on CD"          },  -- confirmed nodeID 101905
-                { id = 442726, label = "Malevolence",           expectedUses = "on CD"          },  -- confirmed Spell List (was 458355)
-                { id = 104316, label = "Call Dreadstalkers",    expectedUses = "on CD"          },  -- confirmed nodeID 101894
-                { id = 1276672, label = "Summon Doomguard",     expectedUses = "on CD (talent)", talentGated = true },  -- confirmed nodeID 101917
-                { id = 1276467, label = "Grimoire: Fel Ravager", expectedUses = "on CD (talent)", talentGated = true }, -- confirmed nodeID 110197
-                { id = 428514, label = "Diabolic Ritual",       expectedUses = "on CD (talent)", talentGated = true },  -- confirmed nodeID 94855
+                { id = 265187,  label = "Summon Demonic Tyrant",  expectedUses = "on CD"           },  -- nodeID 101905 — not PASSIVE
+                { id = 442726,  label = "Malevolence",            expectedUses = "on CD"           },  -- nodeID 94842 — not PASSIVE
+                { id = 104316,  label = "Call Dreadstalkers",     expectedUses = "on CD"           },  -- nodeID 101894 — not PASSIVE
+                { id = 1276672, label = "Summon Doomguard",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 101917 — not PASSIVE
+                { id = 1276467, label = "Grimoire: Fel Ravager",  expectedUses = "situational",    talentGated = true, isInterrupt = true },  -- nodeID 110197 — not PASSIVE; summon + interrupt
+                -- Removed (confirmed PASSIVE via talent snapshot):
+                -- Diabolic Ritual 428514 — PASSIVE
+                -- Summon Vilefiend 1251778 — PASSIVE (nodeID 109252)
+                -- Reign of Tyranny 1276748 — PASSIVE (nodeID 110201)
             },
             rotationalSpells = {
-                { id = 196277, label = "Implosion",     minFightSeconds = 15 },                          -- confirmed nodeID 101893
-                { id = 172,    label = "Hand of Gul'dan", minFightSeconds = 15 },                        -- confirmed Spell List; core shard spender
-                { id = 264178, label = "Demonbolt",     minFightSeconds = 20 },                          -- confirmed Spell List; Demonic Core spender
-                { id = 460551, label = "Doom",          minFightSeconds = 30, talentGated = true },      -- confirmed nodeID 110200
-                { id = 1257052, label = "Dark Harvest", minFightSeconds = 30, talentGated = true },      -- confirmed Spell List
+                { id = 196277,  label = "Implosion",       minFightSeconds = 15 },                          -- nodeID 101893
+                { id = 105174,  label = "Hand of Gul'dan", minFightSeconds = 15, talentGated = true },      -- nodeID 101891; confirmed cast ID in Demonology
+                { id = 264178,  label = "Demonbolt",       minFightSeconds = 20 },                          -- baseline; Demonic Core spender
+                -- Doom (460551) removed — appears as damage tick in logs but not directly cast via UNIT_SPELLCAST_SUCCEEDED
+                -- Applied automatically; cannot be tracked via cast detection. Re-add if confirmed castable via /ms verify.
+                { id = 1257052, label = "Dark Harvest",    minFightSeconds = 30, talentGated = true },      -- confirmed spell list
             },
             procBuffs = {
-                { id = 267102, label = "Demonic Core", maxStackTime = 20 },  -- confirmed Spell List
+                { id = 267102, label = "Demonic Core", maxStackTime = 20 },  -- confirmed spell list
             },
             priorityNotes = {
                 "Stack demons before Demonic Tyrant — Tyrant extends all active pet durations",
@@ -1589,45 +1654,50 @@ Core.SPEC_DATABASE = {
                 "Avoid Soul Shard overcap — spend with Hand of Gul'dan",
             },
             scoreWeights = { cooldownUsage = 35, procUsage = 25, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against Demonology Spell List and Talent tree (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full talent tree passive audit (April 2026)",
         },
 
-        -- Destruction
-        -- Added:    Malevolence (458355), Cataclysm (152108) to majorCooldowns
-        -- Removed:  Immolate from uptimeBuffs (enemy debuff, not detectable via C_UnitAuras)
-        -- Removed:  debuffUptime from scoreWeights (no trackable uptimeBuffs remain)
-        -- Moved to priorityNotes: Immolate maintenance, Backdraft usage, Havoc cleave
-        -- Not added: Backdraft (117828) to procBuffs/uptimeBuffs — player self-buff but needs
-        --            in-game verification via C_UnitAuras before adding. Omitted until confirmed.
-        -- Reason:   Aligns spec with addon's player-aura-only tracking model.
+        -- Destruction (Full talent tree pass — April 2026)
+        -- Verified against full talent tree (103 nodes) and spell snapshot
+        -- Malevolence: corrected 458355 → 442726 (nodeID 94842 ACTIVE)
+        -- Havoc (80240) removed — not in Destruction talent tree or spell list in Midnight 12.0
+        -- Immolate (348) removed from rotational — not in Destruction spell list or talent tree
+        -- Incinerate: spell list shows 686 as "Incinerate" for Destruction (spec-variant baseline)
+        -- Diabolic Ritual (428514) added as talentGated CD — nodeID 94855 ACTIVE
+        -- Devastation (454735) added as talentGated CD — nodeID 110281 ACTIVE rank 2/2
+        -- Conflagrate (17962) added to rotational — nodeID 72068 ACTIVE; core builder
+        -- Shadowburn (17877) added to rotational — nodeID 72060 ACTIVE; execute finisher
+        -- Rain of Fire (5740) added as talentGated rotational — nodeID 72069 ACTIVE
         [3] = {
             name = "Destruction", role = "DPS",
             resourceType = 7, resourceLabel = "SOUL SHARDS", overcapAt = 5,
             majorCooldowns = {
-                { id = 1122,   label = "Summon Infernal",  expectedUses = "on CD"          },
-                { id = 458355, label = "Malevolence",      expectedUses = "on CD"          },
-                { id = 152108, label = "Cataclysm",        expectedUses = "on CD (talent)" },
-                { id = 80240,  label = "Havoc",            expectedUses = "cleave windows" },
+                { id = 1122,   label = "Summon Infernal",  expectedUses = "on CD"           },  -- nodeID 71985 — not PASSIVE
+                { id = 442726, label = "Malevolence",      expectedUses = "on CD"           },  -- nodeID 94842 — not PASSIVE
+                { id = 152108, label = "Cataclysm",        expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 71974 — not PASSIVE
+                -- Removed (confirmed PASSIVE via talent snapshot):
+                -- Diabolic Ritual 428514 — PASSIVE (nodeID 94855)
+                -- Devastation 454735 — PASSIVE (nodeID 110281)
             },
-            -- uptimeBuffs intentionally empty: Immolate is an enemy debuff and
-            -- cannot be tracked via C_UnitAuras.GetPlayerAuraBySpellID.
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 29722,  label = "Incinerate",   minFightSeconds = 15 },  -- filler, used constantly
-                { id = 116858, label = "Chaos Bolt",   minFightSeconds = 20 },  -- primary spender
-                { id = 348,    label = "Immolate",     minFightSeconds = 15 },  -- opener DoT
+                { id = 686,    label = "Incinerate",   minFightSeconds = 15 },                      -- spell list confirmed; primary filler
+                { id = 116858, label = "Chaos Bolt",   minFightSeconds = 20 },                      -- nodeID 110282 ACTIVE; primary spender
+                { id = 17962,  label = "Conflagrate",  minFightSeconds = 15 },                      -- nodeID 72068 ACTIVE; core builder
+                { id = 17877,  label = "Shadowburn",   minFightSeconds = 20, talentGated = true },  -- nodeID 72060 ACTIVE; execute finisher
+                { id = 5740,   label = "Rain of Fire", minFightSeconds = 30, talentGated = true },  -- nodeID 72069 ACTIVE; AoE
             },
             priorityNotes = {
                 "Maintain Immolate on all targets for shard generation (not directly tracked)",
-                "Use Conflagrate to generate Backdraft charges for cheaper Incinerate casts",
-                "Do not waste Backdraft — cast Incinerate or Chaos Bolt while it is active",
+                "Conflagrate on cooldown — generates Backdraft charges for Incinerate",
+                "Do not waste Backdraft — cast Incinerate or Chaos Bolt while active",
                 "Chaos Bolt is the primary shard spender — align with Summon Infernal and Malevolence",
-                "Use Havoc for Chaos Bolt cleave on two targets",
-                "Cataclysm on cooldown for AoE shard generation and Immolate spread",
-                "Avoid Soul Shard overcap — spend with Chaos Bolt or Shadowburn on low health targets",
+                "Cataclysm on cooldown for AoE shard generation and Immolate spread when talented",
+                "Shadowburn on low-health targets when talented — execute replacement",
+                "Avoid Soul Shard overcap — spend with Chaos Bolt",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Adapted from Icy Veins Destruction Warlock guide",
+            sourceNote = "Midnight 12.0 verified against full Destruction talent tree snapshot 103 nodes (April 2026)",
         },
     },
 
@@ -1726,123 +1796,165 @@ Core.SPEC_DATABASE = {
     [11] = {
         className = "Druid",
 
-        -- Balance
-        -- Removed:  Moonfire (164812), Sunfire (93402) from uptimeBuffs — enemy debuffs
-        -- Removed:  debuffUptime from scoreWeights
-        -- Added:    rotationalSpells: Moonfire (8921), Sunfire (93402), Starsurge (78674)
+        -- Balance (Midnight 12.0 rotation guide pass — April 2026)
+        -- Rotation priority sourced from Icy Veins / Wowhead Balance Druid guide
+        -- Starfall moved from majorCooldowns to rotationalSpells — it's a spender, not a burst CD
+        -- Force of Nature (205636) added as talentGated CD — appears in both hero talent priority lists
+        -- Fury of Elune (202770) added to rotational — high priority during Eclipse in both priority lists
+        -- Wrath (5176) added to rotational — baseline filler, primary AP generator
+        -- Hero talent builds differ (Incarnation vs Celestial Alignment) — both tracked as talentGated
         [1] = {
             name = "Balance", role = "DPS",
             resourceType = 8, resourceLabel = "ASTRAL POWER", overcapAt = 90,
             majorCooldowns = {
-                { id = 194223, label = "Celestial Alignment", expectedUses = "on CD"          },
-                { id = 102560, label = "Incarnation: Elune",  expectedUses = "on CD (talent)" },
-                { id = 191034, label = "Starfall",            expectedUses = "AoE on CD"      },
+                { id = 194223, label = "Celestial Alignment",          expectedUses = "on CD",           talentGated = true },  -- hero talent build 1
+                { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)",  talentGated = true },  -- hero talent build 2
+                { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true },  -- priority #3-5 in both builds
             },
-            -- uptimeBuffs empty: Moonfire and Sunfire are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 8921,  label = "Moonfire",   minFightSeconds = 15 },  -- opener DoT
-                { id = 93402, label = "Sunfire",    minFightSeconds = 15 },  -- opener DoT
-                { id = 78674, label = "Starsurge",  minFightSeconds = 20 },  -- Astral Power spender
+                { id = 8921,   label = "Moonfire",      minFightSeconds = 15 },                      -- priority #1 — maintain DoT
+                { id = 93402,  label = "Sunfire",       minFightSeconds = 15 },                      -- priority #2 — maintain DoT
+                { id = 202770, label = "Fury of Elune", minFightSeconds = 20, talentGated = true },  -- priority #3 — use during Eclipse
+                { id = 191034, label = "Starfall",      minFightSeconds = 20 },                      -- priority #8 — AoE AP spender
+                { id = 78674,  label = "Starsurge",     minFightSeconds = 20 },                      -- priority #9 — main ST spender
+                { id = 5176,   label = "Wrath",         minFightSeconds = 15 },                      -- priority #10 — AP generator filler
             },
             priorityNotes = {
-                "Maintain Moonfire and Sunfire on all targets — do not let them fall off (not directly tracked)",
-                "Celestial Alignment / Incarnation on cooldown — enter Eclipse burst window",
-                "Starsurge during Solar/Lunar Eclipse to spend Astral Power",
-                "Starfall during AoE phases — more efficient than Starsurge at 3+ targets",
-                "Never overcap Astral Power at 90 — spend with Starsurge or Starfall",
+                "Maintain Moonfire and Sunfire on all targets — refresh within pandemic (not directly tracked)",
+                "Fury of Elune during Eclipse or before Force of Nature when talented",
+                "Force of Nature when not in Eclipse and about to enter Solar Eclipse",
+                "Celestial Alignment / Incarnation as burst window — use Force of Nature first",
+                "Starfall to consume Starweaver's Warp procs and for AoE",
+                "Starsurge as main spender — use on movement, near AP cap, or Starweaver's Weft procs",
+                "Wrath to generate Astral Power — never overcap at 90",
             },
             scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Adapted from Icy Veins Balance Druid guide",
+            sourceNote = "Midnight 12.0 verified against Icy Veins Balance Druid rotation guide (April 2026)",
         },
 
-        -- Feral
-        -- Removed:  Rip (1079), Rake (1822) from uptimeBuffs — enemy debuffs, not player self-auras
-        -- Removed:  debuffUptime from scoreWeights
-        -- Added:    rotationalSpells: Rip (1079), Rake (1822), Ferocious Bite (22568)
-        -- Kept:     Predatory Swiftness in procBuffs — real player self-buff (VERIFY C_UnitAuras)
+        -- Feral (PASSIVE audit — April 2026)
+        -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
+        -- Predatory Swiftness (69369) removed from procBuffs — not in talent tree or spell list, VERIFY never confirmed
+        -- Frantic Frenzy (1243807) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82111, confirmed spell list
+        -- Feral Frenzy (274837) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82112, confirmed spell list
+        -- Primal Wrath (285381) added as talentGated rotational — non-PASSIVE ACTIVE nodeID 82120; AoE finisher
         [2] = {
             name = "Feral", role = "DPS",
             resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
             majorCooldowns = {
-                { id = 5217,   label = "Tiger's Fury",      expectedUses = "on CD"          },
-                { id = 106951, label = "Berserk",           expectedUses = "burst windows"  },
-                { id = 102543, label = "Incarnation: King", expectedUses = "on CD (talent)" },
+                { id = 5217,   label = "Tiger's Fury",       expectedUses = "on CD"          },  -- non-PASSIVE ACTIVE nodeID 82124
+                { id = 106951, label = "Berserk",             expectedUses = "burst windows"  },  -- non-PASSIVE ACTIVE nodeID 82101
+                { id = 391528, label = "Convoke the Spirits", expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82114
+                { id = 1243807, label = "Frantic Frenzy",    expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82111
+                { id = 274837, label = "Feral Frenzy",        expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82112
+                -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
             },
-            -- uptimeBuffs empty: Rip and Rake are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 1079,  label = "Rip",            minFightSeconds = 15 },  -- opener bleed
-                { id = 1822,  label = "Rake",           minFightSeconds = 15 },  -- opener bleed
-                { id = 22568, label = "Ferocious Bite", minFightSeconds = 20 },  -- primary spender
-            },
-            procBuffs = {
-                { id = 69369, label = "Predatory Swiftness", maxStackTime = 12 },  -- VERIFY C_UnitAuras
+                { id = 1079,   label = "Rip",            minFightSeconds = 15 },                      -- non-PASSIVE ACTIVE nodeID 82222
+                { id = 1822,   label = "Rake",           minFightSeconds = 15 },                      -- non-PASSIVE ACTIVE nodeID 82199
+                { id = 22568,  label = "Ferocious Bite", minFightSeconds = 20 },                      -- baseline confirmed spell list
+                { id = 5221,   label = "Shred",          minFightSeconds = 15 },                      -- baseline confirmed spell list; primary CP builder
+                { id = 285381, label = "Primal Wrath",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82120; AoE finisher
             },
             priorityNotes = {
-                "Maintain Rip and Rake on all targets — core bleed damage (not directly tracked)",
-                "Tiger's Fury on cooldown — Energy refill and 15% damage buff",
-                "Berserk / Incarnation for burst — massive CP generation rate",
-                "Shred to build combo points, Ferocious Bite to spend at 5 CP",
-                "Spend Predatory Swiftness procs immediately — free instant Regrowth",
+                "Ferocious Bite on Apex Predator's Craving procs — highest priority",
+                "Maintain Rip at 4+ combo points with Tiger's Fury active when possible",
+                "Ferocious Bite at 5 CP with Berserk active, 4 CP without",
+                "Sync Berserk and Convoke the Spirits with Tiger's Fury for burst",
+                "Tiger's Fury on cooldown — Energy refill and damage buff",
+                "Maintain Rake — refresh in pandemic, prioritise Tiger's Fury snapshots",
+                "Shred to generate combo points — primary filler",
+                "Primal Wrath as AoE finisher when talented — replaces Ferocious Bite on multi-target",
             },
-            scoreWeights = { cooldownUsage = 25, procUsage = 25, activity = 30, resourceMgmt = 20 },
-            sourceNote = "Adapted from Icy Veins Feral Druid guide",
+            scoreWeights = { cooldownUsage = 25, procUsage = 15, activity = 35, resourceMgmt = 25 },
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Feral talent tree 114 nodes (April 2026)",
         },
 
-        -- Guardian
+        -- Guardian (PASSIVE audit — April 2026)
+        -- Maul/Raze (6807) added to rotational — non-PASSIVE ACTIVE nodeID 82127; Rage spender
+        --   Note: 6807 shows as "Raze" in Guardian spell list (spec-variant)
+        -- Lunar Beam (204066) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 92587
+        -- Red Moon: confirmed in Balance spell list only — NOT present in Guardian files, not tracked
+        -- Catform spells excluded — Bear form only for Guardian
         [3] = {
             name = "Guardian", role = "TANK",
             resourceType = 8, resourceLabel = "RAGE", overcapAt = 100,
             majorCooldowns = {
-                { id = 102558, label = "Incarn: Guardian",      expectedUses = "on CD"         },
-                { id = 22812,  label = "Barkskin",              expectedUses = "magic damage"  },
-                { id = 61336,  label = "Survival Instincts",    expectedUses = "emergency"     },
-                { id = 22842,  label = "Frenzied Regeneration", expectedUses = "sustained dmg" },
+                { id = 102558, label = "Incarnation: Guardian", expectedUses = "on CD"           },  -- non-PASSIVE ACTIVE nodeID 82136
+                { id = 22812,  label = "Barkskin",              expectedUses = "magic damage"    },  -- baseline confirmed spell list
+                { id = 22842,  label = "Frenzied Regeneration", expectedUses = "low health"      },  -- non-PASSIVE ACTIVE nodeID 82220
+                { id = 204066, label = "Lunar Beam",            expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 92587
             },
             uptimeBuffs = {
-                { id = 192081, label = "Ironfur", targetUptime = 70 },
+                { id = 192081, label = "Ironfur", targetUptime = 70 },  -- non-PASSIVE ACTIVE nodeID 82227
             },
             rotationalSpells = {
-                { id = 33917,  label = "Mangle",  minFightSeconds = 20 },
-                { id = 77758,  label = "Thrash",  minFightSeconds = 20 },
+                { id = 8921,    label = "Moonfire",  minFightSeconds = 15 },                      -- baseline; rotation priority #1
+                { id = 33917,   label = "Mangle",    minFightSeconds = 15 },                      -- baseline; rotation priority #4
+                { id = 77758,   label = "Thrash",    minFightSeconds = 15 },                      -- baseline; rotation priority #5
+                { id = 6807,    label = "Maul",      minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82127; Rage spender
+                { id = 213764,  label = "Swipe",     minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82223; filler only
+                -- Red Moon (1252871) removed — confirmed in Balance spell list only, not Guardian
             },
             tankMetrics = { targetMitigationUptime = 70 },
             priorityNotes = {
-                "Keep Ironfur up constantly — spend Rage for 70%+ uptime (tracked via uptimeBuffs)",
+                "Maintain Moonfire on your primary target at all times",
+                "Keep Ironfur active — spend Rage for 70%+ uptime (tracked via uptimeBuffs)",
                 "Mangle on cooldown — primary Rage generator",
-                "Thrash on cooldown — DoT damage and AoE threat",
-                "Frenzied Regeneration for healing in sustained high damage windows",
-                "Barkskin for magic damage, Survival Instincts for emergencies",
+                "Thrash on cooldown — maintain 3-5 stacks",
+                "Spend Rage on Ironfur defensively or Maul offensively",
+                "Lunar Beam on cooldown when talented — healing and damage",
+                "Frenzied Regeneration when health dips low — reactive self-heal",
+                "Barkskin and Incarnation on cooldown — use as frequently as possible",
+                "Swipe as a filler only — never delay Mangle or Thrash for it",
             },
             scoreWeights = { cooldownUsage = 25, mitigationUptime = 40, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Guardian Druid guide",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Guardian talent tree 116 nodes (April 2026)",
         },
 
-        -- Restoration
+        -- Restoration (PASSIVE audit — April 2026)
+        -- Incarnation: Tree of Life (33891) removed — not in Restoration talent tree
+        -- Flourish (197721) removed — not in Restoration talent tree or spell list
+        -- Wild Growth moved from majorCooldowns to rotational — it's a maintenance spell, not a burst CD
+        -- Convoke the Spirits (391528) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82064
+        -- Ironbark (102342) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82082; external defensive
+        -- Nature's Swiftness (132158) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82050; instant cast CD
+        -- Lifebloom (33763) added to rotational — non-PASSIVE ACTIVE nodeID 82049; core HoT
+        -- Innervate (29166) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82244; mana CD
         [4] = {
             name = "Restoration", role = "HEALER",
             resourceType = 0,
             majorCooldowns = {
-                { id = 740,    label = "Tranquility",       expectedUses = "1-2 per fight"   },
-                { id = 33891,  label = "Incarnation: Tree", expectedUses = "sustained burst" },
-                { id = 197721, label = "Flourish",          expectedUses = "extend HoTs"     },
-                { id = 48438,  label = "Wild Growth",       expectedUses = "on CD AoE"       },
+                { id = 740,    label = "Tranquility",       expectedUses = "heavy damage windows"  },  -- non-PASSIVE ACTIVE nodeID 82054
+                { id = 102342, label = "Ironbark",          expectedUses = "tank busters"          },  -- non-PASSIVE ACTIVE nodeID 82082
+                { id = 132158, label = "Nature's Swiftness", expectedUses = "emergency instant"    },  -- non-PASSIVE ACTIVE nodeID 82050
+                { id = 29166,  label = "Innervate",         expectedUses = "mana recovery",        talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82244
+                { id = 391528, label = "Convoke the Spirits", expectedUses = "burst throughput",   talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82064
+                -- Incarnation: Tree of Life (33891) removed — not in talent tree
+                -- Flourish (197721) removed — not in talent tree or spell list
             },
             rotationalSpells = {
-                { id = 774,   label = "Rejuvenation", minFightSeconds = 20 },
-                { id = 18562, label = "Swiftmend",    minFightSeconds = 20 },
+                { id = 774,   label = "Rejuvenation",  minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82217
+                { id = 18562, label = "Swiftmend",     minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82047
+                { id = 33763, label = "Lifebloom",     minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82049; core single-target HoT
+                { id = 48438, label = "Wild Growth",   minFightSeconds = 30 },  -- non-PASSIVE ACTIVE nodeID 82205; AoE HoT
             },
             healerMetrics = { targetOverheal = 35, targetActivity = 75, targetManaEnd = 15 },
             priorityNotes = {
-                "Keep Rejuvenation rolling on injured targets — HoT foundation",
-                "Wild Growth on cooldown for efficient AoE healing",
-                "Flourish to extend all active HoTs during damage windows",
-                "Swiftmend for emergency instant healing — generates Soul of the Forest",
-                "Tranquility for heavy sustained raid damage — 1-2 uses per fight",
+                "Keep Rejuvenation rolling on injured targets — core HoT foundation",
+                "Maintain Lifebloom on the tank — primary single-target HoT",
+                "Wild Growth for efficient AoE healing on grouped targets",
+                "Swiftmend for emergency instant healing",
+                "Nature's Swiftness for an instant cast of any spell in an emergency",
+                "Ironbark on the tank for heavy physical damage",
+                "Innervate during heavy casting phases to recover mana when talented",
+                "Tranquility for heavy sustained raid damage — hold for peak damage",
+                "Convoke the Spirits for burst throughput when talented",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Adapted from Icy Veins Restoration Druid guide",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Restoration talent tree 119 nodes (April 2026)",
         },
     },
 
@@ -1852,25 +1964,31 @@ Core.SPEC_DATABASE = {
     [12] = {
         className = "Demon Hunter",
 
-        -- Havoc
+        -- Havoc (Midnight 12.0 pass — April 2026)
+        -- Verified against full talent tree (123 nodes, PASSIVE column) and spell snapshot
+        -- Fel Barrage (258925) removed — not in Midnight 12.0 talent tree or spell list
+        -- Chaos Strike: spell list confirms 344862 (spec-variant); was 162794 — corrected
+        -- The Hunt: tracking both 370965 and 1246167 (both in spell list)
+        -- Essence Break (258860) added to rotational — non-PASSIVE ACTIVE nodeID 91033
+        -- Felblade (232893) added to rotational — non-PASSIVE ACTIVE nodeID 91008
         [1] = {
             name = "Havoc", role = "DPS",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
             validSpells = {
-                -- Havoc core abilities
                 [191427]=true,  -- Metamorphosis
                 [198013]=true,  -- Eye Beam
-                [258925]=true,  -- Fel Barrage
                 [370965]=true,  -- The Hunt
+                [1246167]=true, -- The Hunt (spec-variant confirmed spell snapshot)
                 [188499]=true,  -- Blade Dance
-                [162794]=true,  -- Chaos Strike
+                [344862]=true,  -- Chaos Strike (spec-variant confirmed — was 162794)
                 [258920]=true,  -- Immolation Aura
                 [188501]=true,  -- Spectral Sight
                 [198793]=true,  -- Vengeful Retreat
-                [179057]=true,  -- Chaos Nova
-                [232893]=true,  -- Felblade
+                [179057]=true,  -- Chaos Nova (non-PASSIVE nodeID 90993)
+                [232893]=true,  -- Felblade (non-PASSIVE nodeID 91008)
+                [258860]=true,  -- Essence Break (non-PASSIVE nodeID 91033)
+                [344865]=true,  -- Fel Rush (confirmed spell snapshot)
                 [185164]=true,  -- Mastery: Demonic Presence
-                -- Shared DH class abilities
                 [255260]=true,  -- Chaos Brand
                 [278326]=true,  -- Consume Magic
                 [196718]=true,  -- Darkness
@@ -1881,53 +1999,60 @@ Core.SPEC_DATABASE = {
                 [207684]=true,  -- Sigil of Misery
                 [185123]=true,  -- Throw Glaive
                 [185245]=true,  -- Torment
-                -- proc buffs
-                [337567]=true,  -- Furious Gaze
-                [389860]=true,  -- Unbound Chaos
+                [337567]=true,  -- Furious Gaze proc
+                [389860]=true,  -- Unbound Chaos proc
             },
             majorCooldowns = {
-                { id = 191427, label = "Metamorphosis",  expectedUses = "burst windows"  },
-                { id = 198013, label = "Eye Beam",       expectedUses = "on CD"          },
-                { id = 258925, label = "Fel Barrage",    expectedUses = "on CD (talent)" },
-                { id = 370965, label = "The Hunt",       expectedUses = "on CD (talent)" },
+                { id = 191427, label = "Metamorphosis", expectedUses = "burst windows"           },  -- non-PASSIVE confirmed
+                { id = 198013, label = "Eye Beam",      expectedUses = "on CD"                  },  -- non-PASSIVE nodeID 91018
+                { id = 370965, label = "The Hunt",      expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE nodeID 90921
+                -- Fel Barrage (258925) removed — not in Midnight 12.0
             },
             rotationalSpells = {
-                { id = 188499, label = "Blade Dance",      minFightSeconds = 15 },
-                { id = 162794, label = "Chaos Strike",     minFightSeconds = 15 },
-                { id = 258920, label = "Immolation Aura",  minFightSeconds = 15 },
+                { id = 188499, label = "Blade Dance",     minFightSeconds = 15 },
+                { id = 344862, label = "Chaos Strike",    minFightSeconds = 15 },              -- spec-variant (was 162794)
+                { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },
+                { id = 258860, label = "Essence Break",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 91033
+                { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 91008
             },
             procBuffs = {
-                { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },
-                { id = 389860, label = "Unbound Chaos", maxStackTime = 12 },
+                { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },   -- VERIFY C_UnitAuras — not in Havoc talent or spell snapshot
+                { id = 389860, label = "Unbound Chaos", maxStackTime = 12 },   -- VERIFY C_UnitAuras — not in Havoc talent or spell snapshot
             },
             priorityNotes = {
                 "Immolation Aura on cooldown — primary Fury generator",
                 "Eye Beam on cooldown — core damage and Fury dump",
-                "Blade Dance / Death Sweep on cooldown — highest priority spender",
+                "Blade Dance on cooldown — highest priority spender",
+                "Essence Break before Chaos Strike when talented — amplifies damage",
                 "Chaos Strike to spend Fury — never overcap at 100",
                 "Metamorphosis for burst — align with trinkets and lust",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 20, activity = 30, resourceMgmt = 20 },
-            sourceNote = "Adapted from Icy Veins Havoc Demon Hunter guide",
+            sourceNote = "Midnight 12.0 verified against full Havoc talent tree 123 nodes (April 2026)",
         },
 
-        -- Vengeance
+        -- Vengeance (Midnight 12.0 pass — April 2026)
+        -- Verified against spell snapshot and talent tree
+        -- Metamorphosis: was 187827, both spell snapshots confirm 191427 — corrected
+        -- Demon Spikes: was 203819 in uptimeBuffs, spell list confirms 203720 — corrected
+        -- Fracture: was 210152, spell list confirms 344859 (spec-variant) — corrected
+        -- Soul Barrier (263648) removed — not in Midnight 12.0 spell list or talent tree
+        -- Soul Cleave: was 228477, spell list confirms 344862 (spec-variant) — corrected
+        -- Spirit Bomb (247454) added to rotational — confirmed spell list, non-PASSIVE ACTIVE nodeID 90990
         [2] = {
             name = "Vengeance", role = "TANK",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
             validSpells = {
-                -- Vengeance core abilities
-                [187827]=true,  -- Metamorphosis
-                [204021]=true,  -- Fiery Brand
-                [212084]=true,  -- Fel Devastation
-                [263648]=true,  -- Soul Barrier
-                [203819]=true,  -- Demon Spikes
+                [191427]=true,  -- Metamorphosis (confirmed spell snapshot — was 187827)
+                [204021]=true,  -- Fiery Brand (confirmed spell snapshot)
+                [212084]=true,  -- Fel Devastation (confirmed spell snapshot)
+                [203720]=true,  -- Demon Spikes (confirmed spell snapshot — was 203819)
                 [258920]=true,  -- Immolation Aura
-                [228477]=true,  -- Soul Cleave
-                [210152]=true,  -- Fracture
+                [344862]=true,  -- Soul Cleave (spec-variant confirmed — was 228477)
+                [344859]=true,  -- Fracture (spec-variant confirmed — was 210152)
+                [247454]=true,  -- Spirit Bomb (confirmed spell snapshot)
                 [278386]=true,  -- Demonic Wards
                 [206478]=true,  -- Demonic Appetite
-                -- Shared DH class abilities
                 [255260]=true,  -- Chaos Brand
                 [278326]=true,  -- Consume Magic
                 [196718]=true,  -- Darkness
@@ -1938,74 +2063,105 @@ Core.SPEC_DATABASE = {
                 [207684]=true,  -- Sigil of Misery
                 [185123]=true,  -- Throw Glaive
                 [185245]=true,  -- Torment
+                -- Soul Barrier (263648) removed — not in Midnight 12.0
             },
             majorCooldowns = {
-                { id = 187827, label = "Metamorphosis",   expectedUses = "emergency mitigation" },
-                { id = 204021, label = "Fiery Brand",     expectedUses = "tank busters"         },
-                { id = 212084, label = "Fel Devastation", expectedUses = "on CD"                },
-                { id = 263648, label = "Soul Barrier",    expectedUses = "big hits (talent)"    },
+                { id = 191427, label = "Metamorphosis",   expectedUses = "emergency mitigation" },  -- non-PASSIVE confirmed
+                { id = 204021, label = "Fiery Brand",     expectedUses = "tank busters"         },  -- non-PASSIVE ACTIVE nodeID 90951
+                { id = 212084, label = "Fel Devastation", expectedUses = "on CD"                },  -- non-PASSIVE ACTIVE nodeID 90991
+                { id = 390163, label = "Sigil of Spite",  expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 90978
+                -- Soul Barrier (263648/1265924) removed — PASSIVE confirmed
             },
             uptimeBuffs = {
-                { id = 203819, label = "Demon Spikes", targetUptime = 50 },
+                { id = 203720, label = "Demon Spikes", targetUptime = 50 },
+            },
+            rotationalSpells = {
+                { id = 247454, label = "Spirit Bomb", minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 90990
+                { id = 344859, label = "Fracture",    minFightSeconds = 15 },                      -- spec-variant; generates Soul Fragments
+                { id = 232893, label = "Felblade",    minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 108722
             },
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
                 "Maintain Demon Spikes for physical mitigation",
                 "Immolation Aura on cooldown for Fury and damage",
-                "Fracture / Shear to generate Soul Fragments",
-                "Spirit Bomb with 4-5 Soul Fragments",
+                "Fracture to generate Soul Fragments",
+                "Spirit Bomb with 4-5 Soul Fragments for healing and damage",
                 "Fiery Brand for magic damage or tank busters",
+                "Fel Devastation on cooldown for sustained damage and healing",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Vengeance Demon Hunter guide",
+            sourceNote = "Midnight 12.0 verified against Vengeance spell snapshot and talent tree (April 2026)",
         },
 
-        -- Devourer (Midnight 12.0 new spec — specIdx 3)
-        -- Resource-gated burst via Void Metamorphosis triggered by Soul Fragments.
-        -- Collapsing Star and Reap are available inside the Void Metamorphosis window.
-        -- Spell IDs verified_web from wowdb.com (see dataset notes).
+        -- Devourer (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Full talent tree snapshot (112 nodes, PASSIVE column) confirmed the following:
+        -- PASSIVE — removed from majorCooldowns: Impending Apocalypse (1227707), Demonsurge (452402), Midnight (1250094)
+        -- PASSIVE — removed from rotational: Eradicate (1226033)
+        -- PASSIVE — removed from validSpells: 471306 (talent node), 1221167 (talent node), 1250094
+        -- Soul Immolation (1241937) confirmed non-PASSIVE ACTIVE nodeID 107344 — retained as sole majorCD
+        -- Void Metamorphosis castable: 191427 confirmed in spellbook, non-passive — retained in rotational
+        -- Collapsing Star: 1221150 (castable) not in talent tree — retained via combatGated, no change
         [3] = {
             name = "Devourer", role = "DPS",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
-            -- Strict whitelist: ONLY these spell IDs are valid for Devourer.
-            -- Any spell not in this table is ignored regardless of spellbook state.
-            -- Hard-blocks all Havoc/Vengeance abilities (Eye Beam, Immolation Aura, etc.)
+            -- Strict whitelist — hard-blocks all Havoc/Vengeance abilities
             validSpells = {
+                [191427]=true,  -- Void Metamorphosis (castable, confirmed spellbook, non-PASSIVE)
+                -- 471306 removed — PASSIVE talent node
+                [1221150]=true, -- Collapsing Star (castable — confirmed via debug session)
+                -- 1221167 removed — PASSIVE talent node
+                [344862]=true,  -- Reap (confirmed spell snapshot)
+                [344859]=true,  -- Consume (confirmed spell snapshot)
+                [344865]=true,  -- Shift (confirmed spell snapshot)
+                [473728]=true,  -- Void Ray (non-PASSIVE ACTIVE nodeID 107336)
+                [1245412]=true, -- Voidblade (non-PASSIVE ACTIVE nodeID 108723)
+                [1234195]=true, -- Void Nova (non-PASSIVE ACTIVE nodeID 107347)
+                [1241937]=true, -- Soul Immolation (non-PASSIVE ACTIVE nodeID 107344)
+                -- 1227707 Impending Apocalypse removed — PASSIVE
+                -- 1226033 Eradicate removed — PASSIVE INACTIVE
+                -- 1250094 Midnight removed — PASSIVE INACTIVE
+                -- 452402  Demonsurge removed — PASSIVE
+                [1260008]=true, -- Grim Focus (confirmed spell snapshot)
                 [198589]=true,  -- Blur
                 [1238855]=true, -- Mastery: Monster Within
                 [1227619]=true, -- Shattered Souls
-                [1234195]=true, -- Void Nova
-                [473728]=true,  -- Void Ray
-                [1245412]=true, -- Voidblade
                 [255260]=true,  -- Chaos Brand
-                [278326]=true,  -- Consume Magic
-                [196718]=true,  -- Darkness
+                [278326]=true,  -- Consume Magic (non-PASSIVE ACTIVE nodeID 91006)
+                [196718]=true,  -- Darkness (non-PASSIVE ACTIVE nodeID 91002)
                 [183752]=true,  -- Disrupt
                 [196055]=true,  -- Double Jump
                 [131347]=true,  -- Glide
-                [217832]=true,  -- Imprison
-                [207684]=true,  -- Sigil of Misery
+                [217832]=true,  -- Imprison (non-PASSIVE ACTIVE nodeID 91007)
+                [207684]=true,  -- Sigil of Misery (non-PASSIVE ACTIVE nodeID 90946)
                 [185123]=true,  -- Throw Glaive
                 [185245]=true,  -- Torment
-                [1217605]=true, -- Void Metamorphosis
-                [1221150]=true, -- Collapsing Star (castable spell ID, confirmed via debug tool)
-                [1226019]=true, -- Reap
             },
-            majorCooldowns = {},
+            majorCooldowns = {
+                -- Only Soul Immolation survived the PASSIVE audit as a trackable CD
+                { id = 1241937, label = "Soul Immolation", expectedUses = "on CD", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 107344
+                -- Removed (confirmed PASSIVE via talent snapshot):
+                -- Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
+            },
             rotationalSpells = {
-                { id = 1217605, label = "Void Metamorphosis", minFightSeconds = 30 },
-                { id = 1221150, label = "Collapsing Star",    minFightSeconds = 45,
-                  combatGated = true },  -- appears ~23s into Void Metamorphosis window; confirmed spellID via debug tool
-                { id = 1226019, label = "Reap",               minFightSeconds = 20 },
+                { id = 191427,  label = "Void Metamorphosis", minFightSeconds = 30 },                    -- castable, non-PASSIVE, confirmed spellbook
+                { id = 1221150, label = "Collapsing Star",    minFightSeconds = 45, combatGated = true }, -- inside Void Metamorphosis window only
+                { id = 344862,  label = "Reap",               minFightSeconds = 20 },                    -- confirmed spell snapshot
+                { id = 473728,  label = "Void Ray",           minFightSeconds = 15 },                    -- non-PASSIVE ACTIVE nodeID 107336
+                { id = 1245412, label = "Voidblade",          minFightSeconds = 15, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 108723
+                { id = 1234195, label = "Void Nova",          minFightSeconds = 20, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 107347
+                -- Eradicate (1226033) removed — PASSIVE INACTIVE
             },
             priorityNotes = {
                 "Build Soul Fragments to trigger Void Metamorphosis windows",
                 "Use Collapsing Star inside Void Metamorphosis for maximum damage",
                 "Cast Void Ray to generate Souls and Fury outside Void Metamorphosis",
+                "Voidblade as primary Fury spender when talented — use on cooldown",
+                "Void Nova for burst AoE — use inside Void Metamorphosis windows when talented",
+                "Soul Immolation on cooldown when talented — major burst window",
                 "Pool Fury before entering Void Metamorphosis for burst spending",
             },
-            scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
-            sourceNote = "Midnight 12.0 Devourer DH — spell IDs verified_web (wowdb.com)",
+            scoreWeights = { cooldownUsage = 25, activity = 40, resourceMgmt = 20, procUsage = 15 },
+            sourceNote = "Midnight 12.0 PASSIVE audit against full talent tree 112 nodes (April 2026)",
         },
     },
 
@@ -2015,83 +2171,109 @@ Core.SPEC_DATABASE = {
     [13] = {
         className = "Evoker",
 
-        -- Devastation
+        -- Devastation (Midnight 12.0 PASSIVE audit — April 2026)
+        -- All majorCooldowns confirmed non-PASSIVE or baseline (Fire Breath, Deep Breath not in talent tree — baseline spells)
+        -- Pyre (357211) added to rotational — non-PASSIVE ACTIVE nodeID 93334
+        -- Quell (351338) added as isInterrupt — non-PASSIVE ACTIVE nodeID 93332
+        -- VERIFY resource enum: resourceType 17 pending in-game confirmation
         [1] = {
             name = "Devastation", role = "DPS",
             resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,  -- VERIFY resource enum
             majorCooldowns = {
-                { id = 375087, label = "Dragonrage",     expectedUses = "on CD"         },
-                { id = 357208, label = "Fire Breath",    expectedUses = "on CD"         },
-                { id = 359073, label = "Eternity Surge", expectedUses = "on CD"         },
-                { id = 357210, label = "Deep Breath",    expectedUses = "burst windows" },
+                { id = 375087, label = "Dragonrage",     expectedUses = "on CD"         },  -- non-PASSIVE ACTIVE nodeID 93331
+                { id = 357208, label = "Fire Breath",    expectedUses = "on CD"         },  -- baseline confirmed spell list
+                { id = 359073, label = "Eternity Surge", expectedUses = "on CD"         },  -- non-PASSIVE ACTIVE nodeID 93275
+                { id = 357210, label = "Deep Breath",    expectedUses = "burst windows" },  -- baseline confirmed spell list
+                { id = 351338, label = "Quell",          expectedUses = "situational",   isInterrupt = true },  -- non-PASSIVE ACTIVE nodeID 93332
             },
             rotationalSpells = {
-                { id = 361469, label = "Living Flame",  minFightSeconds = 20 },
-                { id = 356995, label = "Disintegrate",  minFightSeconds = 20 },
+                { id = 361469, label = "Living Flame",  minFightSeconds = 20 },  -- baseline confirmed spell list
+                { id = 356995, label = "Disintegrate",  minFightSeconds = 20 },  -- baseline confirmed spell list
+                { id = 357211, label = "Pyre",          minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 93334; AoE spender
             },
             priorityNotes = {
                 "Fire Breath and Eternity Surge on cooldown — highest priority empowered spells",
                 "Dragonrage for burst — maximize empowered cast rate inside window",
                 "Disintegrate as primary filler — strong sustained channel",
                 "Living Flame as filler when moving — do not cap Essence",
+                "Pyre for AoE when talented — replaces Living Flame in cleave",
                 "Deep Breath for AoE on stacked targets",
             },
             scoreWeights = { cooldownUsage = 35, activity = 30, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Adapted from Icy Veins Devastation Evoker guide",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Devastation talent tree 122 nodes (April 2026)",
         },
 
-        -- Preservation
+        -- Preservation (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Emerald Communion (370960) removed — not in Preservation talent tree or spell list
+        -- Tip the Scales: was 374348 (Renewing Blaze in spell list) — corrected to 370553 (nodeID 93350 non-PASSIVE)
+        -- Time Dilation (357170) added — non-PASSIVE ACTIVE nodeID 93336
+        -- Temporal Anomaly (373861) added to rotational — non-PASSIVE ACTIVE nodeID 93257
+        -- Echo (364343) added to rotational — non-PASSIVE ACTIVE nodeID 93339; core mechanic
         [2] = {
             name = "Preservation", role = "HEALER",
             resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,
             majorCooldowns = {
-                { id = 363534, label = "Rewind",            expectedUses = "emergency"     },
-                { id = 355936, label = "Dream Breath",      expectedUses = "on CD AoE"     },
-                { id = 370960, label = "Emerald Communion", expectedUses = "sustained AoE" },
-                { id = 374348, label = "Tip the Scales",    expectedUses = "burst ramp"    },
+                { id = 363534, label = "Rewind",          expectedUses = "emergency"     },  -- non-PASSIVE ACTIVE nodeID 93337
+                { id = 355936, label = "Dream Breath",    expectedUses = "on CD AoE"     },  -- non-PASSIVE ACTIVE nodeID 93240
+                { id = 370553, label = "Tip the Scales",  expectedUses = "burst ramp"    },  -- non-PASSIVE ACTIVE nodeID 93350 (was 374348 — wrong)
+                { id = 357170, label = "Time Dilation",   expectedUses = "emergency HoT" },  -- non-PASSIVE ACTIVE nodeID 93336
+                -- Emerald Communion (370960) removed — not in Preservation talent tree or spell list
             },
             rotationalSpells = {
-                { id = 366155, label = "Reversion",        minFightSeconds = 20 },
-                { id = 355913, label = "Emerald Blossom",  minFightSeconds = 30 },
+                { id = 366155, label = "Reversion",        minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 93338
+                { id = 355913, label = "Emerald Blossom",  minFightSeconds = 30 },  -- baseline confirmed spell list
+                { id = 373861, label = "Temporal Anomaly", minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 93257
+                { id = 364343, label = "Echo",             minFightSeconds = 15 },  -- non-PASSIVE ACTIVE nodeID 93339; core mechanic
             },
             healerMetrics = { targetOverheal = 30, targetActivity = 80, targetManaEnd = 10 },
             priorityNotes = {
                 "Reversion on cooldown — primary single-target HoT filler",
                 "Emerald Blossom for group healing efficiency",
                 "Dream Breath on cooldown — primary AoE healing",
-                "Echo to amplify upcoming high-throughput spells",
+                "Echo before high-throughput spells to amplify effect",
+                "Temporal Anomaly for group HoT spread",
+                "Tip the Scales for instant empowered cast during burst",
                 "Rewind is a true emergency — save for near-wipes only",
+                "Time Dilation to extend a teammate's HoT in critical moments",
             },
             scoreWeights = { cooldownUsage = 30, efficiency = 30, activity = 25, responsiveness = 15 },
-            sourceNote = "Adapted from Icy Veins Preservation Evoker guide",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Preservation talent tree 123 nodes (April 2026)",
         },
 
-        -- Augmentation
+        -- Augmentation (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Eruption: was 359618 — talent tree confirms 395160 (nodeID 93200 non-PASSIVE). Corrected.
+        -- Time Skip (404977) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 93232
+        -- Blistering Scales (360827) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 93209; party defensive
+        -- Quell (351338) added as isInterrupt — non-PASSIVE ACTIVE nodeID 93199
         [3] = {
             name = "Augmentation", role = "DPS",
             resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,
             majorCooldowns = {
-                { id = 403631, label = "Breath of Eons", expectedUses = "burst windows" },
-                { id = 395152, label = "Ebon Might",     expectedUses = "on CD"         },
-                { id = 409311, label = "Prescience",     expectedUses = "pre-burst"     },
+                { id = 403631, label = "Breath of Eons",    expectedUses = "burst windows"     },  -- non-PASSIVE ACTIVE nodeID 93234
+                { id = 395152, label = "Ebon Might",        expectedUses = "on CD"             },  -- non-PASSIVE ACTIVE nodeID 93198
+                { id = 409311, label = "Prescience",        expectedUses = "pre-burst"         },  -- non-PASSIVE ACTIVE nodeID 93358
+                { id = 404977, label = "Time Skip",         expectedUses = "on CD",            talentGated = true },  -- non-PASSIVE ACTIVE nodeID 93232
+                { id = 360827, label = "Blistering Scales", expectedUses = "party mitigation", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 93209
+                { id = 351338, label = "Quell",             expectedUses = "situational",      isInterrupt = true },  -- non-PASSIVE ACTIVE nodeID 93199
             },
-            -- Ebon Might IS a player self-buff — kept in uptimeBuffs
             uptimeBuffs = {
                 { id = 395152, label = "Ebon Might", targetUptime = 70 },
             },
             rotationalSpells = {
-                { id = 396286, label = "Upheaval",  minFightSeconds = 20 },
-                { id = 359618, label = "Eruption",  minFightSeconds = 20 },
+                { id = 396286, label = "Upheaval",  minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 93203
+                { id = 395160, label = "Eruption",  minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 93200 (was 359618 — wrong)
             },
             priorityNotes = {
                 "Ebon Might on cooldown — core party amplification buff (tracked via uptimeBuffs)",
                 "Prescience before burst cooldowns to amplify allies",
                 "Upheaval and Eruption for personal damage contribution",
                 "Breath of Eons for peak burst — aligns with lust",
+                "Time Skip on cooldown when talented — significant throughput increase",
+                "Blistering Scales on the most targeted ally when talented",
                 "Maintain Ebon Might uptime at 70%+ for maximum support value",
             },
             scoreWeights = { cooldownUsage = 35, mitigationUptime = 30, activity = 25, resourceMgmt = 10 },
-            sourceNote = "Adapted from Icy Veins Augmentation Evoker guide",
+            sourceNote = "Midnight 12.0 PASSIVE audit against full Augmentation talent tree 114 nodes (April 2026)",
         },
     },
 }
@@ -2392,24 +2574,50 @@ local function BuildTalentSnapshot()
         if okN and nodes then
             for _, nodeID in ipairs(nodes) do
                 local okI, node = pcall(C_Traits.GetNodeInfo, configID, nodeID)
-                if okI and node and node.activeRank and node.activeRank > 0 then
-                    local entry = node.activeEntry
-                    if entry then
-                        local okD, def = pcall(C_Traits.GetEntryInfo, configID, entry.entryID)
-                        if okD and def and def.definitionID then
-                            local okF, defInfo = pcall(C_Traits.GetDefinitionInfo, def.definitionID)
-                            if okF and defInfo and defInfo.spellID then
-                                local name = "unknown"
-                                if C_Spell and C_Spell.GetSpellName then
-                                    local okSN, n = pcall(C_Spell.GetSpellName, defInfo.spellID)
-                                    if okSN and n then name = n end
+                if okI and node then
+                    local activeRank = node.activeRank or 0
+                    local maxRank    = node.maxRanks   or 1
+
+                    -- Walk all entries on this node (choice nodes have multiple)
+                    local entries = node.entries or {}
+                    if #entries == 0 and node.activeEntry then
+                        entries = { node.activeEntry }
+                    end
+
+                    for _, entry in ipairs(entries) do
+                        if entry and entry.entryID then
+                            local okD, def = pcall(C_Traits.GetEntryInfo, configID, entry.entryID)
+                            if okD and def and def.definitionID then
+                                local okF, defInfo = pcall(C_Traits.GetDefinitionInfo, def.definitionID)
+                                if okF and defInfo and defInfo.spellID then
+                                    local name = "unknown"
+                                    if C_Spell and C_Spell.GetSpellName then
+                                        local okSN, n = pcall(C_Spell.GetSpellName, defInfo.spellID)
+                                        if okSN and n then name = n end
+                                    end
+                                    -- status: ACTIVE (taken), INACTIVE (not taken)
+                                    -- rank shown as activeRank/maxRank for multi-rank nodes
+                                    local status = activeRank > 0 and "ACTIVE" or "INACTIVE"
+                                    -- Passive detection — IsSpellPassive or C_Spell.IsSpellPassive
+                                    local isPassive = false
+                                    if C_Spell and C_Spell.IsSpellPassive then
+                                        local okP, p = pcall(C_Spell.IsSpellPassive, defInfo.spellID)
+                                        if okP then isPassive = p end
+                                    elseif IsPassiveSpell then
+                                        local okP, p = pcall(IsPassiveSpell, defInfo.spellID)
+                                        if okP then isPassive = p end
+                                    end
+                                    table.insert(talents, {
+                                        spellID   = defInfo.spellID,
+                                        nodeID    = nodeID,
+                                        entryID   = entry.entryID,
+                                        name      = name,
+                                        rank      = activeRank,
+                                        maxRank   = maxRank,
+                                        status    = status,
+                                        isPassive = isPassive,
+                                    })
                                 end
-                                table.insert(talents, {
-                                    spellID = defInfo.spellID,
-                                    nodeID  = nodeID,
-                                    name    = name,
-                                    rank    = node.activeRank,
-                                })
                             end
                         end
                     end
@@ -2705,18 +2913,36 @@ local function MSSlashHandler(msg)
             return
         end
 
-        L("Midnight Sensei — Talent Snapshot")
+        local active   = 0
+        local inactive = 0
+        local passive  = 0
+        for _, t in ipairs(snap.talents) do
+            if t.status == "ACTIVE" then active = active + 1
+            else inactive = inactive + 1 end
+            if t.isPassive then passive = passive + 1 end
+        end
+
+        L("Midnight Sensei — Full Talent Tree Snapshot")
         L("Spec:      " .. (snap.className or "?") .. " / " .. (snap.specName or "?"))
         L("Captured:  " .. date("%Y-%m-%d %H:%M:%S", snap.timestamp))
         L("Version:   " .. Core.VERSION)
-        L(string.rep("-", 60))
-        L(string.format("Active talents: %d", #snap.talents))
-        L(string.format("%-10s %-10s %-35s %s", "spellID", "nodeID", "name", "rank"))
-        L(string.rep("-", 60))
+        L(string.rep("-", 80))
+        L(string.format("Total nodes: %d  |  ACTIVE: %d  |  INACTIVE: %d  |  PASSIVE: %d",
+            #snap.talents, active, inactive, passive))
+        L(string.format("%-10s %-10s %-8s %-35s %-6s %-8s %s",
+            "spellID", "nodeID", "entryID", "name", "rank", "passive", "status"))
+        L(string.rep("-", 80))
         for _, t in ipairs(snap.talents) do
-            L(string.format("%-10d %-10d %-35s %d", t.spellID, t.nodeID, t.name, t.rank))
+            L(string.format("%-10d %-10d %-8d %-35s %-6s %-8s %s",
+                t.spellID, t.nodeID, t.entryID or 0,
+                t.name,
+                (t.rank or 0) .. "/" .. (t.maxRank or 1),
+                t.isPassive and "PASSIVE" or "",
+                t.status))
         end
         L("")
+        L("-- ACTIVE = talented, INACTIVE = available but not taken")
+        L("-- PASSIVE = spell is passive, do not add to majorCooldowns or rotationalSpells")
         L("-- Cross-reference against spec DB with /ms verify report")
 
         if MS.UI and MS.UI.ShowVerifyExport then
