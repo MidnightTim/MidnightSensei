@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.0"
+    Core.VERSION = ver or "1.4.1"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,75 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.1",
+        tagline = "Class Tuning — Warrior, Hunter, Priest",
+        date    = "April 2026",
+        changes = {
+            -- Warrior / Arms
+            "Arms: Bladestorm (227847) removed — not in Arms talent tree; Fury-only spell",
+            "Arms: Warbreaker (262161) removed — not in Arms talent tree or spell list",
+            "Arms: Ravager (228920) added as talentGated CD — nodeID 90441 non-PASSIVE ACTIVE",
+            "Arms: Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE",
+            "Arms: Colossus Smash (167105) added to rotational — nodeID 90290 non-PASSIVE ACTIVE",
+            "Arms: Overpower (7384) added to rotational — nodeID 90271 non-PASSIVE ACTIVE",
+            "Arms: Rend (772) added to rotational — nodeID 109391 non-PASSIVE ACTIVE",
+            -- Warrior / Fury
+            "Fury: Onslaught (315720) removed — not in Fury talent tree or spell list",
+            "Fury: Avatar (107574) added to majorCooldowns — nodeID 90415 non-PASSIVE ACTIVE",
+            "Fury: Odyn's Fury (385059) added as talentGated CD — nodeID 110203 non-PASSIVE ACTIVE",
+            "Fury: Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE",
+            "Fury: Raging Blow (85288) added to rotational — nodeID 90396 non-PASSIVE ACTIVE",
+            "Fury: Berserker Stance (386196) added to rotational — nodeID 90325 non-PASSIVE ACTIVE",
+            "Fury: Enrage uptime aura 184362 retained with VERIFY flag",
+            -- Warrior / Protection
+            "Protection: Last Stand (12975) removed — confirmed PASSIVE nodeID 107575",
+            "Protection: Demoralizing Shout (1160) added to majorCooldowns — nodeID 90305 non-PASSIVE ACTIVE",
+            "Protection: Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE",
+            "Protection: Disrupting Shout (386071) added as isInterrupt — nodeID 107579 non-PASSIVE ACTIVE",
+            "Protection: Revenge (6572) added to rotational — nodeID 90298 non-PASSIVE ACTIVE",
+            -- Hunter / Beast Mastery
+            "BM Hunter: Call of the Wild (359844) removed — not in BM talent tree or spell list",
+            "BM Hunter: Thrill of the Hunt (246152) removed from procBuffs — not in talent tree or spell list",
+            "BM Hunter: Counter Shot (147362) added as isInterrupt — nodeID 102292 non-PASSIVE ACTIVE",
+            "BM Hunter: Cobra Shot (193455) added to rotational — nodeID 102354 non-PASSIVE ACTIVE; primary Focus dump",
+            "BM Hunter: Black Arrow (466930) added as talentGated rotational — nodeID 109961 non-PASSIVE ACTIVE",
+            "BM Hunter: Wild Thrash (1264359) added as talentGated rotational — nodeID 102363 non-PASSIVE ACTIVE",
+            -- Hunter / Marksmanship
+            "MM Hunter: Precise Shots (342776) removed from procBuffs — not in MM talent tree or spell list",
+            "MM Hunter: Counter Shot (147362) added as isInterrupt — nodeID 102402 non-PASSIVE ACTIVE",
+            "MM Hunter: Arcane Shot (185358) added to rotational — baseline confirmed spell list; Focus spender was missing",
+            -- Hunter / Survival
+            "Survival: Coordinated Assault (360952) removed — not in Survival talent tree or spell list",
+            "Survival: Kill Command corrected 34026 (BM spec-variant) → 259489 — nodeID 102255 non-PASSIVE ACTIVE",
+            "Survival: Mongoose Bite (259387) removed — not in Survival talent tree or spell list",
+            "Survival: Muzzle (187707) added as isInterrupt — nodeID 79837 non-PASSIVE ACTIVE",
+            "Survival: Raptor Strike (186270) added to rotational — nodeID 102262 non-PASSIVE ACTIVE",
+            "Survival: Takedown (1250646) added as talentGated rotational — nodeID 109323 non-PASSIVE ACTIVE",
+            "Survival: Boomstick (1261193) added as talentGated rotational — nodeID 109324 non-PASSIVE ACTIVE",
+            -- Priest / Discipline
+            "Discipline: Power Word: Barrier (62618) removed — not in Discipline talent tree or spell list",
+            "Discipline: Evangelism ID corrected 246287 → 472433 — nodeID 82577 non-PASSIVE ACTIVE",
+            "Discipline: Rapture (47536) removed — not in Discipline talent tree or spell list",
+            "Discipline: Schism (204263) removed — not in Discipline talent tree or spell list",
+            "Discipline: Atonement (194384) removed from uptimeBuffs — applied to others not self; not in tree/spell list",
+            "Discipline: Power Infusion (10060) added to majorCooldowns — nodeID 82556 non-PASSIVE ACTIVE",
+            "Discipline: Penance (47540) added to rotational — baseline confirmed spell list",
+            "Discipline: Power Word: Radiance (194509) added to rotational — nodeID 82593 non-PASSIVE ACTIVE",
+            "Discipline: Mind Blast (8092) added to rotational — nodeID 82713 non-PASSIVE ACTIVE",
+            "Discipline: Shadow Word: Death (32379) added to rotational — nodeID 82712 non-PASSIVE ACTIVE",
+            -- Priest / Holy
+            "Holy: Prayer of Mending corrected 33076 (Disc spec-variant) → 17 — confirmed Holy spell list",
+            "Holy: Power Infusion (10060) added to majorCooldowns — nodeID 82556 non-PASSIVE ACTIVE",
+            "Holy: Guardian Spirit (47788) added to majorCooldowns — nodeID 82637 non-PASSIVE ACTIVE",
+            "Holy: Holy Word: Serenity (2050) added to rotational — nodeID 82638 non-PASSIVE ACTIVE",
+            "Holy: Holy Word: Sanctify (34861) added to rotational — nodeID 82631 non-PASSIVE ACTIVE",
+            "Holy: Holy Fire (14914) added to rotational — nodeID 108730 non-PASSIVE ACTIVE; CDR filler",
+            "Holy: Halo (120517) added as talentGated rotational — nodeID 108724 non-PASSIVE ACTIVE",
+            -- Priest / Shadow
+            "Shadow: Full PASSIVE audit — all IDs confirmed against 114-node talent snapshot; no changes required",
+        },
+    },
     {
         version = "1.4.0",
         tagline = "Class Tuning & Refinement — Full Spec Database Audit",
@@ -784,89 +853,125 @@ Core.SPEC_DATABASE = {
     [1] = {
         className = "Warrior",
 
-        -- Arms
-        -- Removed:  Colossus Smash (208086) from uptimeBuffs — enemy debuff, not a player aura
-        -- Removed:  debuffUptime from scoreWeights
-        -- Added:    rotationalSpells: Mortal Strike (12294), Execute (163201)
+        -- Arms (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Bladestorm (227847) removed — not in Arms talent tree; only in Fury spell list
+        -- Warbreaker (262161) removed — not in Arms talent tree or spell list
+        -- Avatar (107574) confirmed non-PASSIVE ACTIVE nodeID 110176
+        -- Ravager (228920) added as talentGated CD — nodeID 90441 non-PASSIVE ACTIVE
+        -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+        -- Colossus Smash (167105) added to rotational — nodeID 90290 non-PASSIVE ACTIVE
+        -- Overpower (7384) added to rotational — nodeID 90271 non-PASSIVE ACTIVE
+        -- Rend (772) added to rotational — nodeID 109391 non-PASSIVE ACTIVE
         [1] = {
             name = "Arms", role = "DPS",
             resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
             majorCooldowns = {
-                { id = 227847, label = "Bladestorm",   expectedUses = "on CD"    },
-                { id = 107574, label = "Avatar",       expectedUses = "on CD"    },
-                { id = 262161, label = "Warbreaker",   expectedUses = "on CD"    },
+                { id = 107574, label = "Avatar",    expectedUses = "on CD"           },  -- nodeID 110176 non-PASSIVE ACTIVE
+                { id = 228920, label = "Ravager",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90441 non-PASSIVE ACTIVE
+                { id = 436358, label = "Demolish",  expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                -- Bladestorm (227847) removed — not in Arms talent tree
+                -- Warbreaker (262161) removed — not in Arms talent tree or spell list
             },
-            -- uptimeBuffs empty: Colossus Smash is an enemy debuff, not trackable via C_UnitAuras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 12294,  label = "Mortal Strike", minFightSeconds = 30 },
-                { id = 163201, label = "Execute",       minFightSeconds = 45 },  -- execute phase spell
+                { id = 12294,  label = "Mortal Strike",   minFightSeconds = 15 },  -- nodeID 90270 non-PASSIVE ACTIVE
+                { id = 167105, label = "Colossus Smash",  minFightSeconds = 20 },  -- nodeID 90290 non-PASSIVE ACTIVE
+                { id = 7384,   label = "Overpower",       minFightSeconds = 15 },  -- nodeID 90271 non-PASSIVE ACTIVE
+                { id = 772,    label = "Rend",             minFightSeconds = 15 },  -- nodeID 109391 non-PASSIVE ACTIVE
+                { id = 163201, label = "Execute",          minFightSeconds = 45 },  -- confirmed spell list; execute phase
             },
             priorityNotes = {
-                "Apply Colossus Smash / Warbreaker to maximize damage windows (not directly tracked)",
+                "Maintain Rend on target — DoT setup before Colossus Smash",
                 "Mortal Strike on cooldown — primary damage and healing debuff",
-                "Execute during execute phase (< 20% health) — replaces Mortal Strike",
-                "Pool Rage for Colossus Smash windows — spend with Overpower and Mortal Strike",
-                "Stack Bladestorm inside Avatar for maximum burst",
+                "Colossus Smash to open damage windows — high priority",
+                "Overpower on cooldown — free proc-based filler",
+                "Execute during execute phase — replaces Mortal Strike below 20%",
+                "Avatar and Ravager for burst — align with Colossus Smash",
+                "Pool Rage for Colossus Smash windows — avoid overcapping at 100",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Adapted from Icy Veins Arms Warrior guide",
+            sourceNote = "Midnight 12.0 verified against full Arms talent tree 99 nodes (April 2026)",
         },
 
-        -- Fury
+        -- Fury (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Onslaught (315720) removed — not in Fury talent tree or spell list
+        -- Avatar (107574) added to majorCooldowns — nodeID 90415 non-PASSIVE ACTIVE
+        -- Odyn's Fury (385059) added to majorCooldowns — nodeID 110203 non-PASSIVE ACTIVE
+        -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+        -- Raging Blow (85288) added to rotational — nodeID 90396 non-PASSIVE ACTIVE
+        -- Berserker Stance (386196) added to rotational — nodeID 90325 non-PASSIVE ACTIVE
+        -- Enrage uptime buff: 184362 retained (VERIFY — not in talent tree; may be enhanced aura ID)
         [2] = {
             name = "Fury", role = "DPS",
             resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
             majorCooldowns = {
-                { id = 1719,   label = "Recklessness", expectedUses = "on CD"          },
-                { id = 315720, label = "Onslaught",    expectedUses = "Enrage windows" },
+                { id = 1719,   label = "Recklessness", expectedUses = "on CD"           },  -- nodeID 90412 non-PASSIVE ACTIVE
+                { id = 107574, label = "Avatar",        expectedUses = "on CD"           },  -- nodeID 90415 non-PASSIVE ACTIVE
+                { id = 385059, label = "Odyn's Fury",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110203 non-PASSIVE ACTIVE
+                { id = 436358, label = "Demolish",      expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                -- Onslaught (315720) removed — not in Fury talent tree or spell list
             },
-            -- Enrage IS a player self-buff — kept in uptimeBuffs
             uptimeBuffs = {
-                { id = 184362, label = "Enrage", targetUptime = 60 },
+                { id = 184362, label = "Enrage", targetUptime = 60 },  -- VERIFY aura ID — spell list shows 184361; 184362 may be enhanced version
             },
             rotationalSpells = {
-                -- Bloodthirst is the primary builder; Rampage is the primary spender
-                { id = 23881, label = "Bloodthirst", minFightSeconds = 20 },
-                { id = 184367, label = "Rampage",    minFightSeconds = 30 },
+                { id = 23881,  label = "Bloodthirst",     minFightSeconds = 15 },  -- nodeID 90392 non-PASSIVE ACTIVE; primary Enrage trigger
+                { id = 184367, label = "Rampage",          minFightSeconds = 20 },  -- nodeID 90408 non-PASSIVE ACTIVE; primary Rage spender
+                { id = 85288,  label = "Raging Blow",      minFightSeconds = 15 },  -- nodeID 90396 non-PASSIVE ACTIVE; core filler
+                { id = 386196, label = "Berserker Stance", minFightSeconds = 15 },  -- nodeID 90325 non-PASSIVE ACTIVE
             },
             priorityNotes = {
-                "Keep Enrage active — Bloodthirst on cooldown procs it",
-                "Rampage to refresh Enrage and spend Rage — primary spender",
-                "Onslaught during Enrage windows for massive damage",
+                "Bloodthirst on cooldown — primary Enrage trigger and Rage builder",
+                "Rampage to refresh Enrage and spend Rage — never sit on 100 Rage",
+                "Raging Blow as filler during Enrage — high priority",
                 "Recklessness to align with Enrage and trinkets for burst",
+                "Odyn's Fury and Avatar on cooldown when talented",
+                "Demolish inside burst windows when talented",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 25, activity = 25, resourceMgmt = 20 },
-            sourceNote = "Adapted from Icy Veins Fury Warrior guide",
+            sourceNote = "Midnight 12.0 verified against full Fury talent tree 101 nodes (April 2026)",
         },
 
-        -- Protection
+        -- Protection (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Last Stand (12975) removed — talent tree shows 1243659 Last Stand as PASSIVE INACTIVE
+        -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+        -- Demoralizing Shout (1160) added to majorCooldowns — nodeID 90305 non-PASSIVE ACTIVE; debuff CD
+        -- Disrupting Shout (386071) added as isInterrupt — nodeID 107579 non-PASSIVE ACTIVE
+        -- Revenge (6572) added to rotational — nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
+        -- Shield Slam (23922) baseline confirmed in spell list; not in talent tree node — fine
         [3] = {
             name = "Protection", role = "TANK",
             resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
             majorCooldowns = {
-                { id = 871,    label = "Shield Wall",   expectedUses = "big hits"      },
-                { id = 12975,  label = "Last Stand",    expectedUses = "emergency"     },
-                { id = 107574, label = "Avatar",        expectedUses = "on CD"         },
-                { id = 190456, label = "Ignore Pain",   expectedUses = "physical hits" },
+                { id = 871,    label = "Shield Wall",         expectedUses = "big hits"        },  -- nodeID 90302 non-PASSIVE ACTIVE
+                { id = 107574, label = "Avatar",              expectedUses = "on CD"           },  -- nodeID 90433 non-PASSIVE ACTIVE
+                { id = 190456, label = "Ignore Pain",         expectedUses = "physical hits"   },  -- nodeID 90295 non-PASSIVE ACTIVE
+                { id = 1160,   label = "Demoralizing Shout",  expectedUses = "on CD"           },  -- nodeID 90305 non-PASSIVE ACTIVE
+                { id = 436358, label = "Demolish",            expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                { id = 386071, label = "Disrupting Shout",    expectedUses = "situational",    isInterrupt = true },  -- nodeID 107579 non-PASSIVE ACTIVE
+                -- Last Stand (12975) removed — confirmed PASSIVE in talent tree
             },
             uptimeBuffs = {
-                { id = 2565, label = "Shield Block", targetUptime = 50 },
+                { id = 2565, label = "Shield Block", targetUptime = 50 },  -- baseline confirmed spell list
             },
             rotationalSpells = {
-                { id = 6343,  label = "Thunder Clap",  minFightSeconds = 20 },
-                { id = 23922, label = "Shield Slam",   minFightSeconds = 20 },
+                { id = 6343,  label = "Thunder Clap",  minFightSeconds = 15 },  -- nodeID 90343 non-PASSIVE ACTIVE
+                { id = 23922, label = "Shield Slam",   minFightSeconds = 15 },  -- baseline confirmed spell list
+                { id = 6572,  label = "Revenge",       minFightSeconds = 15 },  -- nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
             },
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
                 "Maintain Shield Block for physical mitigation (tracked via uptimeBuffs)",
                 "Shield Slam on cooldown — primary Rage generator and damage",
                 "Thunder Clap on cooldown — AoE damage and slowing",
+                "Revenge to spend Rage — free when proc fires",
                 "Ignore Pain to absorb incoming physical hits",
-                "Shield Wall / Last Stand for true emergencies only",
+                "Demoralizing Shout on cooldown — damage reduction for the group",
+                "Shield Wall for heavy magic or unavoidable damage",
+                "Demolish inside burst windows when talented",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Protection Warrior guide",
+            sourceNote = "Midnight 12.0 verified against full Protection talent tree 102 nodes (April 2026)",
         },
     },
 
@@ -964,91 +1069,102 @@ Core.SPEC_DATABASE = {
     [3] = {
         className = "Hunter",
 
-        -- Beast Mastery
-        -- Removed:  Barbed Shot DoT (259277) from uptimeBuffs — enemy debuff on pet, not a player aura
-        -- Removed:  debuffUptime from scoreWeights
-        -- Added:    rotationalSpells: Kill Command (34026), Barbed Shot (217200)
-        -- Kept:     Thrill of the Hunt in procBuffs — needs in-game C_UnitAuras verification (VERIFY)
+        -- Beast Mastery (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Call of the Wild (359844) removed — not in BM talent tree or spell list
+        -- Thrill of the Hunt (246152) removed from procBuffs — not in talent tree or spell list
+        -- Counter Shot (147362) added as isInterrupt — nodeID 102292 non-PASSIVE ACTIVE
+        -- Cobra Shot (193455) added to rotational — nodeID 102354 non-PASSIVE ACTIVE; primary filler/Focus dump
+        -- Black Arrow (466930) added to rotational — nodeID 109961 non-PASSIVE ACTIVE; new Midnight ability
+        -- Wild Thrash (1264359) added to rotational — nodeID 102363 non-PASSIVE ACTIVE
         [1] = {
             name = "Beast Mastery", role = "DPS",
             resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
             majorCooldowns = {
-                { id = 19574,  label = "Bestial Wrath",    expectedUses = "on CD"   },
-                { id = 359844, label = "Call of the Wild", expectedUses = "on CD"   },
+                { id = 19574,  label = "Bestial Wrath",  expectedUses = "on CD"   },  -- nodeID 102340 non-PASSIVE ACTIVE
+                { id = 147362, label = "Counter Shot",   expectedUses = "situational", isInterrupt = true },  -- nodeID 102292 non-PASSIVE ACTIVE
+                -- Call of the Wild (359844) removed — not in BM talent tree or spell list
             },
-            -- uptimeBuffs empty: Barbed Shot DoT is an enemy/pet debuff, not a player self-aura
             uptimeBuffs = {},
             rotationalSpells = {
-                -- Kill Command is the primary builder; Barbed Shot maintains Frenzy
-                { id = 34026,  label = "Kill Command",  minFightSeconds = 30 },
-                { id = 217200, label = "Barbed Shot",   minFightSeconds = 30 },
-            },
-            procBuffs = {
-                { id = 246152, label = "Thrill of the Hunt", maxStackTime = 12 },  -- VERIFY C_UnitAuras
+                { id = 34026,   label = "Kill Command",  minFightSeconds = 15 },  -- nodeID 102346 non-PASSIVE ACTIVE
+                { id = 217200,  label = "Barbed Shot",   minFightSeconds = 15 },  -- nodeID 102377 non-PASSIVE ACTIVE
+                { id = 193455,  label = "Cobra Shot",    minFightSeconds = 15 },  -- nodeID 102354 non-PASSIVE ACTIVE; Focus dump/filler
+                { id = 466930,  label = "Black Arrow",   minFightSeconds = 20, talentGated = true },  -- nodeID 109961 non-PASSIVE ACTIVE
+                { id = 1264359, label = "Wild Thrash",   minFightSeconds = 20, talentGated = true },  -- nodeID 102363 non-PASSIVE ACTIVE
             },
             priorityNotes = {
-                "Keep Barbed Shot rolling to maintain Frenzy stacks on your pet (not directly tracked)",
+                "Keep Barbed Shot rolling to maintain Frenzy stacks on your pet",
                 "Kill Command on cooldown — primary Focus spender and damage",
                 "Bestial Wrath on cooldown — aligns with pet Frenzy stacks",
-                "Call of the Wild for coordinated burst with trinkets",
-                "Never overcap Focus — use Cobra Shot as filler",
+                "Cobra Shot to dump Focus — never overcap at 100",
+                "Black Arrow and Wild Thrash on cooldown when talented",
             },
-            scoreWeights = { cooldownUsage = 30, procUsage = 20, activity = 30, resourceMgmt = 20 },
-            sourceNote = "Adapted from Icy Veins Beast Mastery Hunter guide",
+            scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
+            sourceNote = "Midnight 12.0 verified against full BM talent tree 104 nodes (April 2026)",
         },
 
-        -- Marksmanship
+        -- Marksmanship (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Precise Shots (342776) removed from procBuffs — not in MM talent tree or spell list
+        -- Counter Shot (147362) added as isInterrupt — nodeID 102402 non-PASSIVE ACTIVE
+        -- Arcane Shot (185358) added to rotational — baseline confirmed spell list; primary Focus spender
         [2] = {
             name = "Marksmanship", role = "DPS",
             resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
             majorCooldowns = {
-                { id = 288613, label = "Trueshot",   expectedUses = "on CD"     },
-                { id = 257044, label = "Rapid Fire", expectedUses = "on CD"     },
-                { id = 260243, label = "Volley",     expectedUses = "AoE on CD" },
+                { id = 288613, label = "Trueshot",   expectedUses = "on CD"     },  -- nodeID 103947 non-PASSIVE ACTIVE
+                { id = 257044, label = "Rapid Fire", expectedUses = "on CD"     },  -- nodeID 103961 non-PASSIVE ACTIVE
+                { id = 260243, label = "Volley",     expectedUses = "AoE on CD" },  -- nodeID 103956 non-PASSIVE ACTIVE
+                { id = 147362, label = "Counter Shot", expectedUses = "situational", isInterrupt = true },  -- nodeID 102402 non-PASSIVE ACTIVE
+                -- Precise Shots (342776) removed — not in talent tree or spell list
             },
             rotationalSpells = {
-                { id = 19434, label = "Aimed Shot", minFightSeconds = 20 },
-            },
-            procBuffs = {
-                { id = 342776, label = "Precise Shots", maxStackTime = 15 },  -- VERIFY C_UnitAuras
+                { id = 19434,  label = "Aimed Shot",  minFightSeconds = 20 },  -- nodeID 103982 non-PASSIVE ACTIVE
+                { id = 185358, label = "Arcane Shot", minFightSeconds = 15 },  -- baseline confirmed spell list; Focus spender
             },
             priorityNotes = {
                 "Aimed Shot on cooldown — primary Focus spender and damage",
-                "Rapid Fire on cooldown — empowered volley of shots",
-                "Spend Precise Shots procs on Arcane Shot / Multi-Shot immediately",
-                "Trueshot for burst — align with trinkets and lust",
+                "Rapid Fire on cooldown — empowered burst cast",
+                "Arcane Shot to dump Focus — never overcap at 100",
                 "Volley for AoE on cooldown at 3+ targets",
+                "Trueshot for burst — align with trinkets and lust",
             },
-            scoreWeights = { cooldownUsage = 30, procUsage = 30, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Marksmanship Hunter guide",
+            scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
+            sourceNote = "Midnight 12.0 verified against full MM talent tree 103 nodes (April 2026)",
         },
 
-        -- Survival
-        -- Removed:  Serpent Sting (118253) from uptimeBuffs — enemy debuff, not a player aura
-        -- Removed:  debuffUptime from scoreWeights
-        -- Added:    rotationalSpells: Kill Command (34026), Mongoose Bite (259387)
+        -- Survival (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Coordinated Assault (360952) removed — not in Survival talent tree or spell list
+        -- Kill Command corrected 34026 (BM ID) → 259489 — nodeID 102255 non-PASSIVE ACTIVE; Survival spec-variant
+        -- Mongoose Bite (259387) removed — not in Survival talent tree or spell list
+        -- Muzzle (187707) added as isInterrupt — nodeID 79837 non-PASSIVE ACTIVE; confirmed spell list
+        -- Raptor Strike (186270) added to rotational — nodeID 102262 non-PASSIVE ACTIVE; confirmed spell list
+        -- Takedown (1250646) added to rotational — nodeID 109323 non-PASSIVE ACTIVE; confirmed spell list
+        -- Boomstick (1261193) added to rotational — nodeID 109324 non-PASSIVE ACTIVE; confirmed spell list
+        -- Flamefang Pitch (1251592) kept out — nodeID 102252 non-PASSIVE INACTIVE in this build
         [3] = {
             name = "Survival", role = "DPS",
             resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
             majorCooldowns = {
-                { id = 360952, label = "Coordinated Assault", expectedUses = "burst windows" },
-                { id = 259495, label = "Wildfire Bomb",       expectedUses = "on CD"         },
+                { id = 259495, label = "Wildfire Bomb", expectedUses = "on CD"        },  -- nodeID 102264 non-PASSIVE ACTIVE
+                { id = 187707, label = "Muzzle",        expectedUses = "situational", isInterrupt = true },  -- nodeID 79837 non-PASSIVE ACTIVE
+                -- Coordinated Assault (360952) removed — not in Survival talent tree or spell list
             },
-            -- uptimeBuffs empty: Serpent Sting is an enemy debuff, not a player self-aura
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 34026,  label = "Kill Command",   minFightSeconds = 30 },
-                { id = 259387, label = "Mongoose Bite",  minFightSeconds = 30 },  -- core melee ability
+                { id = 259489,  label = "Kill Command",  minFightSeconds = 15 },  -- nodeID 102255 non-PASSIVE ACTIVE (Survival spec-variant; was 34026 BM ID)
+                { id = 186270,  label = "Raptor Strike", minFightSeconds = 15 },  -- nodeID 102262 non-PASSIVE ACTIVE
+                { id = 259495,  label = "Wildfire Bomb", minFightSeconds = 20 },  -- also rotational between CD windows
+                { id = 1250646, label = "Takedown",      minFightSeconds = 20, talentGated = true },  -- nodeID 109323 non-PASSIVE ACTIVE
+                { id = 1261193, label = "Boomstick",     minFightSeconds = 20, talentGated = true },  -- nodeID 109324 non-PASSIVE ACTIVE
             },
             priorityNotes = {
-                "Maintain Serpent Sting on all targets for damage and Focus generation (not directly tracked)",
+                "Wildfire Bomb on cooldown — highest priority damage ability",
                 "Kill Command on cooldown — primary builder",
-                "Wildfire Bomb on cooldown — highest damage ability",
-                "Stack Mongoose Bite charges during Aspect of the Eagle for burst",
-                "Coordinated Assault for burst with trinkets and lust",
+                "Raptor Strike to spend Focus — never overcap at 100",
+                "Takedown and Boomstick on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Adapted from Icy Veins Survival Hunter guide",
+            sourceNote = "Midnight 12.0 verified against full Survival talent tree 99 nodes (April 2026)",
         },
     },
 
@@ -1153,53 +1269,89 @@ Core.SPEC_DATABASE = {
     [5] = {
         className = "Priest",
 
-        -- Discipline
+        -- Discipline (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Power Word: Barrier (62618) removed — not in Discipline talent tree or spell list
+        -- Evangelism ID corrected 246287 → 472433 — nodeID 82577 non-PASSIVE ACTIVE
+        -- Rapture (47536) removed — not in Discipline talent tree or spell list
+        -- Schism (204263) removed — not in Discipline talent tree or spell list
+        -- Power Infusion (10060) added to majorCooldowns — nodeID 82556 non-PASSIVE ACTIVE
+        -- Atonement (194384) removed from uptimeBuffs — not in tree/spell list; applied to others not self
+        -- Power Word: Radiance (194509) added to rotational — nodeID 82593 non-PASSIVE ACTIVE
+        -- Penance (47540) added to rotational — baseline confirmed spell list; primary damage/heal cast
+        -- Mind Blast (8092) added to rotational — nodeID 82713 non-PASSIVE ACTIVE
+        -- Shadow Word: Death (32379) added to rotational — nodeID 82712 non-PASSIVE ACTIVE
         [1] = {
             name = "Discipline", role = "HEALER",
             resourceType = 0,
             majorCooldowns = {
-                -- Choice node: Ultimate Penitence OR Power Word: Barrier (not both)
-                -- IsPlayerSpell at fight start will only register whichever is talented
-                { id = 421453, label = "Ultimate Penitence",  expectedUses = "ramp windows"       }, -- 4-min CD
-                { id = 62618,  label = "Power Word: Barrier", expectedUses = "stacked damage"     }, -- choice node alt
-                { id = 33206,  label = "Pain Suppression",    expectedUses = "tank busters"       },
-                { id = 246287, label = "Evangelism",          expectedUses = "ramp windows"       },
-                { id = 47536,  label = "Rapture",             expectedUses = "high damage phases" },
-                { id = 204263, label = "Schism",              expectedUses = "on CD for ramp amp" }, -- VERIFY ID
+                { id = 421453, label = "Ultimate Penitence", expectedUses = "ramp windows"   },  -- nodeID 82564 non-PASSIVE ACTIVE
+                { id = 33206,  label = "Pain Suppression",   expectedUses = "tank busters"   },  -- nodeID 82587 non-PASSIVE ACTIVE
+                { id = 472433, label = "Evangelism",         expectedUses = "ramp windows"   },  -- nodeID 82577 non-PASSIVE ACTIVE (was 246287)
+                { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows"  },  -- nodeID 82556 non-PASSIVE ACTIVE
+                -- Power Word: Barrier (62618) removed — not in talent tree
+                -- Rapture (47536) removed — not in talent tree or spell list
+                -- Schism (204263) removed — not in talent tree or spell list
             },
-            uptimeBuffs = {
-                { id = 194384, label = "Atonement", targetUptime = 0 },
+            uptimeBuffs = {},
+            rotationalSpells = {
+                { id = 47540,  label = "Penance",              minFightSeconds = 15 },  -- baseline confirmed spell list; primary damage/heal
+                { id = 194509, label = "Power Word: Radiance", minFightSeconds = 20 },  -- nodeID 82593 non-PASSIVE ACTIVE; AoE Atonement applicator
+                { id = 8092,   label = "Mind Blast",           minFightSeconds = 20 },  -- nodeID 82713 non-PASSIVE ACTIVE
+                { id = 32379,  label = "Shadow Word: Death",   minFightSeconds = 20 },  -- nodeID 82712 non-PASSIVE ACTIVE
             },
             healerMetrics = { targetOverheal = 20, targetActivity = 90, targetManaEnd = 5 },
             priorityNotes = {
-                "Ramp Atonements before damage with PWS and Shadow Mend",
-                "Evangelism extends Atonements for big damage windows",
-                "Maintain Purge the Wicked / SW:Pain for Atonement healing",
-                "Schism on cooldown during damage windows",
-                "Pain Suppression for tank busters, Barrier for stacks",
+                "Ramp Atonements before damage windows with Power Word: Shield and Shadow Mend",
+                "Evangelism extends all active Atonements — use at peak ramp before burst",
+                "Power Word: Radiance to apply Atonement to multiple targets quickly",
+                "Penance on cooldown — primary damage and direct healing cast",
+                "Mind Blast and Shadow Word: Death for Insanity generation and damage during ramp",
+                "Pain Suppression for tank busters",
+                "Power Infusion during peak damage windows",
+                "Ultimate Penitence as major ramp cooldown",
             },
             scoreWeights = { cooldownUsage = 30, efficiency = 25, activity = 25, responsiveness = 20 },
-            sourceNote = "Adapted from Icy Veins Discipline Priest guide",
+            sourceNote = "Midnight 12.0 verified against full Discipline talent tree 111 nodes (April 2026)",
         },
 
-        -- Holy
+        -- Holy (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Prayer of Mending corrected 33076 → 17 — 33076 is the Disc spec-variant; 17 confirmed in Holy spell list
+        -- Power Infusion (10060) added to majorCooldowns — nodeID 82556 non-PASSIVE ACTIVE
+        -- Guardian Spirit (47788) added to majorCooldowns — nodeID 82637 non-PASSIVE ACTIVE
+        -- Holy Word: Serenity (2050) added to rotational — nodeID 82638 non-PASSIVE ACTIVE
+        -- Holy Word: Sanctify (34861) added to rotational — nodeID 82631 non-PASSIVE ACTIVE
+        -- Holy Fire (14914) added to rotational — nodeID 108730 non-PASSIVE ACTIVE; CDR filler
+        -- Halo (120517) added to rotational — nodeID 108724 non-PASSIVE ACTIVE
         [2] = {
             name = "Holy", role = "HEALER",
             resourceType = 0,
             majorCooldowns = {
-                { id = 64843,  label = "Divine Hymn",       expectedUses = "1-2 per fight"        },
-                { id = 200183, label = "Apotheosis",        expectedUses = "high damage phases"   },
-                { id = 33076,  label = "Prayer of Mending", expectedUses = "on CD"                },
+                { id = 64843,  label = "Divine Hymn",       expectedUses = "heavy raid damage"    },  -- nodeID 82621 non-PASSIVE ACTIVE
+                { id = 200183, label = "Apotheosis",         expectedUses = "high damage phases"   },  -- nodeID 82614 non-PASSIVE ACTIVE
+                { id = 47788,  label = "Guardian Spirit",    expectedUses = "tank emergencies"     },  -- nodeID 82637 non-PASSIVE ACTIVE
+                { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows"        },  -- nodeID 82556 non-PASSIVE ACTIVE
+                -- Prayer of Mending: 33076 removed — Disc spec-variant; 17 is Holy baseline (rotational)
+            },
+            rotationalSpells = {
+                { id = 17,     label = "Prayer of Mending",  minFightSeconds = 15 },  -- confirmed Holy spell list; keep bouncing
+                { id = 2050,   label = "Holy Word: Serenity", minFightSeconds = 15 },  -- nodeID 82638 non-PASSIVE ACTIVE
+                { id = 34861,  label = "Holy Word: Sanctify", minFightSeconds = 15 },  -- nodeID 82631 non-PASSIVE ACTIVE
+                { id = 14914,  label = "Holy Fire",           minFightSeconds = 15 },  -- nodeID 108730 non-PASSIVE ACTIVE; reduces Holy Word CDs
+                { id = 120517, label = "Halo",                minFightSeconds = 20, talentGated = true },  -- nodeID 108724 non-PASSIVE ACTIVE
             },
             healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
             priorityNotes = {
-                "Keep Prayer of Mending bouncing at all times",
-                "Holy Words on cooldown  -  they reduce each other's CD",
-                "Divine Hymn for raid-wide burst damage",
-                "Circle of Healing on cooldown for efficiency",
+                "Keep Prayer of Mending bouncing at all times — instant, never waste charges",
+                "Holy Word: Serenity and Sanctify on cooldown — they reduce each other's CD via Apotheosis",
+                "Holy Fire on cooldown — reduces all Holy Word cooldowns via Answered Prayers",
+                "Apotheosis for burst damage phases — resets and reduces Holy Word CDs",
+                "Guardian Spirit on the tank for emergencies",
+                "Divine Hymn for heavy raid-wide burst damage",
+                "Power Infusion during Apotheosis for maximum throughput",
+                "Halo on cooldown when talented — strong AoE healing",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Adapted from Icy Veins Holy Priest guide",
+            sourceNote = "Midnight 12.0 verified against full Holy talent tree 111 nodes (April 2026)",
         },
 
         -- Shadow
@@ -1239,7 +1391,7 @@ Core.SPEC_DATABASE = {
                 "Tentacle Slam on cooldown (talent) — applies Vampiric Touch to up to 6 targets",
             },
             scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
-            sourceNote = "Adapted from Icy Veins Shadow Priest guide",
+            sourceNote = "Midnight 12.0 verified against full Shadow talent tree 114 nodes (April 2026) — all IDs confirmed",
         },
     },
 
