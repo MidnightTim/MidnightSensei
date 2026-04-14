@@ -168,6 +168,8 @@ local function OnCombatStart()
             -- If the spec defines a validSpells whitelist, enforce it strictly
             if spec.validSpells and not spec.validSpells[cd.id] then
                 -- spell not whitelisted for this spec — skip entirely
+            elseif cd.suppressIfTalent and IsTalentActive(cd.suppressIfTalent) then
+                -- talent replaces this CD and makes it passive — skip
             else
                 local known = (IsPlayerSpell and IsPlayerSpell(cd.id))
                            or IsTalentActive(cd.id)

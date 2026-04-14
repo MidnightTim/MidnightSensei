@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.3"
+    Core.VERSION = ver or "1.4.4"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -290,6 +290,46 @@ Core.CREDITS = {
 
 Core.CHANGELOG = {
     {
+        version = "1.4.4",
+        tagline = "Full Spec DB Audit — All 39 Specs Verified Against v1.4.3 Talent Snapshots",
+        date    = "April 2026",
+        changes = {
+            -- Demon Hunter
+            "Havoc: Chaos Strike (344862/162794/188499) removed — IDs not in Havoc talent tree; Blade Dance (188499) retained as baseline; Chaos Nova (179057) and Sigil of Misery (207684/isInterrupt) added",
+            "Vengeance: Metamorphosis (191427), Soul Cleave (228477/344862), Fracture (344859) removed — wrong IDs or shapeshifting; Sigil of Silence/Misery added as isInterrupt; Chaos Nova and Sigil of Spite added as CDs",
+            "Devourer: Reap (344862) removed — confirmed not in Devourer talent tree; The Hunt (1246167) added as talentGated CD",
+            -- Warrior
+            "Arms: Shockwave (46968) added as talentGated CD — confirmed non-PASSIVE",
+            "Fury: Shockwave (46968), Champion's Spear (376079) added as talentGated CDs; Rend (772) added as talentGated rotational",
+            "Protection: Rend (772) added as talentGated rotational",
+            -- Rogue
+            "Outlaw: Killing Spree (51690) added as talentGated CD — nodeID 94565",
+            "Subtlety: Goremaw's Bite (426591) added as talentGated CD; Gloomblade (200758) added as talentGated rotational with suppressIfTalent on Backstab (1752) — choice node, only one tracks at a time",
+            -- Mage
+            "Arcane: Touch of the Magi corrected 210824 → 321507 (correct tree ID, nodeID 102468); Arcane Orb (153626) and Arcane Pulse (1241462) added as talentGated CDs",
+            "Fire: Flamestrike (1254851) added as talentGated rotational — Fire spec-variant nodeID 109409",
+            -- Death Knight
+            "Blood: Consumption (1263824) added as talentGated CD — nodeID 102244",
+            -- Monk
+            "Mistweaver: Sheilun's Gift (399491) added as CD — nodeID 101120 non-PASSIVE ACTIVE; was missing entirely",
+            "Windwalker: Slicing Winds (1217413) added as talentGated CD — nodeID 102250",
+            -- Warlock
+            "Destruction: Wither (445468) added as talentGated CD — confirmed non-PASSIVE ACTIVE; shared node with Affliction, was missing from Destruction",
+            -- Shaman (Enhancement)
+            "Enhancement: suppressIfTalent audit complete via v1.4.3 snapshot — no changes needed; spec DB confirmed clean",
+            -- Priest
+            "Shadow: Halo (120644) added as talentGated rotational — Shadow spec-variant (different ID from Holy's 120517); nodeID 94697 non-PASSIVE ACTIVE",
+            -- Debug tool
+            "/ms debug talents: spell descriptions now captured and printed below each talent row",
+            "/ms debug talents: keywords Replaces/Grants/Transforms/Causes/Activates flagged with >>> prefix — identifies suppressIfTalent and talentGated candidates",
+            "/ms debug talents: FLAGGED count added to header; description text stored in snapshot for all future audits",
+            -- suppressIfTalent for majorCooldowns
+            "Analytics: suppressIfTalent now checked during majorCooldowns tracking setup — was previously only applied to rotationalSpells",
+            -- All sourceNotes
+            "All 39 spec sourceNotes updated to reflect v1.4.3 snapshot verification with node counts",
+        },
+    },
+    {
         version = "1.4.3",
         tagline = "Version Watermark, Feedback Version Snapshot & Devourer Fixes",
         date    = "April 2026",
@@ -298,9 +338,15 @@ Core.CHANGELOG = {
             "Fight Complete window: version number shown bottom-right above button row — small (8pt), dimmed at 50% opacity, unobtrusive",
             "Version label now reflects the addon version that generated that specific feedback, not the currently running version",
             "addonVersion field added to result struct — stored permanently with each encounter going forward",
+            -- Debug tool
+            "/ms debug talents: spell descriptions now captured and printed below each talent row",
+            "/ms debug talents: keywords Replaces/Grants/Transforms/Causes/Activates flagged with >>> prefix — identifies suppressIfTalent and talentGated candidates at a glance",
+            "/ms debug talents: FLAGGED count added to header summary",
             -- Devourer
             "Devourer: Void Metamorphosis (191427) removed from rotationalSpells — shapeshifting spell fires UPDATE_SHAPESHIFT_FORM not UNIT_SPELLCAST_SUCCEEDED; useCount permanently 0, false 'never used' feedback eliminated",
-            "Devourer: Reap (344862) flagged VERIFY — ID is in rotationalTracking at fight start but useCount stays 0 despite casts registering in damage meters; game likely fires a different spell ID at runtime",
+            "Devourer: Soul Immolation (1241937) — castable by default; Spontaneous Immolation (258920) talent replaces it with a passive version; suppressIfTalent = 258920 added so it is excluded when that talent is taken",
+            "Analytics: suppressIfTalent now checked during majorCooldowns setup — previously only applied to rotationalSpells",
+            "Devourer: Reap (344862) flagged VERIFY — useCount stays 0 despite casts in damage meter; game likely fires different runtime ID",
         },
     },
     {
@@ -939,31 +985,36 @@ Core.SPEC_DATABASE = {
         className = "Warrior",
 
         -- Arms (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (99 nodes, descriptions)
         -- Bladestorm (227847) removed — not in Arms talent tree; only in Fury spell list
         -- Warbreaker (262161) removed — not in Arms talent tree or spell list
         -- Avatar (107574) confirmed non-PASSIVE ACTIVE nodeID 110176
         -- Ravager (228920) added as talentGated CD — nodeID 90441 non-PASSIVE ACTIVE
         -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+        -- Shockwave (46968) added as talentGated CD — non-PASSIVE ACTIVE; shared class node
         -- Colossus Smash (167105) added to rotational — nodeID 90290 non-PASSIVE ACTIVE
         -- Overpower (7384) added to rotational — nodeID 90271 non-PASSIVE ACTIVE
         -- Rend (772) added to rotational — nodeID 109391 non-PASSIVE ACTIVE
+        -- Flags: Battlefield Commander/Deep Wounds/Mortal Wounds — Causes/Grants = effect
+        --   descriptions only, no spell-replacement pattern. No suppressIfTalent needed.
         [1] = {
             name = "Arms", role = "DPS",
             resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
             majorCooldowns = {
-                { id = 107574, label = "Avatar",    expectedUses = "on CD"           },  -- nodeID 110176 non-PASSIVE ACTIVE
-                { id = 228920, label = "Ravager",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90441 non-PASSIVE ACTIVE
-                { id = 436358, label = "Demolish",  expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                { id = 107574, label = "Avatar",     expectedUses = "on CD"           },  -- nodeID 110176 non-PASSIVE ACTIVE
+                { id = 228920, label = "Ravager",    expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90441 non-PASSIVE ACTIVE
+                { id = 436358, label = "Demolish",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                { id = 46968,  label = "Shockwave",  expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
                 -- Bladestorm (227847) removed — not in Arms talent tree
                 -- Warbreaker (262161) removed — not in Arms talent tree or spell list
             },
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 12294,  label = "Mortal Strike",   minFightSeconds = 15 },  -- nodeID 90270 non-PASSIVE ACTIVE
-                { id = 167105, label = "Colossus Smash",  minFightSeconds = 20 },  -- nodeID 90290 non-PASSIVE ACTIVE
-                { id = 7384,   label = "Overpower",       minFightSeconds = 15 },  -- nodeID 90271 non-PASSIVE ACTIVE
-                { id = 772,    label = "Rend",             minFightSeconds = 15 },  -- nodeID 109391 non-PASSIVE ACTIVE
-                { id = 163201, label = "Execute",          minFightSeconds = 45 },  -- confirmed spell list; execute phase
+                { id = 12294,  label = "Mortal Strike",  minFightSeconds = 15 },  -- nodeID 90270 non-PASSIVE ACTIVE
+                { id = 167105, label = "Colossus Smash", minFightSeconds = 20 },  -- nodeID 90290 non-PASSIVE ACTIVE
+                { id = 7384,   label = "Overpower",      minFightSeconds = 15 },  -- nodeID 90271 non-PASSIVE ACTIVE
+                { id = 772,    label = "Rend",            minFightSeconds = 15 },  -- nodeID 109391 non-PASSIVE ACTIVE
+                { id = 163201, label = "Execute",         minFightSeconds = 45 },  -- confirmed spell list; execute phase
             },
             priorityNotes = {
                 "Maintain Rend on target — DoT setup before Colossus Smash",
@@ -972,28 +1023,36 @@ Core.SPEC_DATABASE = {
                 "Overpower on cooldown — free proc-based filler",
                 "Execute during execute phase — replaces Mortal Strike below 20%",
                 "Avatar and Ravager for burst — align with Colossus Smash",
+                "Shockwave on cooldown when talented — AoE stun and damage",
                 "Pool Rage for Colossus Smash windows — avoid overcapping at 100",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Midnight 12.0 verified against full Arms talent tree 99 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Arms talent tree snapshot v1.4.3 99 nodes (April 2026)",
         },
 
         -- Fury (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (101 nodes, descriptions)
         -- Onslaught (315720) removed — not in Fury talent tree or spell list
         -- Avatar (107574) added to majorCooldowns — nodeID 90415 non-PASSIVE ACTIVE
         -- Odyn's Fury (385059) added to majorCooldowns — nodeID 110203 non-PASSIVE ACTIVE
         -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+        -- Shockwave (46968) added as talentGated CD — non-PASSIVE ACTIVE; shared class node
+        -- Champion's Spear (376079) added as talentGated CD — non-PASSIVE ACTIVE; shared class node
         -- Raging Blow (85288) added to rotational — nodeID 90396 non-PASSIVE ACTIVE
         -- Berserker Stance (386196) added to rotational — nodeID 90325 non-PASSIVE ACTIVE
-        -- Enrage uptime buff: 184362 retained (VERIFY — not in talent tree; may be enhanced aura ID)
+        -- Rend (772) added to rotational — non-PASSIVE ACTIVE; shared class node, DoT maintenance
+        -- Enrage uptime buff: 184362 retained (VERIFY — spell list shows 184361; 184362 may be enhanced version)
+        -- Flags: Battlefield Commander/Deep Wounds — Grants/Causes = effect descriptions only
         [2] = {
             name = "Fury", role = "DPS",
             resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
             majorCooldowns = {
-                { id = 1719,   label = "Recklessness", expectedUses = "on CD"           },  -- nodeID 90412 non-PASSIVE ACTIVE
-                { id = 107574, label = "Avatar",        expectedUses = "on CD"           },  -- nodeID 90415 non-PASSIVE ACTIVE
-                { id = 385059, label = "Odyn's Fury",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110203 non-PASSIVE ACTIVE
-                { id = 436358, label = "Demolish",      expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                { id = 1719,   label = "Recklessness",    expectedUses = "on CD"           },  -- nodeID 90412 non-PASSIVE ACTIVE
+                { id = 107574, label = "Avatar",           expectedUses = "on CD"           },  -- nodeID 90415 non-PASSIVE ACTIVE
+                { id = 385059, label = "Odyn's Fury",      expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110203 non-PASSIVE ACTIVE
+                { id = 436358, label = "Demolish",         expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                { id = 46968,  label = "Shockwave",        expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+                { id = 376079, label = "Champion's Spear", expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
                 -- Onslaught (315720) removed — not in Fury talent tree or spell list
             },
             uptimeBuffs = {
@@ -1004,45 +1063,52 @@ Core.SPEC_DATABASE = {
                 { id = 184367, label = "Rampage",          minFightSeconds = 20 },  -- nodeID 90408 non-PASSIVE ACTIVE; primary Rage spender
                 { id = 85288,  label = "Raging Blow",      minFightSeconds = 15 },  -- nodeID 90396 non-PASSIVE ACTIVE; core filler
                 { id = 386196, label = "Berserker Stance", minFightSeconds = 15 },  -- nodeID 90325 non-PASSIVE ACTIVE
+                { id = 772,    label = "Rend",             minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE; shared class node; DoT maintenance
             },
             priorityNotes = {
                 "Bloodthirst on cooldown — primary Enrage trigger and Rage builder",
                 "Rampage to refresh Enrage and spend Rage — never sit on 100 Rage",
                 "Raging Blow as filler during Enrage — high priority",
+                "Maintain Rend for the DoT when talented",
                 "Recklessness to align with Enrage and trinkets for burst",
-                "Odyn's Fury and Avatar on cooldown when talented",
-                "Demolish inside burst windows when talented",
+                "Odyn's Fury, Avatar, Champion's Spear on cooldown when talented",
+                "Shockwave and Demolish inside burst windows when talented",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 25, activity = 25, resourceMgmt = 20 },
-            sourceNote = "Midnight 12.0 verified against full Fury talent tree 101 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Fury talent tree snapshot v1.4.3 101 nodes (April 2026)",
         },
 
         -- Protection (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (102 nodes, descriptions)
         -- Last Stand (12975) removed — talent tree shows 1243659 Last Stand as PASSIVE INACTIVE
         -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
         -- Demoralizing Shout (1160) added to majorCooldowns — nodeID 90305 non-PASSIVE ACTIVE; debuff CD
         -- Disrupting Shout (386071) added as isInterrupt — nodeID 107579 non-PASSIVE ACTIVE
         -- Revenge (6572) added to rotational — nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
+        -- Rend (772) added to rotational — non-PASSIVE ACTIVE; shared class node; DoT maintenance
         -- Shield Slam (23922) baseline confirmed in spell list; not in talent tree node — fine
+        -- Flags: Battlefield Commander/Deep Wounds/Intimidating Shout — Causes/Grants = effect
+        --   descriptions only, no spell-replacement pattern. No suppressIfTalent needed.
         [3] = {
             name = "Protection", role = "TANK",
             resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
             majorCooldowns = {
-                { id = 871,    label = "Shield Wall",         expectedUses = "big hits"        },  -- nodeID 90302 non-PASSIVE ACTIVE
-                { id = 107574, label = "Avatar",              expectedUses = "on CD"           },  -- nodeID 90433 non-PASSIVE ACTIVE
-                { id = 190456, label = "Ignore Pain",         expectedUses = "physical hits"   },  -- nodeID 90295 non-PASSIVE ACTIVE
-                { id = 1160,   label = "Demoralizing Shout",  expectedUses = "on CD"           },  -- nodeID 90305 non-PASSIVE ACTIVE
-                { id = 436358, label = "Demolish",            expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
-                { id = 386071, label = "Disrupting Shout",    expectedUses = "situational",    isInterrupt = true },  -- nodeID 107579 non-PASSIVE ACTIVE
+                { id = 871,    label = "Shield Wall",        expectedUses = "big hits"        },  -- nodeID 90302 non-PASSIVE ACTIVE
+                { id = 107574, label = "Avatar",             expectedUses = "on CD"           },  -- nodeID 90433 non-PASSIVE ACTIVE
+                { id = 190456, label = "Ignore Pain",        expectedUses = "physical hits"   },  -- nodeID 90295 non-PASSIVE ACTIVE
+                { id = 1160,   label = "Demoralizing Shout", expectedUses = "on CD"           },  -- nodeID 90305 non-PASSIVE ACTIVE
+                { id = 436358, label = "Demolish",           expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+                { id = 386071, label = "Disrupting Shout",   expectedUses = "situational",    isInterrupt = true },  -- nodeID 107579 non-PASSIVE ACTIVE
                 -- Last Stand (12975) removed — confirmed PASSIVE in talent tree
             },
             uptimeBuffs = {
                 { id = 2565, label = "Shield Block", targetUptime = 50 },  -- baseline confirmed spell list
             },
             rotationalSpells = {
-                { id = 6343,  label = "Thunder Clap",  minFightSeconds = 15 },  -- nodeID 90343 non-PASSIVE ACTIVE
-                { id = 23922, label = "Shield Slam",   minFightSeconds = 15 },  -- baseline confirmed spell list
-                { id = 6572,  label = "Revenge",       minFightSeconds = 15 },  -- nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
+                { id = 6343,  label = "Thunder Clap", minFightSeconds = 15 },  -- nodeID 90343 non-PASSIVE ACTIVE
+                { id = 23922, label = "Shield Slam",  minFightSeconds = 15 },  -- baseline confirmed spell list
+                { id = 6572,  label = "Revenge",      minFightSeconds = 15 },  -- nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
+                { id = 772,   label = "Rend",         minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE; shared class node; DoT maintenance
             },
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
@@ -1050,13 +1116,14 @@ Core.SPEC_DATABASE = {
                 "Shield Slam on cooldown — primary Rage generator and damage",
                 "Thunder Clap on cooldown — AoE damage and slowing",
                 "Revenge to spend Rage — free when proc fires",
+                "Maintain Rend for the DoT when talented",
                 "Ignore Pain to absorb incoming physical hits",
                 "Demoralizing Shout on cooldown — damage reduction for the group",
                 "Shield Wall for heavy magic or unavoidable damage",
                 "Demolish inside burst windows when talented",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against full Protection talent tree 102 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Protection talent tree snapshot v1.4.3 102 nodes (April 2026)",
         },
     },
 
@@ -1142,7 +1209,7 @@ Core.SPEC_DATABASE = {
                 "Ardent Defender and Guardian of Ancient Kings for heavy damage windows",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against full Protection talent tree 114 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Protection Paladin talent tree snapshot v1.4.3 114 nodes (April 2026)",
         },
 
         -- Retribution (Midnight 12.0 PASSIVE audit + rotation guide — April 2026)
@@ -1191,7 +1258,7 @@ Core.SPEC_DATABASE = {
                 "Divine Storm as AoE finisher at 5 Holy Power",
             },
             scoreWeights = { cooldownUsage = 35, activity = 30, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Midnight 12.0 verified against full Ret talent tree 107 nodes + rotation guide (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Retribution talent tree snapshot v1.4.3 107 nodes (April 2026)",
         },
     },
 
@@ -1232,7 +1299,7 @@ Core.SPEC_DATABASE = {
                 "Black Arrow and Wild Thrash on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Midnight 12.0 verified against full BM talent tree 104 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full BM Hunter talent tree snapshot v1.4.3 104 nodes (April 2026)",
         },
 
         -- Marksmanship (Midnight 12.0 PASSIVE audit — April 2026)
@@ -1261,7 +1328,7 @@ Core.SPEC_DATABASE = {
                 "Trueshot for burst — align with trinkets and lust",
             },
             scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Midnight 12.0 verified against full MM talent tree 103 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full MM Hunter talent tree snapshot v1.4.3 103 nodes (April 2026)",
         },
 
         -- Survival (Midnight 12.0 PASSIVE audit — April 2026)
@@ -1296,7 +1363,7 @@ Core.SPEC_DATABASE = {
                 "Takedown and Boomstick on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Midnight 12.0 verified against full Survival talent tree 99 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Survival Hunter talent tree snapshot v1.4.3 99 nodes (April 2026)",
         },
     },
 
@@ -1337,17 +1404,19 @@ Core.SPEC_DATABASE = {
                 "Crimson Tempest for AoE — keeps bleeds rolling on multiple targets",
             },
             scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Midnight 12.0 verified against full Assassination talent tree 103 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Assassination talent tree snapshot v1.4.3 103 nodes (April 2026)",
         },
 
         -- Outlaw (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (102 nodes, descriptions) — FLAGGED: 0
         -- Roll the Bones corrected 315508 → 1214909 — confirmed Outlaw spell list
         -- Blade Rush (271877) added to majorCooldowns — nodeID 90649 non-PASSIVE ACTIVE
         -- Keep It Rolling (381989) added to majorCooldowns — nodeID 90652 non-PASSIVE ACTIVE
         -- Kick (1766) added as isInterrupt — confirmed Outlaw spell list
+        -- Killing Spree (51690) added as talentGated CD — nodeID 94565 INACTIVE this build
         -- Between the Eyes corrected 199804 → 315341 — Outlaw spec-variant confirmed spell list
         -- Dispatch corrected 2098 → 196819 — Outlaw spec-variant confirmed spell list
-        -- Sinister Strike (1752) added to rotational — Outlaw spec-variant confirmed spell list; primary builder
+        -- Sinister Strike (1752) added to rotational — Outlaw spec-variant; primary builder
         -- Pistol Shot (185763) added to rotational — confirmed Outlaw spell list; builder/proc spender
         [2] = {
             name = "Outlaw", role = "DPS",
@@ -1358,13 +1427,14 @@ Core.SPEC_DATABASE = {
                 { id = 13877,   label = "Blade Flurry",     expectedUses = "AoE on CD"      },  -- baseline confirmed Outlaw spell list
                 { id = 271877,  label = "Blade Rush",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90649 non-PASSIVE ACTIVE
                 { id = 381989,  label = "Keep It Rolling",  expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90652 non-PASSIVE ACTIVE
-                { id = 1766,    label = "Kick",             expectedUses = "situational",    isInterrupt = true },  -- confirmed Outlaw spell list
+                { id = 51690,   label = "Killing Spree",    expectedUses = "burst windows (talent)", talentGated = true },  -- nodeID 94565 INACTIVE this build
+                { id = 1766,    label = "Kick",             expectedUses = "situational",    isInterrupt = true },
             },
             rotationalSpells = {
-                { id = 1752,   label = "Sinister Strike",   minFightSeconds = 15 },  -- Outlaw spec-variant confirmed spell list; primary builder
-                { id = 185763, label = "Pistol Shot",       minFightSeconds = 15 },  -- confirmed Outlaw spell list; Quick Draw proc spender
-                { id = 315341, label = "Between the Eyes",  minFightSeconds = 20 },  -- Outlaw spec-variant confirmed spell list (was 199804)
-                { id = 196819, label = "Dispatch",          minFightSeconds = 20 },  -- Outlaw spec-variant confirmed spell list (was 2098)
+                { id = 1752,   label = "Sinister Strike",  minFightSeconds = 15 },
+                { id = 185763, label = "Pistol Shot",      minFightSeconds = 15 },
+                { id = 315341, label = "Between the Eyes", minFightSeconds = 20 },
+                { id = 196819, label = "Dispatch",         minFightSeconds = 20 },
             },
             priorityNotes = {
                 "Keep Roll the Bones active — reroll for better buffs with Keep It Rolling",
@@ -1372,44 +1442,51 @@ Core.SPEC_DATABASE = {
                 "Between the Eyes on cooldown during Adrenaline Rush for burst",
                 "Sinister Strike / Pistol Shot to build combo points",
                 "Dispatch at 5+ combo points — primary finisher",
+                "Killing Spree for burst when talented",
                 "Blade Flurry for any 2+ target situation",
             },
             scoreWeights = { cooldownUsage = 35, activity = 35, resourceMgmt = 20, procUsage = 10 },
-            sourceNote = "Midnight 12.0 verified against full Outlaw talent tree 102 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Outlaw talent tree snapshot v1.4.3 102 nodes (April 2026)",
         },
 
         -- Subtlety (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (105 nodes, descriptions) — FLAGGED: 0
         -- Symbols of Death (212283) removed — not in Subtlety talent tree or spell list
         -- Kick (1766) added as isInterrupt — confirmed Subtlety spell list
         -- Nightblade (195452) removed from rotational — not in Subtlety talent tree or spell list
-        -- Eviscerate (196819) confirmed Sub spell list ✅; "Eviscerate" is correct Sub finisher name
-        -- Backstab (1752) added to rotational — Sub spec-variant confirmed spell list (shows as "Backstab"); primary builder
+        -- Backstab (1752): suppressIfTalent = 200758 (Gloomblade) — Gloomblade is a choice node
+        --   that replaces Backstab as the primary builder. Both are in the tree as INACTIVE in
+        --   this build; only one should be tracked depending on which is talented.
+        -- Goremaw's Bite (426591) added as talentGated CD — nodeID 94581 INACTIVE this build
         -- Shuriken Storm (197835) added to rotational — confirmed Sub spell list; AoE builder
         [3] = {
             name = "Subtlety", role = "DPS",
             resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
             majorCooldowns = {
-                { id = 185313, label = "Shadow Dance",  expectedUses = "burst windows" },  -- baseline confirmed Sub spell list
-                { id = 121471, label = "Shadow Blades", expectedUses = "on CD"         },  -- nodeID 90726 non-PASSIVE ACTIVE
-                { id = 1766,   label = "Kick",          expectedUses = "situational",   isInterrupt = true },  -- confirmed Sub spell list
-                -- Symbols of Death (212283) removed — not in Subtlety talent tree or spell list
+                { id = 185313, label = "Shadow Dance",   expectedUses = "burst windows"           },  -- baseline confirmed Sub spell list
+                { id = 121471, label = "Shadow Blades",  expectedUses = "on CD"                   },  -- nodeID 90726 non-PASSIVE ACTIVE
+                { id = 426591, label = "Goremaw's Bite", expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94581 INACTIVE this build
+                { id = 1766,   label = "Kick",           expectedUses = "situational",    isInterrupt = true },
             },
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 185438, label = "Shadowstrike",  minFightSeconds = 20 },  -- confirmed Sub spell list; Stealth builder
-                { id = 1752,   label = "Backstab",      minFightSeconds = 15 },  -- Sub spec-variant confirmed spell list; primary builder outside Stealth
-                { id = 196819, label = "Eviscerate",    minFightSeconds = 20 },  -- confirmed Sub spell list; primary finisher
+                { id = 185438, label = "Shadowstrike",   minFightSeconds = 20 },  -- confirmed Sub spell list; Stealth builder
+                { id = 1752,   label = "Backstab",       minFightSeconds = 15,
+                  suppressIfTalent = 200758 },   -- Gloomblade (200758) replaces Backstab as primary builder
+                { id = 200758, label = "Gloomblade",     minFightSeconds = 15, talentGated = true },  -- choice node replacing Backstab
+                { id = 196819, label = "Eviscerate",     minFightSeconds = 20 },  -- confirmed Sub spell list; primary finisher
                 { id = 197835, label = "Shuriken Storm", minFightSeconds = 20 },  -- confirmed Sub spell list; AoE builder
             },
             priorityNotes = {
                 "Shadow Dance for burst — spend with Shadowstrike inside every window",
                 "Shadow Blades on cooldown — sustained burst and CP generation",
-                "Shadowstrike inside Shadow Dance, Backstab outside",
+                "Shadowstrike inside Shadow Dance, Backstab (or Gloomblade) outside",
                 "Eviscerate at 5+ combo points — primary finisher",
+                "Goremaw's Bite on cooldown when talented",
                 "Shuriken Storm as AoE builder at 3+ targets",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Midnight 12.0 verified against full Subtlety talent tree 105 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Subtlety talent tree snapshot v1.4.3 105 nodes (April 2026)",
         },
     },
 
@@ -1461,7 +1538,7 @@ Core.SPEC_DATABASE = {
                 "Ultimate Penitence as major ramp cooldown",
             },
             scoreWeights = { cooldownUsage = 30, efficiency = 25, activity = 25, responsiveness = 20 },
-            sourceNote = "Midnight 12.0 verified against full Discipline talent tree 111 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Discipline talent tree snapshot v1.4.3 111 nodes (April 2026)",
         },
 
         -- Holy (Midnight 12.0 PASSIVE audit — April 2026)
@@ -1501,14 +1578,17 @@ Core.SPEC_DATABASE = {
                 "Halo on cooldown when talented — strong AoE healing",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Midnight 12.0 verified against full Holy talent tree 111 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Holy Paladin talent tree snapshot v1.4.3 103 nodes (April 2026)",
         },
 
-        -- Shadow
+        -- Shadow (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (114 nodes, descriptions) — FLAGGED: 0
         -- Removed:  Shadow Word: Pain (589), Vampiric Touch (34914) from uptimeBuffs — enemy debuffs
         -- Removed:  debuffUptime from scoreWeights
         -- Added:    rotationalSpells: Shadow Word: Pain (589), Vampiric Touch (34914),
         --           Devouring Plague (335467), Mind Blast (8092)
+        -- Halo (120644) added as talentGated rotational — nodeID 94697 non-PASSIVE ACTIVE
+        --   Shadow spec-variant (different ID from Holy's 120517)
         [3] = {
             name = "Shadow", role = "DPS",
             resourceType = 13, resourceLabel = "INSANITY", overcapAt = 90,
@@ -1518,15 +1598,15 @@ Core.SPEC_DATABASE = {
                 { id = 263165,  label = "Void Torrent",    expectedUses = "on CD", talentGated = true },    -- Voidweaver only
                 { id = 1227280, label = "Tentacle Slam",   expectedUses = "on CD", talentGated = true },    -- renamed from Shadow Crash in 12.0
             },
-            -- uptimeBuffs empty: SW:Pain and Vampiric Touch are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 589,    label = "Shadow Word: Pain", minFightSeconds = 15,
-                  suppressIfTalent = 238558 },  -- Misery (238558): VT auto-applies SW:Pain passively
-                { id = 34914,  label = "Vampiric Touch", minFightSeconds = 15,
+                { id = 589,    label = "Shadow Word: Pain",  minFightSeconds = 15,
+                  suppressIfTalent = 238558 },   -- Misery (238558): VT auto-applies SW:Pain passively
+                { id = 34914,  label = "Vampiric Touch",     minFightSeconds = 15,
                   suppressIfTalent = 1227280 },  -- Tentacle Slam auto-applies VT to up to 6 targets
                 { id = 335467, label = "Shadow Word: Madness", minFightSeconds = 20 },
-                { id = 8092,   label = "Mind Blast",        minFightSeconds = 20 },
+                { id = 8092,   label = "Mind Blast",           minFightSeconds = 20 },
+                { id = 120644, label = "Halo",                 minFightSeconds = 30, talentGated = true },  -- Shadow spec-variant; nodeID 94697 non-PASSIVE ACTIVE
             },
             priorityNotes = {
                 "Cast Vampiric Touch to apply Shadow Word: Pain automatically (Misery talent)",
@@ -1539,9 +1619,10 @@ Core.SPEC_DATABASE = {
                 "Mind Blast on cooldown for Insanity generation",
                 "Void Torrent on cooldown (Voidweaver) — strong channel, do not cancel",
                 "Tentacle Slam on cooldown (talent) — applies Vampiric Touch to up to 6 targets",
+                "Halo on cooldown when talented — strong AoE damage",
             },
             scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
-            sourceNote = "Midnight 12.0 verified against full Shadow talent tree 114 nodes (April 2026) — all IDs confirmed",
+            sourceNote = "Midnight 12.0 verified against full Shadow talent tree snapshot v1.4.3 114 nodes (April 2026)",
         },
     },
 
@@ -1552,22 +1633,23 @@ Core.SPEC_DATABASE = {
         className = "Death Knight",
 
         -- Blood (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (108 nodes, descriptions) — FLAGGED: 0
         -- Abomination Limb (383269) removed — not in Blood talent tree or spell list
         -- Bonestorm (194844) removed — not in Blood talent tree or spell list
         -- Reaper's Mark (439843) added to majorCooldowns — nodeID 95062 non-PASSIVE ACTIVE
         -- Mind Freeze (47528) added as isInterrupt — nodeID 76084 non-PASSIVE ACTIVE
-        -- Blood Shield (77535) removed from uptimeBuffs — proc absorb from Death Strike, not a persistent aura
+        -- Blood Shield (77535) removed from uptimeBuffs — proc absorb, not a persistent aura
+        -- Consumption (1263824) added as talentGated CD — nodeID 102244 non-PASSIVE INACTIVE this build
         -- rotationalSpells added: Marrowrend, Heart Strike, Blood Boil, Death Strike — all missing entirely
         [1] = {
             name = "Blood", role = "TANK",
             resourceType = 6, resourceLabel = "RUNIC POWER", overcapAt = 100,
             majorCooldowns = {
-                { id = 49028,  label = "Dancing Rune Weapon", expectedUses = "on CD"      },  -- nodeID 76138 non-PASSIVE ACTIVE
-                { id = 55233,  label = "Vampiric Blood",      expectedUses = "big damage" },  -- nodeID 76173 non-PASSIVE ACTIVE
-                { id = 439843, label = "Reaper's Mark",       expectedUses = "on CD"      },  -- nodeID 95062 non-PASSIVE ACTIVE
-                { id = 47528,  label = "Mind Freeze",         expectedUses = "situational", isInterrupt = true },  -- nodeID 76084 non-PASSIVE ACTIVE
-                -- Abomination Limb (383269) removed — not in Blood talent tree or spell list
-                -- Bonestorm (194844) removed — not in Blood talent tree or spell list
+                { id = 49028,   label = "Dancing Rune Weapon", expectedUses = "on CD"           },  -- nodeID 76138 non-PASSIVE ACTIVE
+                { id = 55233,   label = "Vampiric Blood",      expectedUses = "big damage"      },  -- nodeID 76173 non-PASSIVE ACTIVE
+                { id = 439843,  label = "Reaper's Mark",       expectedUses = "on CD"           },  -- nodeID 95062 non-PASSIVE ACTIVE
+                { id = 1263824, label = "Consumption",         expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102244; damage + mitigation
+                { id = 47528,   label = "Mind Freeze",         expectedUses = "situational",    isInterrupt = true },  -- nodeID 76084 non-PASSIVE ACTIVE
             },
             uptimeBuffs = {},
             rotationalSpells = {
@@ -1585,9 +1667,10 @@ Core.SPEC_DATABASE = {
                 "Dancing Rune Weapon on cooldown — parry and Rune regeneration",
                 "Vampiric Blood for sustained dangerous phases",
                 "Reaper's Mark on cooldown",
+                "Consumption on cooldown when talented — damage and instant Blood Plague burst",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against full Blood talent tree 108 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Blood talent tree snapshot v1.4.3 108 nodes (April 2026)",
         },
 
         -- Frost (Midnight 12.0 PASSIVE audit — April 2026)
@@ -1628,7 +1711,7 @@ Core.SPEC_DATABASE = {
                 "Breath of Sindragosa: do not break early — maximise channel duration",
             },
             scoreWeights = { cooldownUsage = 25, procUsage = 30, activity = 25, resourceMgmt = 20 },
-            sourceNote = "Midnight 12.0 verified against full Frost talent tree 107 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Frost DK talent tree snapshot v1.4.3 107 nodes (April 2026)",
         },
 
         -- Unholy (Midnight 12.0 PASSIVE audit — April 2026)
@@ -1670,7 +1753,7 @@ Core.SPEC_DATABASE = {
                 "Army of the Dead on pull or major burst window",
             },
             scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
-            sourceNote = "Midnight 12.0 verified against full Unholy talent tree 106 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Unholy DK talent tree snapshot v1.4.3 106 nodes (April 2026)",
         },
     },
 
@@ -1825,7 +1908,12 @@ Core.SPEC_DATABASE = {
         className = "Mage",
 
         -- Arcane (Midnight 12.0 PASSIVE audit — April 2026)
-        -- Touch of the Magi (210824) removed — not in Arcane talent tree or spell list
+        -- Verified against v1.4.3 talent snapshot (90 nodes, descriptions) — FLAGGED: 2
+        -- Flags: Ice Block [Causes] = self-CC effect; Arcane Orb [Grants] = Arcane Power charge.
+        --   Neither is a spell-replacement pattern. No suppressIfTalent needed.
+        -- Touch of the Magi 210824 was wrong ID. 321507 confirmed nodeID 102468 INACTIVE — restored
+        -- Arcane Orb (153626) added as talentGated CD — nodeID 104113 INACTIVE this build
+        -- Arcane Pulse (1241462) added as talentGated CD — nodeID 102439 INACTIVE this build
         -- Evocation (12051) removed — not in Arcane talent tree or spell list
         -- Arcane Surge (365350) nodeID 102449 INACTIVE in this build — talentGated
         -- Alter Time (342245) added to majorCooldowns — nodeID 62115 non-PASSIVE ACTIVE
@@ -1837,16 +1925,17 @@ Core.SPEC_DATABASE = {
             name = "Arcane", role = "DPS",
             resourceType = 0,
             majorCooldowns = {
-                { id = 365350, label = "Arcane Surge", expectedUses = "on CD",    talentGated = true },  -- nodeID 102449 INACTIVE this build
-                { id = 342245, label = "Alter Time",   expectedUses = "on CD"                       },  -- nodeID 62115 non-PASSIVE ACTIVE
-                -- Touch of the Magi (210824) removed — not in Arcane talent tree or spell list
-                -- Evocation (12051) removed — not in Arcane talent tree or spell list
+                { id = 365350, label = "Arcane Surge",     expectedUses = "on CD",    talentGated = true },  -- nodeID 102449 INACTIVE this build
+                { id = 342245, label = "Alter Time",       expectedUses = "on CD"                       },  -- nodeID 62115 non-PASSIVE ACTIVE
+                { id = 321507, label = "Touch of the Magi",expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102468 INACTIVE (was 210824 — wrong ID)
+                { id = 153626, label = "Arcane Orb",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 104113 INACTIVE this build
+                { id = 1241462,label = "Arcane Pulse",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102439 INACTIVE this build
             },
             rotationalSpells = {
                 { id = 116,    label = "Arcane Blast",     minFightSeconds = 15 },  -- baseline confirmed spell list; primary charge builder
                 { id = 319836, label = "Arcane Barrage",   minFightSeconds = 20 },  -- confirmed Arcane spell list (was 44425 — Fire/Frost variant)
                 { id = 5143,   label = "Arcane Missiles",  minFightSeconds = 15, talentGated = true },  -- nodeID 102467 non-PASSIVE ACTIVE; Clearcasting consumer
-                { id = 1449,   label = "Arcane Explosion", minFightSeconds = 20 },  -- baseline confirmed spell list; AoE filler
+                { id = 1449,   label = "Arcane Explosion", minFightSeconds = 20 },  -- baseline confirmed Arcane spell list; AoE filler
             },
             procBuffs = {
                 { id = 79684, label = "Clearcasting", maxStackTime = 15 },  -- confirmed Arcane spell list (was 276743 — old aura ID)
@@ -1855,11 +1944,13 @@ Core.SPEC_DATABASE = {
                 "Build to 4 Arcane Charges with Arcane Blast before spending",
                 "Arcane Barrage to dump charges and reset for mana conservation",
                 "Arcane Surge at 4 charges when talented — primary burst window",
+                "Touch of the Magi on cooldown when talented — detonates accumulated damage",
                 "Spend Clearcasting procs on Arcane Missiles immediately",
+                "Arcane Orb and Arcane Pulse on cooldown when talented",
                 "Alter Time on cooldown — rewind to a better mana/charges state",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 25, activity = 25, resourceMgmt = 20 },
-            sourceNote = "Midnight 12.0 verified against full Arcane talent tree 90 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Arcane talent tree snapshot v1.4.3 90 nodes (April 2026)",
         },
 
         -- Fire (Midnight 12.0 PASSIVE audit — April 2026)
@@ -1882,10 +1973,11 @@ Core.SPEC_DATABASE = {
             },
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 116,    label = "Fireball",   minFightSeconds = 15 },  -- Fire spec-variant confirmed spell list (was 133 — Arcane/Frost variant)
-                { id = 108853, label = "Fire Blast", minFightSeconds = 15 },  -- nodeID 100989 non-PASSIVE ACTIVE; instant Hot Streak proc
-                { id = 11366,  label = "Pyroblast",  minFightSeconds = 15 },  -- nodeID 100998 non-PASSIVE ACTIVE; Hot Streak proc consumer
-                { id = 2948,   label = "Scorch",     minFightSeconds = 20, talentGated = true },  -- nodeID 110322 non-PASSIVE ACTIVE; filler/execute
+                { id = 116,     label = "Fireball",    minFightSeconds = 15 },  -- Fire spec-variant confirmed spell list (was 133 — Arcane/Frost variant)
+                { id = 108853,  label = "Fire Blast",  minFightSeconds = 15 },  -- nodeID 100989 non-PASSIVE ACTIVE; instant Hot Streak proc
+                { id = 11366,   label = "Pyroblast",   minFightSeconds = 15 },  -- nodeID 100998 non-PASSIVE ACTIVE; Hot Streak proc consumer
+                { id = 2948,    label = "Scorch",      minFightSeconds = 20, talentGated = true },  -- nodeID 110322 non-PASSIVE ACTIVE; filler/execute
+                { id = 1254851, label = "Flamestrike", minFightSeconds = 20, talentGated = true },  -- nodeID 109409 non-PASSIVE ACTIVE; Fire spec-variant AoE
             },
             procBuffs = {
                 { id = 48108, label = "Hot Streak", maxStackTime = 10 },  -- VERIFY aura ID — spell list shows 195283 Hot Streak
@@ -1896,10 +1988,11 @@ Core.SPEC_DATABASE = {
                 "Combustion for burst — align with trinkets and lust",
                 "Fire Blast on cooldown to proc or extend Hot Streak",
                 "Scorch as filler during execute phase and while moving when talented",
+                "Flamestrike for AoE when talented",
                 "Meteor and Supernova on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 30, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against full Fire talent tree 101 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Fire talent tree snapshot v1.4.3 101 nodes (April 2026)",
         },
 
         -- Frost (Midnight 12.0 PASSIVE audit — April 2026)
@@ -1940,7 +2033,7 @@ Core.SPEC_DATABASE = {
                 "Frostfire Bolt on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 30, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against full Frost talent tree 100 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Frost Mage talent tree snapshot v1.4.3 100 nodes (April 2026)",
         },
     },
 
@@ -2038,12 +2131,15 @@ Core.SPEC_DATABASE = {
 
         -- Destruction (Full talent tree pass — April 2026)
         -- Verified against full talent tree (103 nodes) and spell snapshot
+        -- v1.4.3 snapshot: Wither (445468) confirmed non-PASSIVE ACTIVE — added to majorCooldowns
+        --   (was in Affliction spec DB but missing from Destruction — shared cross-spec node)
+        --   Wither [Replaces] Corruption tooltip — Corruption not tracked in Destruction, no suppressIfTalent needed
         -- Malevolence: corrected 458355 → 442726 (nodeID 94842 ACTIVE)
         -- Havoc (80240) removed — not in Destruction talent tree or spell list in Midnight 12.0
         -- Immolate (348) removed from rotational — not in Destruction spell list or talent tree
         -- Incinerate: spell list shows 686 as "Incinerate" for Destruction (spec-variant baseline)
-        -- Diabolic Ritual (428514) added as talentGated CD — nodeID 94855 ACTIVE
-        -- Devastation (454735) added as talentGated CD — nodeID 110281 ACTIVE rank 2/2
+        -- Diabolic Ritual (428514) removed — confirmed PASSIVE (nodeID 94855)
+        -- Devastation (454735) removed — confirmed PASSIVE (nodeID 110281)
         -- Conflagrate (17962) added to rotational — nodeID 72068 ACTIVE; core builder
         -- Shadowburn (17877) added to rotational — nodeID 72060 ACTIVE; execute finisher
         -- Rain of Fire (5740) added as talentGated rotational — nodeID 72069 ACTIVE
@@ -2054,7 +2150,7 @@ Core.SPEC_DATABASE = {
                 { id = 1122,   label = "Summon Infernal",  expectedUses = "on CD"           },  -- nodeID 71985 — not PASSIVE
                 { id = 442726, label = "Malevolence",      expectedUses = "on CD"           },  -- nodeID 94842 — not PASSIVE
                 { id = 152108, label = "Cataclysm",        expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 71974 — not PASSIVE
-                -- Removed (confirmed PASSIVE via talent snapshot):
+                { id = 445468, label = "Wither",           expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; confirmed v1.4.3 snapshot — shared node with Affliction
                 -- Diabolic Ritual 428514 — PASSIVE (nodeID 94855)
                 -- Devastation 454735 — PASSIVE (nodeID 110281)
             },
@@ -2125,14 +2221,16 @@ Core.SPEC_DATABASE = {
                 "Fortifying Brew for true emergencies",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against full Brewmaster talent tree 117 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Brewmaster talent tree snapshot v1.4.3 117 nodes (April 2026)",
         },
 
         -- Mistweaver (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (124 nodes, descriptions) — FLAGGED: 0
         -- Invoke Yu'lon (322118) removed — not in Mistweaver talent tree or spell list
         -- Invoke Chi-Ji (325197) added to majorCooldowns — nodeID 101129 non-PASSIVE ACTIVE
         -- Life Cocoon (116849) added to majorCooldowns — nodeID 101096 non-PASSIVE ACTIVE
         -- Celestial Conduit (443028) added to majorCooldowns — nodeID 110067 non-PASSIVE ACTIVE
+        -- Sheilun's Gift (399491) added to majorCooldowns — nodeID 101120 non-PASSIVE ACTIVE
         -- Spear Hand Strike (116705) added as isInterrupt — baseline confirmed Mistweaver spell list
         -- Renewing Mist corrected 119611 → 115151 — 119611 is wrong ID; 115151 confirmed Mistweaver spell list
         -- Enveloping Mist (124682) added to rotational — nodeID 101134 non-PASSIVE ACTIVE
@@ -2142,10 +2240,11 @@ Core.SPEC_DATABASE = {
             majorCooldowns = {
                 { id = 115310, label = "Revival",           expectedUses = "raid emergency"  },  -- nodeID 101131 non-PASSIVE ACTIVE
                 { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"           },  -- nodeID 101133 non-PASSIVE ACTIVE
-                { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE"  },  -- nodeID 101129 non-PASSIVE ACTIVE (was Yu'lon 322118 — wrong)
+                { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE"  },  -- nodeID 101129 non-PASSIVE ACTIVE
                 { id = 116849, label = "Life Cocoon",       expectedUses = "tank emergencies"},  -- nodeID 101096 non-PASSIVE ACTIVE
+                { id = 399491, label = "Sheilun's Gift",    expectedUses = "on CD"           },  -- nodeID 101120 non-PASSIVE ACTIVE; draws in mist clouds for burst heal
                 { id = 443028, label = "Celestial Conduit", expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110067 non-PASSIVE ACTIVE
-                { id = 116705, label = "Spear Hand Strike", expectedUses = "situational",    isInterrupt = true },  -- baseline confirmed Mistweaver spell list
+                { id = 116705, label = "Spear Hand Strike", expectedUses = "situational",    isInterrupt = true },
             },
             rotationalSpells = {
                 { id = 115151, label = "Renewing Mist",   minFightSeconds = 15 },  -- baseline confirmed Mistweaver spell list (was 119611 — wrong ID)
@@ -2158,39 +2257,41 @@ Core.SPEC_DATABASE = {
                 "Rising Sun Kick on cooldown — damage amp and healing bonus",
                 "Enveloping Mist for sustained single-target healing",
                 "Thunder Focus Tea on cooldown — empowers next major heal",
+                "Sheilun's Gift on cooldown — draws in mist clouds for burst healing",
                 "Life Cocoon on the tank for heavy damage",
                 "Invoke Chi-Ji for sustained AoE healing phases",
                 "Revival for emergency full-group healing — do not hold it",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Midnight 12.0 verified against full Mistweaver talent tree 124 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Mistweaver talent tree snapshot v1.4.3 124 nodes (April 2026)",
         },
 
         -- Windwalker (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Verified against v1.4.3 talent snapshot (129 nodes, descriptions) — FLAGGED: 0
         -- Storm, Earth and Fire (137639) removed — not in Windwalker talent tree or spell list
         -- Serenity (152173) removed — not in Windwalker talent tree or spell list
         -- Zenith (1249625) added to majorCooldowns — nodeID 101053 non-PASSIVE ACTIVE
+        -- Slicing Winds (1217413) added as talentGated CD — nodeID 102250 INACTIVE this build
         -- Spear Hand Strike (116705) added as isInterrupt — nodeID 110098 non-PASSIVE ACTIVE
         -- Combo Breaker: BoK (116768) removed from procBuffs — not in talent tree or spell list
-        -- Tiger Palm (100780) added to rotational — baseline confirmed WW spell list; primary filler
-        -- Blackout Kick (100784) added to rotational — baseline confirmed WW spell list; core filler
+        -- Tiger Palm (100780) added to rotational — baseline confirmed WW spell list
+        -- Blackout Kick (100784) added to rotational — baseline confirmed WW spell list
         -- Whirling Dragon Punch (152175) added to rotational — nodeID 101207 non-PASSIVE ACTIVE
         [3] = {
             name = "Windwalker", role = "DPS",
             resourceType = 12, resourceLabel = "CHI", overcapAt = 6,
             majorCooldowns = {
-                { id = 123904,  label = "Invoke Xuen",        expectedUses = "burst windows"   },  -- nodeID 101243 non-PASSIVE ACTIVE
-                { id = 1249625, label = "Zenith",             expectedUses = "on CD"           },  -- nodeID 101053 non-PASSIVE ACTIVE
-                { id = 116705,  label = "Spear Hand Strike",  expectedUses = "situational",    isInterrupt = true },  -- nodeID 110098 non-PASSIVE ACTIVE
-                -- Storm, Earth and Fire (137639) removed — not in talent tree or spell list
-                -- Serenity (152173) removed — not in talent tree or spell list
+                { id = 123904,  label = "Invoke Xuen",       expectedUses = "burst windows"           },  -- nodeID 101243 non-PASSIVE ACTIVE
+                { id = 1249625, label = "Zenith",            expectedUses = "on CD"                   },  -- nodeID 101053 non-PASSIVE ACTIVE
+                { id = 1217413, label = "Slicing Winds",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102250 INACTIVE this build
+                { id = 116705,  label = "Spear Hand Strike", expectedUses = "situational",    isInterrupt = true },  -- nodeID 110098 non-PASSIVE ACTIVE
             },
             rotationalSpells = {
-                { id = 113656, label = "Fists of Fury",         minFightSeconds = 15 },  -- nodeID 101218 non-PASSIVE ACTIVE; highest damage CD
-                { id = 107428, label = "Rising Sun Kick",        minFightSeconds = 15 },  -- nodeID 101186 non-PASSIVE ACTIVE
-                { id = 152175, label = "Whirling Dragon Punch",  minFightSeconds = 15, talentGated = true },  -- nodeID 101207 non-PASSIVE ACTIVE
-                { id = 100780, label = "Tiger Palm",             minFightSeconds = 15 },  -- baseline confirmed WW spell list; primary filler
-                { id = 100784, label = "Blackout Kick",          minFightSeconds = 15 },  -- baseline confirmed WW spell list; core filler
+                { id = 113656, label = "Fists of Fury",        minFightSeconds = 15 },  -- nodeID 101218 non-PASSIVE ACTIVE
+                { id = 107428, label = "Rising Sun Kick",       minFightSeconds = 15 },  -- nodeID 101186 non-PASSIVE ACTIVE
+                { id = 152175, label = "Whirling Dragon Punch", minFightSeconds = 15, talentGated = true },  -- nodeID 101207 non-PASSIVE ACTIVE
+                { id = 100780, label = "Tiger Palm",            minFightSeconds = 15 },  -- baseline confirmed WW spell list
+                { id = 100784, label = "Blackout Kick",         minFightSeconds = 15 },  -- baseline confirmed WW spell list
             },
             priorityNotes = {
                 "Fists of Fury on cooldown — highest damage ability",
@@ -2199,10 +2300,11 @@ Core.SPEC_DATABASE = {
                 "Tiger Palm and Blackout Kick as fillers — generate Chi and procs",
                 "Zenith on cooldown — major burst window",
                 "Invoke Xuen for additional burst — align with Zenith",
+                "Slicing Winds on cooldown when talented",
                 "Never overcap Chi at 6",
             },
             scoreWeights = { cooldownUsage = 35, procUsage = 15, activity = 35, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against full Windwalker talent tree 129 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Windwalker talent tree snapshot v1.4.3 129 nodes (April 2026)",
         },
     },
 
@@ -2246,7 +2348,7 @@ Core.SPEC_DATABASE = {
                 "Wrath to generate Astral Power — never overcap at 90",
             },
             scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Midnight 12.0 verified against Icy Veins Balance Druid rotation guide (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Balance talent tree snapshot v1.4.3 113 nodes (April 2026)",
         },
 
         -- Feral (PASSIVE audit — April 2026)
@@ -2285,7 +2387,7 @@ Core.SPEC_DATABASE = {
                 "Primal Wrath as AoE finisher when talented — replaces Ferocious Bite on multi-target",
             },
             scoreWeights = { cooldownUsage = 25, procUsage = 15, activity = 35, resourceMgmt = 25 },
-            sourceNote = "Midnight 12.0 PASSIVE audit against full Feral talent tree 114 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Feral talent tree snapshot v1.4.3 114 nodes (April 2026)",
         },
 
         -- Guardian (PASSIVE audit — April 2026)
@@ -2327,7 +2429,7 @@ Core.SPEC_DATABASE = {
                 "Swipe as a filler only — never delay Mangle or Thrash for it",
             },
             scoreWeights = { cooldownUsage = 25, mitigationUptime = 40, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 PASSIVE audit against full Guardian talent tree 116 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Guardian talent tree snapshot v1.4.3 116 nodes (April 2026)",
         },
 
         -- Restoration (PASSIVE audit — April 2026)
@@ -2370,7 +2472,7 @@ Core.SPEC_DATABASE = {
                 "Convoke the Spirits for burst throughput when talented",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Midnight 12.0 PASSIVE audit against full Restoration talent tree 119 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Restoration Druid talent tree snapshot v1.4.3 119 nodes (April 2026)",
         },
     },
 
@@ -2381,12 +2483,17 @@ Core.SPEC_DATABASE = {
         className = "Demon Hunter",
 
         -- Havoc (Midnight 12.0 pass — April 2026)
-        -- Verified against full talent tree (123 nodes, PASSIVE column) and spell snapshot
-        -- Fel Barrage (258925) removed — not in Midnight 12.0 talent tree or spell list
-        -- Chaos Strike: spell list confirms 344862 (spec-variant); was 162794 — corrected
-        -- The Hunt: tracking both 370965 and 1246167 (both in spell list)
-        -- Essence Break (258860) added to rotational — non-PASSIVE ACTIVE nodeID 91033
-        -- Felblade (232893) added to rotational — non-PASSIVE ACTIVE nodeID 91008
+        -- Verified against full talent tree snapshot v1.4.3 (123 nodes, descriptions)
+        -- 162794 (old Chaos Strike ID) removed — not in talent tree
+        -- 188499 (old Blade Dance ID) removed — not in talent tree
+        -- 344862 removed from Havoc — this is Devourer's Reap ID, not a Havoc spell
+        -- Blade Dance: correct ID is 188499 confirmed via spell snapshot — WAIT, 188499
+        --   not in tree either. Blade Dance must be baseline. Retained as baseline spell.
+        -- Chaos Strike: 344862 confirmed NOT in Havoc tree — wrong ID. Needs VERIFY.
+        -- Sigil of Misery (207684) added as isInterrupt — non-PASSIVE ACTIVE
+        -- Chaos Nova (179057) added as talentGated CD — non-PASSIVE ACTIVE
+        -- Felblade (232893) already in rotational — confirmed non-PASSIVE ACTIVE nodeID 91008
+        -- Essence Break (258860) already in rotational — confirmed non-PASSIVE ACTIVE nodeID 91033
         [1] = {
             name = "Havoc", role = "DPS",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
@@ -2395,8 +2502,9 @@ Core.SPEC_DATABASE = {
                 [198013]=true,  -- Eye Beam
                 [370965]=true,  -- The Hunt
                 [1246167]=true, -- The Hunt (spec-variant confirmed spell snapshot)
-                [188499]=true,  -- Blade Dance
-                [344862]=true,  -- Chaos Strike (spec-variant confirmed — was 162794)
+                [188499]=true,  -- Blade Dance (baseline — not in talent tree but in spellbook)
+                -- 344862 removed — Devourer's Reap ID, not a Havoc ability
+                -- 162794 removed — old Chaos Strike ID, not in tree
                 [258920]=true,  -- Immolation Aura
                 [188501]=true,  -- Spectral Sight
                 [198793]=true,  -- Vengeful Retreat
@@ -2422,50 +2530,57 @@ Core.SPEC_DATABASE = {
                 { id = 191427, label = "Metamorphosis", expectedUses = "burst windows"           },  -- non-PASSIVE confirmed
                 { id = 198013, label = "Eye Beam",      expectedUses = "on CD"                  },  -- non-PASSIVE nodeID 91018
                 { id = 370965, label = "The Hunt",      expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE nodeID 90921
-                -- Fel Barrage (258925) removed — not in Midnight 12.0
+                { id = 179057, label = "Chaos Nova",    expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE nodeID 90993
+                { id = 207684, label = "Sigil of Misery",expectedUses = "situational",   isInterrupt = true },  -- non-PASSIVE ACTIVE; fear CC
             },
             rotationalSpells = {
-                { id = 188499, label = "Blade Dance",     minFightSeconds = 15 },
-                { id = 344862, label = "Chaos Strike",    minFightSeconds = 15 },              -- spec-variant (was 162794)
-                { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },
+                { id = 188499, label = "Blade Dance",     minFightSeconds = 15 },                    -- baseline confirmed spellbook
+                { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },                    -- baseline confirmed spellbook
                 { id = 258860, label = "Essence Break",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 91033
                 { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 91008
+                -- 344862 (Chaos Strike) removed — ID not in Havoc talent tree; needs VERIFY for correct spec-variant
             },
             procBuffs = {
-                { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },   -- VERIFY C_UnitAuras — not in Havoc talent or spell snapshot
-                { id = 389860, label = "Unbound Chaos", maxStackTime = 12 },   -- VERIFY C_UnitAuras — not in Havoc talent or spell snapshot
+                { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },   -- VERIFY C_UnitAuras
+                { id = 389860, label = "Unbound Chaos", maxStackTime = 12 },   -- VERIFY C_UnitAuras
             },
             priorityNotes = {
                 "Immolation Aura on cooldown — primary Fury generator",
                 "Eye Beam on cooldown — core damage and Fury dump",
                 "Blade Dance on cooldown — highest priority spender",
                 "Essence Break before Chaos Strike when talented — amplifies damage",
-                "Chaos Strike to spend Fury — never overcap at 100",
                 "Metamorphosis for burst — align with trinkets and lust",
+                "Chaos Nova on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 20, activity = 30, resourceMgmt = 20 },
-            sourceNote = "Midnight 12.0 verified against full Havoc talent tree 123 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Havoc talent tree snapshot v1.4.3 123 nodes (April 2026)",
         },
 
         -- Vengeance (Midnight 12.0 pass — April 2026)
-        -- Verified against spell snapshot and talent tree
-        -- Metamorphosis: was 187827, both spell snapshots confirm 191427 — corrected
-        -- Demon Spikes: was 203819 in uptimeBuffs, spell list confirms 203720 — corrected
-        -- Fracture: was 210152, spell list confirms 344859 (spec-variant) — corrected
-        -- Soul Barrier (263648) removed — not in Midnight 12.0 spell list or talent tree
-        -- Soul Cleave: was 228477, spell list confirms 344862 (spec-variant) — corrected
-        -- Spirit Bomb (247454) added to rotational — confirmed spell list, non-PASSIVE ACTIVE nodeID 90990
+        -- Verified against v1.4.3 talent snapshot (108 nodes, descriptions)
+        -- 191427 Metamorphosis removed from majorCooldowns — shapeshifting, fires UPDATE_SHAPESHIFT_FORM not SUCCEEDED
+        -- 228477 Soul Cleave removed — old ID not in talent tree (was spec-variant fix that was itself wrong)
+        -- 344862 removed — Devourer's Reap ID; wrong for Vengeance
+        -- 344859 Fracture removed from rotational — confirmed not in Vengeance talent tree
+        -- Soul Cleave: correct ID unknown — needs VERIFY
+        -- 203720 Demon Spikes: ID not in talent tree as non-PASSIVE — VERIFY aura ID for uptimeBuffs
+        -- Sigil of Silence (202137) added as isInterrupt — non-PASSIVE ACTIVE
+        -- Sigil of Misery (207684) added as isInterrupt — non-PASSIVE ACTIVE
+        -- Chaos Nova (179057) added as talentGated CD — non-PASSIVE ACTIVE
+        -- Felblade (232893) already in rotational — confirmed ✓
+        -- Spirit Bomb (247454) already in rotational — confirmed ✓
+        -- Sigil of Spite (390163) already in majorCooldowns — confirmed ✓
         [2] = {
             name = "Vengeance", role = "TANK",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
             validSpells = {
-                [191427]=true,  -- Metamorphosis (confirmed spell snapshot — was 187827)
+                -- 191427 Metamorphosis removed — shapeshifting, not trackable via SUCCEEDED
                 [204021]=true,  -- Fiery Brand (confirmed spell snapshot)
                 [212084]=true,  -- Fel Devastation (confirmed spell snapshot)
-                [203720]=true,  -- Demon Spikes (confirmed spell snapshot — was 203819)
+                [203720]=true,  -- Demon Spikes (confirmed spell snapshot)
                 [258920]=true,  -- Immolation Aura
-                [344862]=true,  -- Soul Cleave (spec-variant confirmed — was 228477)
-                [344859]=true,  -- Fracture (spec-variant confirmed — was 210152)
+                -- 344862 removed — Devourer's Reap ID, wrong for Vengeance
+                -- 344859 removed — not in Vengeance talent tree
                 [247454]=true,  -- Spirit Bomb (confirmed spell snapshot)
                 [278386]=true,  -- Demonic Wards
                 [206478]=true,  -- Demonic Appetite
@@ -2477,36 +2592,42 @@ Core.SPEC_DATABASE = {
                 [131347]=true,  -- Glide
                 [217832]=true,  -- Imprison
                 [207684]=true,  -- Sigil of Misery
+                [202137]=true,  -- Sigil of Silence
                 [185123]=true,  -- Throw Glaive
                 [185245]=true,  -- Torment
-                -- Soul Barrier (263648) removed — not in Midnight 12.0
+                [390163]=true,  -- Sigil of Spite
+                [179057]=true,  -- Chaos Nova
+                [232893]=true,  -- Felblade
             },
             majorCooldowns = {
-                { id = 191427, label = "Metamorphosis",   expectedUses = "emergency mitigation" },  -- non-PASSIVE confirmed
-                { id = 204021, label = "Fiery Brand",     expectedUses = "tank busters"         },  -- non-PASSIVE ACTIVE nodeID 90951
-                { id = 212084, label = "Fel Devastation", expectedUses = "on CD"                },  -- non-PASSIVE ACTIVE nodeID 90991
-                { id = 390163, label = "Sigil of Spite",  expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 90978
-                -- Soul Barrier (263648/1265924) removed — PASSIVE confirmed
+                -- 191427 Metamorphosis removed — shapeshifting spell, UPDATE_SHAPESHIFT_FORM not SUCCEEDED
+                { id = 204021, label = "Fiery Brand",      expectedUses = "tank busters"              },  -- non-PASSIVE ACTIVE nodeID 90951
+                { id = 212084, label = "Fel Devastation",  expectedUses = "on CD"                     },  -- non-PASSIVE ACTIVE nodeID 90991
+                { id = 390163, label = "Sigil of Spite",   expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 90978
+                { id = 179057, label = "Chaos Nova",       expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE
+                { id = 202137, label = "Sigil of Silence", expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
+                { id = 207684, label = "Sigil of Misery",  expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
             },
             uptimeBuffs = {
-                { id = 203720, label = "Demon Spikes", targetUptime = 50 },
+                { id = 203720, label = "Demon Spikes", targetUptime = 50 },  -- VERIFY aura ID — not confirmed as non-PASSIVE in tree
             },
             rotationalSpells = {
                 { id = 247454, label = "Spirit Bomb", minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 90990
-                { id = 344859, label = "Fracture",    minFightSeconds = 15 },                      -- spec-variant; generates Soul Fragments
+                -- 344859 Fracture removed — not in Vengeance talent tree; Soul Cleave ID needs VERIFY
                 { id = 232893, label = "Felblade",    minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 108722
             },
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
                 "Maintain Demon Spikes for physical mitigation",
                 "Immolation Aura on cooldown for Fury and damage",
-                "Fracture to generate Soul Fragments",
                 "Spirit Bomb with 4-5 Soul Fragments for healing and damage",
                 "Fiery Brand for magic damage or tank busters",
                 "Fel Devastation on cooldown for sustained damage and healing",
+                "Sigil of Spite on cooldown when talented",
+                "Chaos Nova on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Midnight 12.0 verified against Vengeance spell snapshot and talent tree (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Vengeance talent tree snapshot v1.4.3 108 nodes (April 2026)",
         },
 
         -- Devourer (Midnight 12.0 PASSIVE audit — April 2026)
@@ -2514,29 +2635,30 @@ Core.SPEC_DATABASE = {
         -- PASSIVE — removed from majorCooldowns: Impending Apocalypse (1227707), Demonsurge (452402), Midnight (1250094)
         -- PASSIVE — removed from rotational: Eradicate (1226033)
         -- PASSIVE — removed from validSpells: 471306 (talent node), 1221167 (talent node), 1250094
-        -- Soul Immolation (1241937) confirmed non-PASSIVE ACTIVE nodeID 107344 — retained as sole majorCD
+        -- Soul Immolation (1241937): castable by default — Spontaneous Immolation (258920,
+        --   nodeID 108727) talent REPLACES it and makes it passive. suppressIfTalent = 258920.
         -- Void Metamorphosis (191427): removed from rotational — shapeshifting spell, fires UPDATE_SHAPESHIFT_FORM
-        --   not UNIT_SPELLCAST_SUCCEEDED, so useCount never increments. Cannot be tracked via cast events.
-        -- Reap (344862): in rotationalTracking at fight start but useCount stays 0 despite being cast.
-        --   Suspected: game fires a different spell ID for the Devourer-specific Reap at runtime.
-        --   Flagged VERIFY — needs /ms verify in-game to confirm actual cast ID.
-        -- Collapsing Star: 1221150 (castable) not in talent tree — retained via combatGated, no change
+        --   not UNIT_SPELLCAST_SUCCEEDED. Cannot be tracked via cast events.
+        -- Reap (344862): removed — ID confirmed NOT in Devourer talent tree via v1.4.3 snapshot.
+        --   Wrong ID. Correct runtime ID unknown — needs /ms verify in-game.
+        -- The Hunt (1246167): Devourer spec-variant — confirmed non-PASSIVE ACTIVE in v1.4.3 snapshot.
+        --   Added to majorCooldowns.
+        -- Collapsing Star: 1221150 (castable) not in talent tree — retained via combatGated
         [3] = {
             name = "Devourer", role = "DPS",
             resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
             -- Strict whitelist — hard-blocks all Havoc/Vengeance abilities
             validSpells = {
-                [191427]=true,  -- Void Metamorphosis (castable, confirmed spellbook, non-PASSIVE)
-                -- 471306 removed — PASSIVE talent node
+                [191427]=true,  -- Void Metamorphosis (in spellbook — shapeshift, not cast-tracked)
                 [1221150]=true, -- Collapsing Star (castable — confirmed via debug session)
-                -- 1221167 removed — PASSIVE talent node
-                [344862]=true,  -- Reap (confirmed spell snapshot)
+                -- 344862 removed — not in Devourer talent tree (confirmed v1.4.3 snapshot)
                 [344859]=true,  -- Consume (confirmed spell snapshot)
                 [344865]=true,  -- Shift (confirmed spell snapshot)
                 [473728]=true,  -- Void Ray (non-PASSIVE ACTIVE nodeID 107336)
                 [1245412]=true, -- Voidblade (non-PASSIVE ACTIVE nodeID 108723)
                 [1234195]=true, -- Void Nova (non-PASSIVE ACTIVE nodeID 107347)
                 [1241937]=true, -- Soul Immolation (non-PASSIVE ACTIVE nodeID 107344)
+                [1246167]=true, -- The Hunt Devourer spec-variant (non-PASSIVE ACTIVE)
                 -- 1227707 Impending Apocalypse removed — PASSIVE
                 -- 1226033 Eradicate removed — PASSIVE INACTIVE
                 -- 1250094 Midnight removed — PASSIVE INACTIVE
@@ -2557,32 +2679,31 @@ Core.SPEC_DATABASE = {
                 [185245]=true,  -- Torment
             },
             majorCooldowns = {
-                -- Only Soul Immolation survived the PASSIVE audit as a trackable CD
-                { id = 1241937, label = "Soul Immolation", expectedUses = "on CD", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 107344
-                -- Removed (confirmed PASSIVE via talent snapshot):
-                -- Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
+                { id = 1241937, label = "Soul Immolation", expectedUses = "on CD",
+                  talentGated = true, suppressIfTalent = 258920 },  -- suppress when Spontaneous Immolation (258920) replaces it
+                { id = 1246167, label = "The Hunt",        expectedUses = "on CD (talent)", talentGated = true },  -- Devourer spec-variant; non-PASSIVE ACTIVE confirmed v1.4.3 snapshot
+                -- Removed (confirmed PASSIVE): Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
             },
             rotationalSpells = {
-                -- Void Metamorphosis (191427) removed — shapeshifting spell, fires UPDATE_SHAPESHIFT_FORM
-                --   not UNIT_SPELLCAST_SUCCEEDED. useCount never increments. Not trackable via cast events.
-                { id = 1221150, label = "Collapsing Star",    minFightSeconds = 45, combatGated = true }, -- inside Void Metamorphosis window only
-                { id = 344862,  label = "Reap",               minFightSeconds = 20 },                    -- VERIFY — in tracking but useCount stays 0; game may fire different ID at runtime
-                { id = 473728,  label = "Void Ray",           minFightSeconds = 15 },                    -- non-PASSIVE ACTIVE nodeID 107336
-                { id = 1245412, label = "Voidblade",          minFightSeconds = 15, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 108723
-                { id = 1234195, label = "Void Nova",          minFightSeconds = 20, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 107347
-                -- Eradicate (1226033) removed — PASSIVE INACTIVE
+                -- Void Metamorphosis (191427) removed — shapeshifting, UPDATE_SHAPESHIFT_FORM not SUCCEEDED
+                { id = 1221150, label = "Collapsing Star", minFightSeconds = 45, combatGated = true },  -- inside Void Metamorphosis window
+                -- 344862 Reap removed — not in Devourer talent tree (v1.4.3 snapshot confirmed); correct ID needs /ms verify
+                { id = 473728,  label = "Void Ray",        minFightSeconds = 15 },                     -- non-PASSIVE ACTIVE nodeID 107336
+                { id = 1245412, label = "Voidblade",       minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 108723
+                { id = 1234195, label = "Void Nova",       minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 107347
             },
             priorityNotes = {
                 "Build Soul Fragments to trigger Void Metamorphosis windows",
                 "Use Collapsing Star inside Void Metamorphosis for maximum damage",
                 "Cast Void Ray to generate Souls and Fury outside Void Metamorphosis",
                 "Voidblade as primary Fury spender when talented — use on cooldown",
-                "Void Nova for burst AoE — use inside Void Metamorphosis windows when talented",
-                "Soul Immolation on cooldown when talented — major burst window",
+                "Void Nova for burst AoE inside Void Metamorphosis when talented",
+                "The Hunt on cooldown when talented — Devourer spec-variant",
+                "Soul Immolation on cooldown when talented and Spontaneous Immolation is NOT taken",
                 "Pool Fury before entering Void Metamorphosis for burst spending",
             },
             scoreWeights = { cooldownUsage = 25, activity = 40, resourceMgmt = 20, procUsage = 15 },
-            sourceNote = "Midnight 12.0 PASSIVE audit against full talent tree 112 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Devourer talent tree snapshot v1.4.3 112 nodes (April 2026)",
         },
     },
 
@@ -2621,7 +2742,7 @@ Core.SPEC_DATABASE = {
                 "Deep Breath for AoE on stacked targets",
             },
             scoreWeights = { cooldownUsage = 35, activity = 30, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Midnight 12.0 PASSIVE audit against full Devastation talent tree 122 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Devastation talent tree snapshot v1.4.3 122 nodes (April 2026)",
         },
 
         -- Preservation (Midnight 12.0 PASSIVE audit — April 2026)
@@ -2658,7 +2779,7 @@ Core.SPEC_DATABASE = {
                 "Time Dilation to extend a teammate's HoT in critical moments",
             },
             scoreWeights = { cooldownUsage = 30, efficiency = 30, activity = 25, responsiveness = 15 },
-            sourceNote = "Midnight 12.0 PASSIVE audit against full Preservation talent tree 123 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Preservation talent tree snapshot v1.4.3 123 nodes (April 2026)",
         },
 
         -- Augmentation (Midnight 12.0 PASSIVE audit — April 2026)
@@ -2694,7 +2815,7 @@ Core.SPEC_DATABASE = {
                 "Maintain Ebon Might uptime at 70%+ for maximum support value",
             },
             scoreWeights = { cooldownUsage = 35, mitigationUptime = 30, activity = 25, resourceMgmt = 10 },
-            sourceNote = "Midnight 12.0 PASSIVE audit against full Augmentation talent tree 114 nodes (April 2026)",
+            sourceNote = "Midnight 12.0 verified against full Augmentation talent tree snapshot v1.4.3 114 nodes (April 2026)",
         },
     },
 }
@@ -3028,6 +3149,20 @@ local function BuildTalentSnapshot()
                                         local okP, p = pcall(IsPassiveSpell, defInfo.spellID)
                                         if okP then isPassive = p end
                                     end
+                                    -- Spell description — captures "Replaces X", "Grants Y",
+                                    -- "Transforms", etc. for proactive suppressIfTalent discovery.
+                                    local desc = ""
+                                    if C_Spell and C_Spell.GetSpellDescription then
+                                        local okD2, d = pcall(C_Spell.GetSpellDescription, defInfo.spellID)
+                                        if okD2 and d and d ~= "" then
+                                            -- Strip colour codes and newlines for clean single-line storage
+                                            desc = d:gsub("|c%x%x%x%x%x%x%x%x", "")
+                                                    :gsub("|r", "")
+                                                    :gsub("[\n\r]+", " ")
+                                                    :gsub("%s+", " ")
+                                                    :match("^%s*(.-)%s*$") or ""
+                                        end
+                                    end
                                     table.insert(talents, {
                                         spellID   = defInfo.spellID,
                                         nodeID    = nodeID,
@@ -3037,6 +3172,7 @@ local function BuildTalentSnapshot()
                                         maxRank   = maxRank,
                                         status    = status,
                                         isPassive = isPassive,
+                                        desc      = desc,
                                     })
                                 end
                             end
@@ -3329,10 +3465,27 @@ local function MSSlashHandler(msg)
         local active   = 0
         local inactive = 0
         local passive  = 0
+        local flagged  = 0
+        -- Keywords that indicate a talent modifies spell availability:
+        -- "Replaces"  → suppressIfTalent candidate (spell becomes passive or is replaced)
+        -- "Grants"    → talentGated candidate (talent creates a new castable spell)
+        -- "Transforms"→ suppressIfTalent candidate
+        -- "Causes"    → may create secondary castable abilities
+        -- "Activates" → may unlock a new ability
+        local KEYWORDS = { "Replaces", "Grants", "Transforms", "Causes", "Activates" }
+        local function GetFlag(desc)
+            if not desc or desc == "" then return nil end
+            for _, kw in ipairs(KEYWORDS) do
+                if desc:find(kw) then return kw end
+            end
+            return nil
+        end
+
         for _, t in ipairs(snap.talents) do
             if t.status == "ACTIVE" then active = active + 1
             else inactive = inactive + 1 end
             if t.isPassive then passive = passive + 1 end
+            if GetFlag(t.desc) then flagged = flagged + 1 end
         end
 
         L("Midnight Sensei — Full Talent Tree Snapshot")
@@ -3340,8 +3493,8 @@ local function MSSlashHandler(msg)
         L("Captured:  " .. date("%Y-%m-%d %H:%M:%S", snap.timestamp))
         L("Version:   " .. Core.VERSION)
         L(string.rep("-", 80))
-        L(string.format("Total nodes: %d  |  ACTIVE: %d  |  INACTIVE: %d  |  PASSIVE: %d",
-            #snap.talents, active, inactive, passive))
+        L(string.format("Total nodes: %d  |  ACTIVE: %d  |  INACTIVE: %d  |  PASSIVE: %d  |  FLAGGED: %d",
+            #snap.talents, active, inactive, passive, flagged))
         L(string.format("%-10s %-10s %-8s %-35s %-6s %-8s %s",
             "spellID", "nodeID", "entryID", "name", "rank", "passive", "status"))
         L(string.rep("-", 80))
@@ -3352,10 +3505,27 @@ local function MSSlashHandler(msg)
                 (t.rank or 0) .. "/" .. (t.maxRank or 1),
                 t.isPassive and "PASSIVE" or "",
                 t.status))
+            -- Print description on a continuation line if present
+            -- Flag lines that contain spell-relationship keywords with >>>
+            if t.desc and t.desc ~= "" then
+                local flag = GetFlag(t.desc)
+                local prefix = flag and ("  >>> [" .. flag .. "] ") or "  -- "
+                -- Wrap at 78 chars to keep the export clean
+                local text = prefix .. t.desc
+                while #text > 78 do
+                    local cut = text:sub(1, 78):match("^(.*%s)") or text:sub(1, 78)
+                    L(cut)
+                    text = "     " .. text:sub(#cut + 1)
+                end
+                if text and text ~= "" then L(text) end
+            end
         end
         L("")
         L("-- ACTIVE = talented, INACTIVE = available but not taken")
         L("-- PASSIVE = spell is passive, do not add to majorCooldowns or rotationalSpells")
+        L("-- >>> [Replaces]  = suppressIfTalent candidate — talent makes a spell passive")
+        L("-- >>> [Grants]    = talentGated candidate — talent creates a new castable spell")
+        L("-- >>> [Transforms]= suppressIfTalent candidate — talent changes spell behaviour")
         L("-- Cross-reference against spec DB with /ms verify report")
 
         if MS.UI and MS.UI.ShowVerifyExport then
