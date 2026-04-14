@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.1"
+    Core.VERSION = ver or "1.4.2"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,77 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.2",
+        tagline = "Class Tuning — Paladin, Death Knight, Mage, Rogue, Monk + UX Polish",
+        date    = "April 2026",
+        changes = {
+            -- UX
+            "Login message: replaced 'Type /ms for commands' with direct '/ms show · /ms help' hint",
+            "/ms bare now prints compact command strip instead of redirecting to /ms help",
+            "/ms help and FAQ panel: removed reset, debug, verify entries; added versions and friend",
+            "debug guild inject handler removed entirely — not appropriate for public release",
+            -- Paladin / Holy
+            "Holy Paladin: resourceType corrected 0 → 9 (Holy Power); Beacon of Light removed from uptimeBuffs (applied to target not self)",
+            "Holy Paladin: Blessing of Sacrifice marked talentGated (INACTIVE this build); Aura Mastery, Lay on Hands, Holy Bulwark added as CDs",
+            "Holy Paladin: Light of Dawn added to rotational",
+            -- Paladin / Protection
+            "Protection Paladin: Avenging Wrath and Divine Toll added as CDs (both missing); Rebuke added as isInterrupt",
+            "Protection Paladin: Crusader Strike label corrected to Blessed Hammer (Prot spec-variant); Consecration and Holy Shock added to rotational",
+            "Protection Paladin: Shield of the Righteous uptime aura 132403 flagged VERIFY",
+            -- Paladin / Retribution
+            "Retribution: Crusade (231895) removed — PASSIVE modifier node, not castable",
+            "Retribution: Templar's Verdict 85256 → Final Verdict 383328 (Midnight 12.0 rename); Divine Toll and Rebuke (isInterrupt) added",
+            "Retribution: Execution Sentence marked talentGated; Blade of Justice, Divine Storm added to rotational",
+            "Retribution: Art of War added to procBuffs (VERIFY C_UnitAuras); Hammer of Light not tracked — not in tree/spell list",
+            -- Death Knight / Blood
+            "Blood DK: Abomination Limb (383269) and Bonestorm (194844) removed — not in Blood tree/spell list",
+            "Blood DK: Blood Shield (77535) removed from uptimeBuffs — proc absorb, not a persistent aura",
+            "Blood DK: Reaper's Mark and Mind Freeze (isInterrupt) added; entire rotationalSpells block added (Marrowrend, Heart Strike, Blood Boil, Death Strike — all missing)",
+            -- Death Knight / Frost
+            "Frost DK: Breath of Sindragosa and Reaper's Mark added as CDs; Mind Freeze added as isInterrupt",
+            "Frost DK: Howling Blast and Frostscythe added to rotational; Killing Machine and Rime procBuff IDs flagged VERIFY (old aura IDs)",
+            -- Death Knight / Unholy
+            "Unholy DK: Apocalypse (275699) and Unholy Assault (207289) removed — not in Unholy tree/spell list",
+            "Unholy DK: Dark Transformation corrected 63560 → 1233448 (Unholy spec-variant); Outbreak and Soul Reaper added as CDs; Mind Freeze added as isInterrupt",
+            "Unholy DK: Festering Strike corrected 85092 → 316239 (Unholy spec-variant); Putrefy added to rotational",
+            -- Mage / Arcane
+            "Arcane: Touch of the Magi (210824) and Evocation (12051) removed — not in Arcane tree/spell list",
+            "Arcane: Arcane Blast corrected 30451 → 116 (Arcane spec-variant); Arcane Barrage corrected 44425 → 319836",
+            "Arcane: Alter Time added as CD; Arcane Missiles and Arcane Explosion added to rotational; Clearcasting procBuff corrected 276743 → 79684",
+            -- Mage / Fire
+            "Fire: Phoenix Flames (257541) removed — not in Fire tree/spell list",
+            "Fire: Fireball corrected 133 → 116 (Fire spec-variant); Supernova and Frostfire Bolt added as talentGated CDs",
+            "Fire: Pyroblast and Scorch added to rotational; Hot Streak procBuff 48108 flagged VERIFY",
+            -- Mage / Frost
+            "Frost Mage: Icy Veins (12472) removed — not in Frost tree/spell list",
+            "Frost Mage: Flurry, Frostfire Bolt, Ray of Frost, Dragon's Breath added as CDs",
+            "Frost Mage: Frostbolt (116) added to rotational — primary filler was missing entirely; Brain Freeze and Fingers of Frost procBuff IDs flagged VERIFY",
+            -- Rogue / Assassination
+            "Assassination: Vendetta (79140) removed — not in tree/spell list; Kick added as isInterrupt",
+            "Assassination: Envenom corrected 32645 → 196819 (Assassination spec-variant); Mutilate and Crimson Tempest added to rotational",
+            -- Rogue / Outlaw
+            "Outlaw: Roll the Bones corrected 315508 → 1214909; Between the Eyes corrected 199804 → 315341; Dispatch corrected 2098 → 196819",
+            "Outlaw: Blade Rush and Keep It Rolling added as talentGated CDs; Kick added as isInterrupt",
+            "Outlaw: Sinister Strike and Pistol Shot added to rotational — both missing entirely",
+            -- Rogue / Subtlety
+            "Subtlety: Symbols of Death (212283) removed — not in Subtlety tree/spell list; Kick added as isInterrupt",
+            "Subtlety: Nightblade (195452) removed from rotational — not in tree/spell list",
+            "Subtlety: Backstab and Shuriken Storm added to rotational",
+            -- Monk / Brewmaster
+            "Brewmaster: Celestial Brew (322507) removed — not in tree/spell list; Ironskin Brew (215479) removed from uptimeBuffs",
+            "Brewmaster: Exploding Keg, Celestial Infusion added as CDs; Spear Hand Strike added as isInterrupt",
+            "Brewmaster: Breath of Fire, Tiger Palm, Blackout Kick added to rotational — all missing entirely",
+            -- Monk / Mistweaver
+            "Mistweaver: Invoke Yu'lon (322118) removed — not in tree/spell list; Invoke Chi-Ji added (correct Mistweaver invoke)",
+            "Mistweaver: Renewing Mist corrected 119611 → 115151 (wrong ID); Life Cocoon, Celestial Conduit added as CDs; Spear Hand Strike added as isInterrupt",
+            "Mistweaver: Enveloping Mist added to rotational",
+            -- Monk / Windwalker
+            "Windwalker: Storm, Earth and Fire (137639) and Serenity (152173) removed — not in tree/spell list",
+            "Windwalker: Zenith added as CD; Spear Hand Strike added as isInterrupt; Combo Breaker:BoK (116768) removed from procBuffs",
+            "Windwalker: Tiger Palm, Blackout Kick, Whirling Dragon Punch added to rotational — Tiger Palm and Blackout Kick were missing entirely",
+        },
+    },
     {
         version = "1.4.1",
         tagline = "Class Tuning — Warrior, Hunter, Priest",
@@ -981,85 +1052,132 @@ Core.SPEC_DATABASE = {
     [2] = {
         className = "Paladin",
 
-        -- Holy
+        -- Holy (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Beacon of Light (53563) removed from uptimeBuffs — applied to target, not a self-aura
+        -- Blessing of Sacrifice (6940) nodeID 81614 INACTIVE in this build — talentGated
+        -- Aura Mastery (31821) added to majorCooldowns — nodeID 81567 non-PASSIVE ACTIVE
+        -- Lay on Hands (633) added to majorCooldowns — nodeID 81597 non-PASSIVE ACTIVE
+        -- Holy Bulwark (432459) added to majorCooldowns — nodeID 110257 non-PASSIVE ACTIVE
+        -- Light of Dawn (85222) added to rotational — nodeID 81565 non-PASSIVE ACTIVE; AoE HP spender
         [1] = {
             name = "Holy", role = "HEALER",
-            resourceType = 0,
+            resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
             majorCooldowns = {
-                { id = 31884,  label = "Avenging Wrath",        expectedUses = "burst damage phases"  },
-                { id = 375576, label = "Divine Toll",           expectedUses = "on CD"                },
-                { id = 6940,   label = "Blessing of Sacrifice", expectedUses = "tank busters"         },
-                { id = 86659,  label = "Guardian of Anc. Kings",expectedUses = "emergency throughput" },
+                { id = 31884,  label = "Avenging Wrath",        expectedUses = "burst phases"          },  -- confirmed spell list
+                { id = 375576, label = "Divine Toll",           expectedUses = "on CD"                 },  -- confirmed spell list
+                { id = 31821,  label = "Aura Mastery",          expectedUses = "heavy magic damage"    },  -- nodeID 81567 non-PASSIVE ACTIVE
+                { id = 86659,  label = "Guardian of Anc. Kings",expectedUses = "emergency throughput"  },  -- confirmed spell list
+                { id = 633,    label = "Lay on Hands",          expectedUses = "emergencies"           },  -- nodeID 81597 non-PASSIVE ACTIVE
+                { id = 432459, label = "Holy Bulwark",          expectedUses = "on CD"                 },  -- nodeID 110257 non-PASSIVE ACTIVE
+                { id = 6940,   label = "Blessing of Sacrifice", expectedUses = "tank busters",         talentGated = true },  -- nodeID 81614 INACTIVE this build
             },
-            uptimeBuffs = {
-                { id = 53563, label = "Beacon of Light", targetUptime = 95 },
-            },
+            uptimeBuffs = {},
             rotationalSpells = {
-                { id = 20473, label = "Holy Shock",    minFightSeconds = 20 },
-                { id = 85673, label = "Word of Glory", minFightSeconds = 30 },
+                { id = 20473, label = "Holy Shock",    minFightSeconds = 15 },  -- nodeID 81555 non-PASSIVE ACTIVE; primary HP generator
+                { id = 85673, label = "Word of Glory", minFightSeconds = 20 },  -- confirmed spell list; ST HP spender
+                { id = 85222, label = "Light of Dawn", minFightSeconds = 20 },  -- nodeID 81565 non-PASSIVE ACTIVE; AoE HP spender
             },
             healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
             priorityNotes = {
-                "Beacon of Light on the tank — never let it drop (tracked via uptimeBuffs)",
-                "Holy Shock on cooldown — primary Holy Power generator and healing",
-                "Use Holy Words as they come off cooldown — massive healing value",
-                "Word of Glory to spend Holy Power efficiently",
-                "Divine Toll for burst AoE Holy Power and healing on cooldown",
+                "Holy Shock on cooldown — primary Holy Power generator and heal",
+                "Word of Glory and Light of Dawn to spend Holy Power — never overcap at 5",
+                "Divine Toll on cooldown — generates 5 Holy Power and AoE heals",
+                "Avenging Wrath during burst damage phases",
+                "Aura Mastery for heavy magic damage — covers raid with Devotion Aura",
+                "Lay on Hands as an emergency — do not hold it when someone will die",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Adapted from Icy Veins Holy Paladin guide",
+            sourceNote = "Midnight 12.0 verified against full Holy talent tree 103 nodes (April 2026)",
         },
 
-        -- Protection
+        -- Protection (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Avenging Wrath (31884) added to majorCooldowns — nodeID 81483 non-PASSIVE ACTIVE
+        -- Divine Toll (375576) added to majorCooldowns — nodeID 110006 non-PASSIVE ACTIVE
+        -- Rebuke (96231) added as isInterrupt — nodeID 81604 non-PASSIVE ACTIVE
+        -- Shield of the Righteous uptimeBuff: 132403 (old aura ID) → VERIFY; spell list shows 53600/415091
+        -- Crusader Strike label corrected: 35395 shows as "Blessed Hammer" in Prot spell list (spec-variant)
+        -- Consecration (26573) added to rotational — confirmed spell list baseline
+        -- Holy Shock (20473) added to rotational — confirmed Prot spell list baseline
         [2] = {
             name = "Protection", role = "TANK",
             resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
             majorCooldowns = {
-                { id = 31850,  label = "Ardent Defender",        expectedUses = "dangerous windows"   },
-                { id = 86659,  label = "Guardian of Anc. Kings", expectedUses = "emergency"           },
-                { id = 31935,  label = "Avenger's Shield",       expectedUses = "on CD"               },
+                { id = 31850,  label = "Ardent Defender",        expectedUses = "dangerous windows"   },  -- nodeID 81481 non-PASSIVE ACTIVE
+                { id = 86659,  label = "Guardian of Anc. Kings", expectedUses = "emergency"           },  -- nodeID 81490 non-PASSIVE ACTIVE
+                { id = 31935,  label = "Avenger's Shield",       expectedUses = "on CD"               },  -- nodeID 81502 non-PASSIVE ACTIVE
+                { id = 31884,  label = "Avenging Wrath",         expectedUses = "on CD"               },  -- nodeID 81483 non-PASSIVE ACTIVE
+                { id = 375576, label = "Divine Toll",            expectedUses = "on CD"               },  -- nodeID 110006 non-PASSIVE ACTIVE
+                { id = 96231,  label = "Rebuke",                 expectedUses = "situational",  isInterrupt = true },  -- nodeID 81604 non-PASSIVE ACTIVE
             },
             uptimeBuffs = {
-                { id = 132403, label = "Shield of the Righteous", targetUptime = 50 },
+                { id = 132403, label = "Shield of the Righteous", targetUptime = 50 },  -- VERIFY aura ID — spell list shows 53600/415091 as cast IDs
             },
             rotationalSpells = {
-                { id = 53600, label = "Shield of the Righteous", minFightSeconds = 20 },
-                { id = 35395, label = "Crusader Strike",         minFightSeconds = 20 },
+                { id = 53600, label = "Shield of the Righteous", minFightSeconds = 15 },  -- confirmed spell list; HP spender + mitigation
+                { id = 35395, label = "Blessed Hammer",          minFightSeconds = 15 },  -- nodeID 81469 non-PASSIVE ACTIVE; shows as "Blessed Hammer" in Prot (spec-variant of Crusader Strike)
+                { id = 26573, label = "Consecration",            minFightSeconds = 15 },  -- confirmed spell list baseline; AoE damage and ground effect
+                { id = 20473, label = "Holy Shock",              minFightSeconds = 20 },  -- confirmed Prot spell list baseline
             },
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
                 "Shield of the Righteous to spend Holy Power — core mitigation (tracked via uptimeBuffs)",
                 "Avenger's Shield on cooldown — primary damage and threat",
-                "Crusader Strike / Hammer of the Righteous for Holy Power generation",
-                "Ardent Defender for sustained dangerous phases — do not hold it",
+                "Blessed Hammer on cooldown — Holy Power generator",
+                "Consecration on cooldown — AoE threat and damage",
+                "Avenging Wrath and Divine Toll on cooldown for burst",
+                "Ardent Defender and Guardian of Ancient Kings for heavy damage windows",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Protection Paladin guide",
+            sourceNote = "Midnight 12.0 verified against full Protection talent tree 114 nodes (April 2026)",
         },
 
-        -- Retribution
+        -- Retribution (Midnight 12.0 PASSIVE audit + rotation guide — April 2026)
+        -- Crusade (231895) removed — not in Ret talent tree or spell list;
+        --   1253598 Crusade is PASSIVE nodeID 109369 (modifies Avenging Wrath, not castable separately)
+        -- Avenging Wrath (31884) confirmed nodeID 81544 non-PASSIVE ACTIVE
+        -- Wake of Ashes (255937) confirmed nodeID 81525 non-PASSIVE ACTIVE
+        -- Execution Sentence (343527) confirmed nodeID 109373 non-PASSIVE INACTIVE — talentGated
+        -- Divine Toll (375576) added to majorCooldowns — nodeID 109368 non-PASSIVE ACTIVE
+        -- Rebuke (96231) added as isInterrupt — nodeID 110093 non-PASSIVE ACTIVE
+        -- Templar's Verdict (85256) corrected → Final Verdict (383328) — 85256 shows as "Final Verdict"
+        --   in Ret spell list (spec-variant rename in Midnight 12.0); nodeID 81532 non-PASSIVE ACTIVE
+        -- Blade of Justice (184575) added to rotational — nodeID 81526 non-PASSIVE ACTIVE; rotation priority #8/10
+        -- Divine Storm (53385) added to rotational — nodeID 81527 non-PASSIVE ACTIVE; AoE HP spender
+        -- Judgment (20271) confirmed spell list ✅
+        -- Art of War (406064) PASSIVE nodeID 81523 — procs reset Blade of Justice; tracked as procBuff (VERIFY)
+        -- Hammer of Light — not in talent tree or spell list; not tracked until confirmed
         [3] = {
             name = "Retribution", role = "DPS",
             resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
             majorCooldowns = {
-                { id = 231895, label = "Crusade",            expectedUses = "on CD"           },
-                { id = 31884,  label = "Avenging Wrath",     expectedUses = "on CD"           },
-                { id = 255937, label = "Wake of Ashes",      expectedUses = "on CD / 0 HP"    },
-                { id = 343527, label = "Execution Sentence", expectedUses = "on CD (talent)"  },
+                { id = 31884,  label = "Avenging Wrath",     expectedUses = "on CD"                    },  -- nodeID 81544 non-PASSIVE ACTIVE; rotation priority #1
+                { id = 255937, label = "Wake of Ashes",      expectedUses = "at 0 HP / burst windows"  },  -- nodeID 81525 non-PASSIVE ACTIVE; rotation priority #6; generates 3 HP
+                { id = 375576, label = "Divine Toll",         expectedUses = "on CD"                   },  -- nodeID 109368 non-PASSIVE ACTIVE; rotation priority #7
+                { id = 343527, label = "Execution Sentence", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 109373 non-PASSIVE INACTIVE
+                { id = 96231,  label = "Rebuke",             expectedUses = "situational",     isInterrupt = true },  -- nodeID 110093 non-PASSIVE ACTIVE
+                -- Crusade (231895) removed — not in talent tree; 1253598 is a PASSIVE modifier
             },
             rotationalSpells = {
-                { id = 85256,  label = "Templar's Verdict", minFightSeconds = 20 },
-                { id = 20271,  label = "Judgment",          minFightSeconds = 20 },
+                { id = 383328, label = "Final Verdict",  minFightSeconds = 15 },  -- nodeID 81532 non-PASSIVE ACTIVE; primary 5 HP spender (was 85256 Templar's Verdict — Midnight 12.0 rename)
+                { id = 20271,  label = "Judgment",       minFightSeconds = 15 },  -- confirmed spell list; rotation priority #12
+                { id = 184575, label = "Blade of Justice",minFightSeconds = 15 },  -- nodeID 81526 non-PASSIVE ACTIVE; rotation priority #8/10
+                { id = 53385,  label = "Divine Storm",   minFightSeconds = 20 },  -- nodeID 81527 non-PASSIVE ACTIVE; AoE HP spender
+            },
+            procBuffs = {
+                { id = 406064, label = "Art of War", maxStackTime = 10 },  -- PASSIVE nodeID 81523; procs reset Blade of Justice — VERIFY C_UnitAuras
             },
             priorityNotes = {
-                "Build to 5 Holy Power before spending — don't cap",
-                "Templar's Verdict (single target) / Divine Storm (AoE) as Holy Power spenders",
-                "Judgment on cooldown — amplifies next finisher damage",
-                "Wake of Ashes: generates 3 Holy Power on CD",
-                "Align Crusade / Avenging Wrath with trinkets for burst",
+                "Avenging Wrath on cooldown — primary burst window, priority #1",
+                "Execution Sentence on cooldown when talented — high priority during Avenging Wrath",
+                "Build to 5 Holy Power before spending with Final Verdict — never overcap",
+                "Wake of Ashes at 0 Holy Power or during burst — generates 3 Holy Power",
+                "Divine Toll on cooldown — Holy Power and damage",
+                "Blade of Justice on cooldown — spend Art of War procs immediately",
+                "Judgment on cooldown — Holy Power generator",
+                "Divine Storm as AoE finisher at 5 Holy Power",
             },
             scoreWeights = { cooldownUsage = 35, activity = 30, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Adapted from Icy Veins Retribution Paladin guide",
+            sourceNote = "Midnight 12.0 verified against full Ret talent tree 107 nodes + rotation guide (April 2026)",
         },
     },
 
@@ -1174,92 +1292,110 @@ Core.SPEC_DATABASE = {
     [4] = {
         className = "Rogue",
 
-        -- Assassination
-        -- Removed:  Rupture (1943), Garrote (703) from uptimeBuffs — enemy debuffs, not player auras
-        -- Removed:  debuffUptime from scoreWeights
-        -- Added:    rotationalSpells: Rupture (1943), Garrote (703), Envenom (32645)
+        -- Assassination (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Vendetta (79140) removed — not in Assassination talent tree or spell list
+        -- Kick (1766) added as isInterrupt — confirmed Assassination spell list
+        -- Envenom corrected 32645 → 196819 — Assassination spec-variant confirmed spell list
+        -- Mutilate (1752) added to rotational — confirmed Assassination spell list; primary CP builder
+        -- Crimson Tempest (1247227) added to rotational — nodeID 94557 non-PASSIVE ACTIVE; AoE finisher
         [1] = {
             name = "Assassination", role = "DPS",
             resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
             majorCooldowns = {
-                { id = 360194, label = "Deathmark", expectedUses = "on CD"               },
-                { id = 385627, label = "Kingsbane", expectedUses = "on CD (if talented)" },
-                { id = 79140,  label = "Vendetta",  expectedUses = "on CD"               },
+                { id = 360194, label = "Deathmark",        expectedUses = "on CD"           },  -- nodeID 90769 non-PASSIVE ACTIVE
+                { id = 385627, label = "Kingsbane",        expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90770 non-PASSIVE ACTIVE
+                { id = 1766,   label = "Kick",             expectedUses = "situational",    isInterrupt = true },  -- confirmed Assassination spell list
+                -- Vendetta (79140) removed — not in Assassination talent tree or spell list
             },
-            -- uptimeBuffs empty: Rupture and Garrote are enemy debuffs, not player self-auras
             uptimeBuffs = {},
             rotationalSpells = {
-                -- Critical rotation abilities tracked for presence — never should be zero in a real fight
-                { id = 1943,  label = "Rupture",  minFightSeconds = 20 },  -- core bleed, applied immediately
-                { id = 703,   label = "Garrote",  minFightSeconds = 20 },  -- opener, should always be used
-                { id = 32645, label = "Envenom",  minFightSeconds = 30 },  -- primary finisher
+                { id = 703,    label = "Garrote",          minFightSeconds = 15 },  -- confirmed spell list; opener bleed
+                { id = 1943,   label = "Rupture",          minFightSeconds = 15 },  -- confirmed spell list; core bleed
+                { id = 1752,   label = "Mutilate",         minFightSeconds = 15 },  -- confirmed spell list; primary CP builder
+                { id = 196819, label = "Envenom",          minFightSeconds = 20 },  -- Assassination spec-variant (was 32645 — Outlaw ID)
+                { id = 1247227,label = "Crimson Tempest",  minFightSeconds = 20, talentGated = true },  -- nodeID 94557 non-PASSIVE ACTIVE; AoE finisher
             },
             priorityNotes = {
-                "Maintain Rupture and Garrote on all targets — core bleed damage (not directly tracked)",
-                "Keep Envenom active for the damage amplification buff",
-                "Spend at 4-5 combo points — do not sit on max CP",
-                "Deathmark doubles all bleeds — use with Kingsbane and other CDs",
-                "Fan of Knives / Shuriken Storm for AoE — keep bleeds on multiple targets",
+                "Maintain Garrote and Rupture on all targets — core bleed damage",
+                "Mutilate to build combo points — primary builder",
+                "Envenom at 4-5 combo points — primary finisher and damage amp",
+                "Deathmark doubles all bleeds — use with Kingsbane for burst",
+                "Crimson Tempest for AoE — keeps bleeds rolling on multiple targets",
             },
             scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
-            sourceNote = "Adapted from Icy Veins Assassination Rogue guide",
+            sourceNote = "Midnight 12.0 verified against full Assassination talent tree 103 nodes (April 2026)",
         },
 
-        -- Outlaw
-        -- Fixed:    Roll the Bones removed from procBuffs — same ID as majorCooldowns entry
-        --           which caused double-tracking. It is a cooldown, not a proc buff.
-        -- Added:    rotationalSpells: Between the Eyes (199804), Dispatch (2098)
+        -- Outlaw (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Roll the Bones corrected 315508 → 1214909 — confirmed Outlaw spell list
+        -- Blade Rush (271877) added to majorCooldowns — nodeID 90649 non-PASSIVE ACTIVE
+        -- Keep It Rolling (381989) added to majorCooldowns — nodeID 90652 non-PASSIVE ACTIVE
+        -- Kick (1766) added as isInterrupt — confirmed Outlaw spell list
+        -- Between the Eyes corrected 199804 → 315341 — Outlaw spec-variant confirmed spell list
+        -- Dispatch corrected 2098 → 196819 — Outlaw spec-variant confirmed spell list
+        -- Sinister Strike (1752) added to rotational — Outlaw spec-variant confirmed spell list; primary builder
+        -- Pistol Shot (185763) added to rotational — confirmed Outlaw spell list; builder/proc spender
         [2] = {
             name = "Outlaw", role = "DPS",
             resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
             majorCooldowns = {
-                { id = 13750,  label = "Adrenaline Rush", expectedUses = "on CD"          },
-                { id = 315508, label = "Roll the Bones",  expectedUses = "keep refreshed" },
-                { id = 13877,  label = "Blade Flurry",    expectedUses = "AoE on CD"      },
+                { id = 13750,   label = "Adrenaline Rush",  expectedUses = "on CD"          },  -- nodeID 90659 non-PASSIVE ACTIVE
+                { id = 1214909, label = "Roll the Bones",   expectedUses = "keep refreshed" },  -- confirmed Outlaw spell list (was 315508)
+                { id = 13877,   label = "Blade Flurry",     expectedUses = "AoE on CD"      },  -- baseline confirmed Outlaw spell list
+                { id = 271877,  label = "Blade Rush",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90649 non-PASSIVE ACTIVE
+                { id = 381989,  label = "Keep It Rolling",  expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90652 non-PASSIVE ACTIVE
+                { id = 1766,    label = "Kick",             expectedUses = "situational",    isInterrupt = true },  -- confirmed Outlaw spell list
             },
             rotationalSpells = {
-                { id = 199804, label = "Between the Eyes", minFightSeconds = 30 },
-                { id = 2098,   label = "Dispatch",         minFightSeconds = 30 },
+                { id = 1752,   label = "Sinister Strike",   minFightSeconds = 15 },  -- Outlaw spec-variant confirmed spell list; primary builder
+                { id = 185763, label = "Pistol Shot",       minFightSeconds = 15 },  -- confirmed Outlaw spell list; Quick Draw proc spender
+                { id = 315341, label = "Between the Eyes",  minFightSeconds = 20 },  -- Outlaw spec-variant confirmed spell list (was 199804)
+                { id = 196819, label = "Dispatch",          minFightSeconds = 20 },  -- Outlaw spec-variant confirmed spell list (was 2098)
             },
             priorityNotes = {
-                "Keep Roll the Bones active — reroll if only one buff procs",
+                "Keep Roll the Bones active — reroll for better buffs with Keep It Rolling",
+                "Adrenaline Rush on cooldown — massive Energy regeneration burst",
                 "Between the Eyes on cooldown during Adrenaline Rush for burst",
                 "Sinister Strike / Pistol Shot to build combo points",
-                "Dispatch / Eviscerate at 5+ combo points — primary finisher",
+                "Dispatch at 5+ combo points — primary finisher",
                 "Blade Flurry for any 2+ target situation",
             },
             scoreWeights = { cooldownUsage = 35, activity = 35, resourceMgmt = 20, procUsage = 10 },
-            sourceNote = "Adapted from Icy Veins Outlaw Rogue guide",
+            sourceNote = "Midnight 12.0 verified against full Outlaw talent tree 102 nodes (April 2026)",
         },
 
-        -- Subtlety
-        -- Removed:  Find Weakness (121733) from uptimeBuffs — enemy debuff, not a player aura
-        -- Removed:  debuffUptime from scoreWeights
-        -- Added:    rotationalSpells: Shadowstrike (185438), Eviscerate (196819), Nightblade (195452)
+        -- Subtlety (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Symbols of Death (212283) removed — not in Subtlety talent tree or spell list
+        -- Kick (1766) added as isInterrupt — confirmed Subtlety spell list
+        -- Nightblade (195452) removed from rotational — not in Subtlety talent tree or spell list
+        -- Eviscerate (196819) confirmed Sub spell list ✅; "Eviscerate" is correct Sub finisher name
+        -- Backstab (1752) added to rotational — Sub spec-variant confirmed spell list (shows as "Backstab"); primary builder
+        -- Shuriken Storm (197835) added to rotational — confirmed Sub spell list; AoE builder
         [3] = {
             name = "Subtlety", role = "DPS",
             resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
             majorCooldowns = {
-                { id = 185313, label = "Shadow Dance",     expectedUses = "burst windows" },
-                { id = 212283, label = "Symbols of Death", expectedUses = "on CD"         },
-                { id = 121471, label = "Shadow Blades",    expectedUses = "on CD"         },
+                { id = 185313, label = "Shadow Dance",  expectedUses = "burst windows" },  -- baseline confirmed Sub spell list
+                { id = 121471, label = "Shadow Blades", expectedUses = "on CD"         },  -- nodeID 90726 non-PASSIVE ACTIVE
+                { id = 1766,   label = "Kick",          expectedUses = "situational",   isInterrupt = true },  -- confirmed Sub spell list
+                -- Symbols of Death (212283) removed — not in Subtlety talent tree or spell list
             },
-            -- uptimeBuffs empty: Find Weakness is an enemy debuff, not a player self-aura
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 185438, label = "Shadowstrike",  minFightSeconds = 30 },
-                { id = 196819, label = "Eviscerate",    minFightSeconds = 30 },
-                { id = 195452, label = "Nightblade",    minFightSeconds = 30 },  -- damage amp, should apply early
+                { id = 185438, label = "Shadowstrike",  minFightSeconds = 20 },  -- confirmed Sub spell list; Stealth builder
+                { id = 1752,   label = "Backstab",      minFightSeconds = 15 },  -- Sub spec-variant confirmed spell list; primary builder outside Stealth
+                { id = 196819, label = "Eviscerate",    minFightSeconds = 20 },  -- confirmed Sub spell list; primary finisher
+                { id = 197835, label = "Shuriken Storm", minFightSeconds = 20 },  -- confirmed Sub spell list; AoE builder
             },
             priorityNotes = {
-                "Shadow Dance for burst — use Shadowstrike charges immediately",
-                "Symbols of Death on cooldown — amplifies all damage and generates CP",
-                "Maintain Nightblade on target for the damage amplification (not directly tracked)",
-                "Shadow Blades for sustained burst — aligns with Symbols of Death",
-                "Backstab / Shadowstrike to build combo points outside of Dance",
+                "Shadow Dance for burst — spend with Shadowstrike inside every window",
+                "Shadow Blades on cooldown — sustained burst and CP generation",
+                "Shadowstrike inside Shadow Dance, Backstab outside",
+                "Eviscerate at 5+ combo points — primary finisher",
+                "Shuriken Storm as AoE builder at 3+ targets",
             },
             scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-            sourceNote = "Adapted from Icy Veins Subtlety Rogue guide",
+            sourceNote = "Midnight 12.0 verified against full Subtlety talent tree 105 nodes (April 2026)",
         },
     },
 
@@ -1401,47 +1537,73 @@ Core.SPEC_DATABASE = {
     [6] = {
         className = "Death Knight",
 
-        -- Blood
+        -- Blood (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Abomination Limb (383269) removed — not in Blood talent tree or spell list
+        -- Bonestorm (194844) removed — not in Blood talent tree or spell list
+        -- Reaper's Mark (439843) added to majorCooldowns — nodeID 95062 non-PASSIVE ACTIVE
+        -- Mind Freeze (47528) added as isInterrupt — nodeID 76084 non-PASSIVE ACTIVE
+        -- Blood Shield (77535) removed from uptimeBuffs — proc absorb from Death Strike, not a persistent aura
+        -- rotationalSpells added: Marrowrend, Heart Strike, Blood Boil, Death Strike — all missing entirely
         [1] = {
             name = "Blood", role = "TANK",
             resourceType = 6, resourceLabel = "RUNIC POWER", overcapAt = 100,
             majorCooldowns = {
-                { id = 49028,  label = "Dancing Rune Weapon", expectedUses = "on CD"           },
-                { id = 55233,  label = "Vampiric Blood",      expectedUses = "big damage"      },
-                { id = 383269, label = "Abomination Limb",    expectedUses = "on CD"           },
-                { id = 194844, label = "Bonestorm",           expectedUses = "grouped enemies" },
+                { id = 49028,  label = "Dancing Rune Weapon", expectedUses = "on CD"      },  -- nodeID 76138 non-PASSIVE ACTIVE
+                { id = 55233,  label = "Vampiric Blood",      expectedUses = "big damage" },  -- nodeID 76173 non-PASSIVE ACTIVE
+                { id = 439843, label = "Reaper's Mark",       expectedUses = "on CD"      },  -- nodeID 95062 non-PASSIVE ACTIVE
+                { id = 47528,  label = "Mind Freeze",         expectedUses = "situational", isInterrupt = true },  -- nodeID 76084 non-PASSIVE ACTIVE
+                -- Abomination Limb (383269) removed — not in Blood talent tree or spell list
+                -- Bonestorm (194844) removed — not in Blood talent tree or spell list
             },
-            uptimeBuffs = {
-                { id = 77535, label = "Blood Shield", targetUptime = 40 },
+            uptimeBuffs = {},
+            rotationalSpells = {
+                { id = 195182, label = "Marrowrend",  minFightSeconds = 15 },  -- nodeID 76168 non-PASSIVE ACTIVE; Bone Shield builder
+                { id = 206930, label = "Heart Strike", minFightSeconds = 15 },  -- nodeID 76169 non-PASSIVE ACTIVE; primary RP generator
+                { id = 50842,  label = "Blood Boil",  minFightSeconds = 15 },  -- nodeID 76170 non-PASSIVE ACTIVE; DoT and AoE threat
+                { id = 49998,  label = "Death Strike", minFightSeconds = 15 },  -- nodeID 76071 non-PASSIVE ACTIVE; primary self-heal
             },
             tankMetrics = { targetMitigationUptime = 50 },
             priorityNotes = {
-                "Death Strike is your healing  -  use on incoming damage",
-                "Dancing Rune Weapon on cooldown for parry and runes",
+                "Death Strike on incoming damage — primary self-heal, generates Blood Shield",
+                "Marrowrend to maintain Bone Shield stacks — core mitigation",
+                "Heart Strike on cooldown — primary Runic Power generator",
+                "Blood Boil on cooldown — DoT and AoE threat",
+                "Dancing Rune Weapon on cooldown — parry and Rune regeneration",
                 "Vampiric Blood for sustained dangerous phases",
-                "Crimson Scourge procs = free Death and Decay",
-                "Bone Shield stacks = core mitigation, keep it up",
+                "Reaper's Mark on cooldown",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Blood Death Knight guide",
+            sourceNote = "Midnight 12.0 verified against full Blood talent tree 108 nodes (April 2026)",
         },
 
-        -- Frost
+        -- Frost (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Breath of Sindragosa (1249658) added to majorCooldowns — nodeID 76093 non-PASSIVE ACTIVE
+        -- Reaper's Mark (439843) added to majorCooldowns — nodeID 95062 non-PASSIVE ACTIVE
+        -- Mind Freeze (47528) added as isInterrupt — nodeID 76084 non-PASSIVE ACTIVE
+        -- Howling Blast (49184) added to rotational — nodeID 76114 non-PASSIVE ACTIVE; primary AoE + Rime proc consumer
+        -- Frostscythe (207230) added to rotational — nodeID 76113 non-PASSIVE ACTIVE; AoE alternative to Obliterate
+        -- Killing Machine procBuff: 59052 (old aura ID) — VERIFY; talent tree shows 51128 at nodeID 76117 PASSIVE
+        -- Rime procBuff: 51124 (old aura ID) — VERIFY; spell list shows 59057 Rime
         [2] = {
             name = "Frost", role = "DPS",
             resourceType = 6, resourceLabel = "RUNIC POWER", overcapAt = 100,
             majorCooldowns = {
-                { id = 51271,  label = "Pillar of Frost",     expectedUses = "on CD"         },
-                { id = 47568,  label = "Empower Rune Weapon", expectedUses = "on CD"         },
-                { id = 279302, label = "Frostwyrm's Fury",    expectedUses = "burst windows" },
+                { id = 51271,  label = "Pillar of Frost",       expectedUses = "on CD"          },  -- nodeID 101929 non-PASSIVE ACTIVE
+                { id = 47568,  label = "Empower Rune Weapon",   expectedUses = "on CD"          },  -- nodeID 76096 non-PASSIVE ACTIVE
+                { id = 279302, label = "Frostwyrm's Fury",      expectedUses = "burst windows"  },  -- nodeID 76106 non-PASSIVE ACTIVE
+                { id = 1249658,label = "Breath of Sindragosa",  expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 76093 non-PASSIVE ACTIVE
+                { id = 439843, label = "Reaper's Mark",         expectedUses = "on CD"          },  -- nodeID 95062 non-PASSIVE ACTIVE
+                { id = 47528,  label = "Mind Freeze",           expectedUses = "situational",    isInterrupt = true },  -- nodeID 76084 non-PASSIVE ACTIVE
             },
             rotationalSpells = {
-                { id = 49020,  label = "Obliterate",  minFightSeconds = 15 },  -- primary damage, used constantly
-                { id = 49143,  label = "Frost Strike", minFightSeconds = 20 },  -- Runic Power dump
+                { id = 49020,  label = "Obliterate",   minFightSeconds = 15 },  -- nodeID 76116 non-PASSIVE ACTIVE; primary damage
+                { id = 49143,  label = "Frost Strike",  minFightSeconds = 20 },  -- nodeID 76115 non-PASSIVE ACTIVE; Runic Power dump
+                { id = 49184,  label = "Howling Blast", minFightSeconds = 15 },  -- nodeID 76114 non-PASSIVE ACTIVE; AoE + Rime proc consumer
+                { id = 207230, label = "Frostscythe",  minFightSeconds = 20, talentGated = true },  -- nodeID 76113 non-PASSIVE ACTIVE; AoE alt
             },
             procBuffs = {
-                { id = 59052,  label = "Killing Machine",      maxStackTime = 10 },
-                { id = 51124,  label = "Rime (Howling Blast)", maxStackTime = 15 },
+                { id = 59052, label = "Killing Machine",      maxStackTime = 10 },  -- VERIFY aura ID — talent tree shows 51128 at nodeID 76117
+                { id = 51124, label = "Rime (Howling Blast)", maxStackTime = 15 },  -- VERIFY aura ID — spell list shows 59057 Rime
             },
             priorityNotes = {
                 "Spend Killing Machine procs with Obliterate immediately",
@@ -1449,37 +1611,52 @@ Core.SPEC_DATABASE = {
                 "Obliterate on cooldown — primary damage and proc driver",
                 "Frost Strike to dump Runic Power — avoid overcapping at 100",
                 "Pillar of Frost for burst — align with Empower Rune Weapon and trinkets",
+                "Breath of Sindragosa: do not break early — maximise channel duration",
             },
             scoreWeights = { cooldownUsage = 25, procUsage = 30, activity = 25, resourceMgmt = 20 },
-            sourceNote = "Adapted from Icy Veins Frost Death Knight guide",
+            sourceNote = "Midnight 12.0 verified against full Frost talent tree 107 nodes (April 2026)",
         },
 
-        -- Unholy
+        -- Unholy (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Apocalypse (275699) removed — not in Unholy talent tree or spell list
+        -- Unholy Assault (207289) removed — not in Unholy talent tree or spell list
+        -- Dark Transformation: corrected 63560 → 1233448 — nodeID 76185 non-PASSIVE ACTIVE; confirmed spell list
+        --   Note: 63560 may be an old ID or unused variant — 1233448 is what the spellbook reports
+        -- Mind Freeze (47528) added as isInterrupt — nodeID 76084 non-PASSIVE ACTIVE
+        -- Outbreak (77575) added to majorCooldowns — nodeID 76189 non-PASSIVE ACTIVE; critical DoT applicator
+        -- Soul Reaper (343294) added to majorCooldowns — nodeID 76179 non-PASSIVE ACTIVE; execute CD
+        -- Festering Strike: corrected 85092 → 316239 — Unholy spec-variant confirmed in spell list
+        -- Putrefy (1247378) added to rotational — nodeID 108129 non-PASSIVE ACTIVE; confirmed spell list
         [3] = {
             name = "Unholy", role = "DPS",
             resourceType = 6, resourceLabel = "RUNIC POWER", overcapAt = 100,
             majorCooldowns = {
-                { id = 275699, label = "Apocalypse",          expectedUses = "on CD"            },
-                { id = 42650,  label = "Army of the Dead",    expectedUses = "pre-pull / burst" },
-                { id = 207289, label = "Unholy Assault",      expectedUses = "burst windows"    },
-                { id = 63560,  label = "Dark Transformation", expectedUses = "on CD"            },
+                { id = 42650,   label = "Army of the Dead",    expectedUses = "pre-pull / burst" },  -- nodeID 76196 non-PASSIVE ACTIVE
+                { id = 1233448, label = "Dark Transformation", expectedUses = "on CD"            },  -- nodeID 76185 non-PASSIVE ACTIVE (was 63560 — wrong ID)
+                { id = 77575,   label = "Outbreak",            expectedUses = "DoT application"  },  -- nodeID 76189 non-PASSIVE ACTIVE
+                { id = 343294,  label = "Soul Reaper",         expectedUses = "execute phase",  talentGated = true },  -- nodeID 76179 non-PASSIVE ACTIVE
+                { id = 47528,   label = "Mind Freeze",         expectedUses = "situational",    isInterrupt = true },  -- nodeID 76084 non-PASSIVE ACTIVE
+                -- Apocalypse (275699) removed — not in Unholy talent tree or spell list
+                -- Unholy Assault (207289) removed — not in Unholy talent tree or spell list
             },
-            -- uptimeBuffs empty: Blood Plague is an enemy debuff, not a player self-aura
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 85092,  label = "Festering Strike", minFightSeconds = 15 },  -- wound builder
-                { id = 55090,  label = "Scourge Strike",   minFightSeconds = 15 },  -- wound popper
-                { id = 47541,  label = "Death Coil",       minFightSeconds = 20 },  -- Runic Power dump
+                { id = 316239,  label = "Festering Strike", minFightSeconds = 15 },  -- Unholy spec-variant (was 85092 — BM/old ID); confirmed Unholy spell list
+                { id = 55090,   label = "Scourge Strike",   minFightSeconds = 15 },  -- nodeID 76190 non-PASSIVE ACTIVE; wound popper
+                { id = 47541,   label = "Death Coil",       minFightSeconds = 20 },  -- confirmed spell list; Runic Power dump
+                { id = 1247378, label = "Putrefy",          minFightSeconds = 20, talentGated = true },  -- nodeID 108129 non-PASSIVE ACTIVE
             },
             priorityNotes = {
-                "Apply Blood Plague and Festering Wounds with Festering Strike (not directly tracked)",
-                "Pop Festering Wounds with Scourge Strike in batches of 4-8",
-                "Apocalypse requires 8 Festering Wounds — build before using",
+                "Apply Festering Wounds with Festering Strike before Scourge Strike",
+                "Pop Festering Wounds with Scourge Strike — aim for batches of 4-8",
+                "Outbreak to reapply Virulent Plague when it drops",
                 "Dark Transformation on cooldown — empowers ghoul for burst",
                 "Death Coil to dump Runic Power — avoid overcapping at 100",
+                "Soul Reaper at execute range when talented",
+                "Army of the Dead on pull or major burst window",
             },
             scoreWeights = { cooldownUsage = 25, activity = 35, resourceMgmt = 25, procUsage = 15 },
-            sourceNote = "Adapted from Icy Veins Unholy Death Knight guide",
+            sourceNote = "Midnight 12.0 verified against full Unholy talent tree 106 nodes (April 2026)",
         },
     },
 
@@ -1633,87 +1810,123 @@ Core.SPEC_DATABASE = {
     [8] = {
         className = "Mage",
 
-        -- Arcane
+        -- Arcane (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Touch of the Magi (210824) removed — not in Arcane talent tree or spell list
+        -- Evocation (12051) removed — not in Arcane talent tree or spell list
+        -- Arcane Surge (365350) nodeID 102449 INACTIVE in this build — talentGated
+        -- Alter Time (342245) added to majorCooldowns — nodeID 62115 non-PASSIVE ACTIVE
+        -- Arcane Barrage corrected 44425 → 319836 — Fire/Frost variant; 319836 confirmed Arcane spell list
+        -- Arcane Missiles (5143) added to rotational — nodeID 102467 non-PASSIVE ACTIVE; Clearcasting consumer
+        -- Arcane Explosion (1449) added to rotational — baseline confirmed Arcane spell list; AoE filler
+        -- Clearcasting procBuff corrected 276743 → 79684 — confirmed Arcane spell list
         [1] = {
             name = "Arcane", role = "DPS",
             resourceType = 0,
             majorCooldowns = {
-                { id = 365350, label = "Arcane Surge",      expectedUses = "on CD"    },
-                { id = 210824, label = "Touch of the Magi", expectedUses = "on CD"    },
-                { id = 12051,  label = "Evocation",         expectedUses = "low mana" },
+                { id = 365350, label = "Arcane Surge", expectedUses = "on CD",    talentGated = true },  -- nodeID 102449 INACTIVE this build
+                { id = 342245, label = "Alter Time",   expectedUses = "on CD"                       },  -- nodeID 62115 non-PASSIVE ACTIVE
+                -- Touch of the Magi (210824) removed — not in Arcane talent tree or spell list
+                -- Evocation (12051) removed — not in Arcane talent tree or spell list
             },
             rotationalSpells = {
-                { id = 30451, label = "Arcane Blast",   minFightSeconds = 20 },
-                { id = 44425, label = "Arcane Barrage", minFightSeconds = 30 },
+                { id = 116,    label = "Arcane Blast",     minFightSeconds = 15 },  -- baseline confirmed spell list; primary charge builder
+                { id = 319836, label = "Arcane Barrage",   minFightSeconds = 20 },  -- confirmed Arcane spell list (was 44425 — Fire/Frost variant)
+                { id = 5143,   label = "Arcane Missiles",  minFightSeconds = 15, talentGated = true },  -- nodeID 102467 non-PASSIVE ACTIVE; Clearcasting consumer
+                { id = 1449,   label = "Arcane Explosion", minFightSeconds = 20 },  -- baseline confirmed spell list; AoE filler
             },
             procBuffs = {
-                { id = 276743, label = "Clearcasting", maxStackTime = 15 },
+                { id = 79684, label = "Clearcasting", maxStackTime = 15 },  -- confirmed Arcane spell list (was 276743 — old aura ID)
             },
             priorityNotes = {
                 "Build to 4 Arcane Charges with Arcane Blast before spending",
                 "Arcane Barrage to dump charges and reset for mana conservation",
-                "Arcane Surge at 4 charges — primary burst window",
-                "Touch of the Magi on cooldown to detonate the damage window",
+                "Arcane Surge at 4 charges when talented — primary burst window",
                 "Spend Clearcasting procs on Arcane Missiles immediately",
+                "Alter Time on cooldown — rewind to a better mana/charges state",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 25, activity = 25, resourceMgmt = 20 },
-            sourceNote = "Adapted from Icy Veins Arcane Mage guide",
+            sourceNote = "Midnight 12.0 verified against full Arcane talent tree 90 nodes (April 2026)",
         },
 
-        -- Fire
+        -- Fire (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Phoenix Flames (257541) removed — not in Fire talent tree or spell list
+        -- Supernova (157980) added to majorCooldowns — nodeID 101883 non-PASSIVE ACTIVE
+        -- Frostfire Bolt (431044) added to majorCooldowns — nodeID 109956 non-PASSIVE ACTIVE
+        -- Fireball corrected 133 → 116 — Fire spec-variant; 116 shows as "Fireball" in Fire spell list
+        -- Pyroblast (11366) added to rotational — nodeID 100998 non-PASSIVE ACTIVE; Hot Streak proc consumer
+        -- Scorch (2948) added to rotational — nodeID 110322 non-PASSIVE ACTIVE; filler/execute
+        -- Hot Streak procBuff: 48108 (old aura ID) — VERIFY; spell list shows 195283 Hot Streak
         [2] = {
             name = "Fire", role = "DPS",
             resourceType = 0,
             majorCooldowns = {
-                { id = 190319, label = "Combustion",     expectedUses = "burst windows"  },
-                { id = 257541, label = "Phoenix Flames", expectedUses = "on CD"          },
-                { id = 153561, label = "Meteor",         expectedUses = "on CD (talent)" },
+                { id = 190319, label = "Combustion",     expectedUses = "burst windows"           },  -- nodeID 100995 non-PASSIVE ACTIVE
+                { id = 153561, label = "Meteor",         expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 101021 non-PASSIVE ACTIVE
+                { id = 157980, label = "Supernova",      expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 101883 non-PASSIVE ACTIVE
+                { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 109956 non-PASSIVE ACTIVE
+                -- Phoenix Flames (257541) removed — not in Fire talent tree or spell list
             },
-            -- uptimeBuffs empty: Ignite is an enemy debuff, not a player self-aura
             uptimeBuffs = {},
             rotationalSpells = {
-                { id = 133,    label = "Fireball",   minFightSeconds = 15 },  -- primary builder, used constantly
-                { id = 108853, label = "Fire Blast", minFightSeconds = 15 },  -- instant Hot Streak proc
+                { id = 116,    label = "Fireball",   minFightSeconds = 15 },  -- Fire spec-variant confirmed spell list (was 133 — Arcane/Frost variant)
+                { id = 108853, label = "Fire Blast", minFightSeconds = 15 },  -- nodeID 100989 non-PASSIVE ACTIVE; instant Hot Streak proc
+                { id = 11366,  label = "Pyroblast",  minFightSeconds = 15 },  -- nodeID 100998 non-PASSIVE ACTIVE; Hot Streak proc consumer
+                { id = 2948,   label = "Scorch",     minFightSeconds = 20, talentGated = true },  -- nodeID 110322 non-PASSIVE ACTIVE; filler/execute
             },
             procBuffs = {
-                { id = 48108, label = "Hot Streak", maxStackTime = 10 },
+                { id = 48108, label = "Hot Streak", maxStackTime = 10 },  -- VERIFY aura ID — spell list shows 195283 Hot Streak
             },
             priorityNotes = {
-                "Build Hot Streak with Fireball + Fire Blast crits — Ignite spreads passively",
+                "Build Hot Streak with Fireball + Fire Blast crits",
                 "Spend Hot Streak procs on Pyroblast immediately — do not sit on them",
                 "Combustion for burst — align with trinkets and lust",
-                "Phoenix Flames during Combustion to guarantee crits",
-                "Fire Blast on cooldown to extend Hot Streak or guarantee a crit",
+                "Fire Blast on cooldown to proc or extend Hot Streak",
+                "Scorch as filler during execute phase and while moving when talented",
+                "Meteor and Supernova on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 30, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Fire Mage guide",
+            sourceNote = "Midnight 12.0 verified against full Fire talent tree 101 nodes (April 2026)",
         },
 
-        -- Frost
+        -- Frost (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Icy Veins (12472) removed — not in Frost talent tree or spell list
+        -- Flurry (44614) added to majorCooldowns — nodeID 62178 non-PASSIVE ACTIVE; key burst/proc cast
+        -- Frostfire Bolt (431044) added to majorCooldowns — nodeID 94636 non-PASSIVE ACTIVE
+        -- Ray of Frost (205021) added to majorCooldowns — nodeID 62153 non-PASSIVE ACTIVE; talentGated
+        -- Dragon's Breath (31661) added to majorCooldowns — nodeID 101883 non-PASSIVE ACTIVE; talentGated
+        -- Frostbolt (116) added to rotational — baseline confirmed Frost spell list; primary filler missing entirely
+        -- Brain Freeze procBuff: 190446 (old aura ID) — VERIFY; talent tree shows 190447 at nodeID 62179
+        -- Fingers of Frost procBuff: 44544 (old aura ID) — VERIFY; talent tree shows 112965 at nodeID 62164
         [3] = {
             name = "Frost", role = "DPS",
             resourceType = 0,
             majorCooldowns = {
-                { id = 12472, label = "Icy Veins",  expectedUses = "once per 2 min" },
-                { id = 84714, label = "Frozen Orb", expectedUses = "on CD"          },
+                { id = 84714,  label = "Frozen Orb",    expectedUses = "on CD"           },  -- nodeID 62177 non-PASSIVE ACTIVE
+                { id = 44614,  label = "Flurry",        expectedUses = "Brain Freeze procs" },  -- nodeID 62178 non-PASSIVE ACTIVE
+                { id = 431044, label = "Frostfire Bolt",expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 94636 non-PASSIVE ACTIVE
+                { id = 205021, label = "Ray of Frost",  expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 62153 non-PASSIVE ACTIVE
+                { id = 31661,  label = "Dragon's Breath",expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 101883 non-PASSIVE ACTIVE
+                -- Icy Veins (12472) removed — not in Frost talent tree or spell list
             },
             rotationalSpells = {
-                { id = 30455,  label = "Ice Lance", minFightSeconds = 15 },  -- proc consumer, used constantly
-                { id = 44614,  label = "Flurry",    minFightSeconds = 15 },  -- Brain Freeze consumer
+                { id = 116,   label = "Frostbolt", minFightSeconds = 15 },  -- baseline confirmed Frost spell list; primary filler was missing entirely
+                { id = 30455, label = "Ice Lance",  minFightSeconds = 15 },  -- nodeID 62176 non-PASSIVE ACTIVE; Fingers of Frost consumer
+                { id = 44614, label = "Flurry",     minFightSeconds = 15 },  -- nodeID 62178; also tracked in CDs above
             },
             procBuffs = {
-                { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },
-                { id = 44544,  label = "Fingers of Frost", maxStackTime = 15 },
+                { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },  -- VERIFY aura ID — talent shows 190447 nodeID 62179
+                { id = 44544,  label = "Fingers of Frost", maxStackTime = 15 },  -- VERIFY aura ID — talent shows 112965 nodeID 62164
             },
             priorityNotes = {
                 "Spend Brain Freeze procs with Flurry immediately — before Ice Lance for shatter",
                 "Spend Fingers of Frost with Ice Lance — do not let them expire",
-                "Frozen Orb on cooldown for proc generation",
-                "Icy Veins during burst windows — aligns with trinkets",
-                "Avoid munching procs — never cast Flurry without Brain Freeze",
+                "Frostbolt as primary filler — generates Brain Freeze and Fingers of Frost",
+                "Frozen Orb on cooldown for burst proc generation",
+                "Ray of Frost on cooldown when talented — channel for massive damage",
+                "Frostfire Bolt on cooldown when talented",
             },
             scoreWeights = { cooldownUsage = 30, procUsage = 30, activity = 25, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Frost Mage guide",
+            sourceNote = "Midnight 12.0 verified against full Frost talent tree 100 nodes (April 2026)",
         },
     },
 
@@ -1859,86 +2072,123 @@ Core.SPEC_DATABASE = {
     [10] = {
         className = "Monk",
 
-        -- Brewmaster
+        -- Brewmaster (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Celestial Brew (322507) removed — not in Brewmaster talent tree or spell list
+        -- Exploding Keg (325153) added to majorCooldowns — nodeID 101197 non-PASSIVE ACTIVE
+        -- Celestial Infusion (1241059) added to majorCooldowns — nodeID 101067 non-PASSIVE ACTIVE
+        -- Spear Hand Strike (116705) added as isInterrupt — nodeID 101152 non-PASSIVE ACTIVE
+        -- Ironskin Brew (215479) removed from uptimeBuffs — not in Midnight 12.0 talent tree or spell list
+        -- Breath of Fire (115181) added to rotational — nodeID 101069 non-PASSIVE ACTIVE
+        -- Tiger Palm (100780) added to rotational — baseline confirmed spell list; primary filler/energy builder
+        -- Blackout Kick (100784) added to rotational — baseline confirmed spell list; core filler
         [1] = {
             name = "Brewmaster", role = "TANK",
             resourceType = 1, resourceLabel = "ENERGY", overcapAt = 100,
             majorCooldowns = {
-                { id = 132578, label = "Invoke Niuzao",   expectedUses = "burst damage" },
-                { id = 322507, label = "Celestial Brew",  expectedUses = "big hits"     },
-                { id = 115203, label = "Fortifying Brew", expectedUses = "emergency"    },
+                { id = 132578,  label = "Invoke Niuzao",     expectedUses = "burst damage"  },  -- nodeID 101075 non-PASSIVE ACTIVE
+                { id = 115203,  label = "Fortifying Brew",   expectedUses = "emergency"     },  -- nodeID 101173 non-PASSIVE ACTIVE
+                { id = 325153,  label = "Exploding Keg",     expectedUses = "on CD"         },  -- nodeID 101197 non-PASSIVE ACTIVE
+                { id = 1241059, label = "Celestial Infusion",expectedUses = "on CD"         },  -- nodeID 101067 non-PASSIVE ACTIVE
+                { id = 116705,  label = "Spear Hand Strike", expectedUses = "situational",  isInterrupt = true },  -- nodeID 101152 non-PASSIVE ACTIVE
+                -- Celestial Brew (322507) removed — not in talent tree or spell list
             },
-            uptimeBuffs = {
-                { id = 215479, label = "Ironskin Brew", targetUptime = 60 },
-            },
+            uptimeBuffs = {},
             rotationalSpells = {
-                { id = 121253, label = "Keg Smash",       minFightSeconds = 20 },
-                { id = 119582, label = "Purifying Brew",  minFightSeconds = 30 },
+                { id = 121253, label = "Keg Smash",      minFightSeconds = 15 },  -- nodeID 101088 non-PASSIVE ACTIVE; primary Brew generator
+                { id = 119582, label = "Purifying Brew", minFightSeconds = 20 },  -- nodeID 101064 non-PASSIVE ACTIVE; clears Heavy/Severe stagger
+                { id = 115181, label = "Breath of Fire", minFightSeconds = 15 },  -- nodeID 101069 non-PASSIVE ACTIVE; AoE damage and debuff
+                { id = 100780, label = "Tiger Palm",     minFightSeconds = 15 },  -- baseline confirmed spell list; primary filler
+                { id = 100784, label = "Blackout Kick",  minFightSeconds = 15 },  -- baseline confirmed spell list; core filler
             },
             tankMetrics = { targetMitigationUptime = 60 },
             priorityNotes = {
-                "Maintain Ironskin Brew for stagger reduction at 60%+ uptime (tracked via uptimeBuffs)",
                 "Purifying Brew to clear Heavy or Severe Stagger — don't let it sit",
-                "Keg Smash on cooldown — primary Brew generator and damage",
-                "Celestial Brew for absorb shield before predictable big hits",
+                "Keg Smash on cooldown — primary Brew charge generator and damage",
+                "Breath of Fire on cooldown — AoE damage and debuff",
+                "Tiger Palm and Blackout Kick as fillers between cooldowns",
+                "Invoke Niuzao for heavy sustained damage phases",
+                "Exploding Keg and Celestial Infusion on cooldown",
+                "Fortifying Brew for true emergencies",
             },
             scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Brewmaster Monk guide",
+            sourceNote = "Midnight 12.0 verified against full Brewmaster talent tree 117 nodes (April 2026)",
         },
 
-        -- Mistweaver
+        -- Mistweaver (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Invoke Yu'lon (322118) removed — not in Mistweaver talent tree or spell list
+        -- Invoke Chi-Ji (325197) added to majorCooldowns — nodeID 101129 non-PASSIVE ACTIVE
+        -- Life Cocoon (116849) added to majorCooldowns — nodeID 101096 non-PASSIVE ACTIVE
+        -- Celestial Conduit (443028) added to majorCooldowns — nodeID 110067 non-PASSIVE ACTIVE
+        -- Spear Hand Strike (116705) added as isInterrupt — baseline confirmed Mistweaver spell list
+        -- Renewing Mist corrected 119611 → 115151 — 119611 is wrong ID; 115151 confirmed Mistweaver spell list
+        -- Enveloping Mist (124682) added to rotational — nodeID 101134 non-PASSIVE ACTIVE
         [2] = {
             name = "Mistweaver", role = "HEALER",
             resourceType = 0,
             majorCooldowns = {
-                { id = 115310, label = "Revival",           expectedUses = "raid emergency" },
-                { id = 322118, label = "Invoke Yu'lon",     expectedUses = "sustained AoE"  },
-                { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"          },
+                { id = 115310, label = "Revival",           expectedUses = "raid emergency"  },  -- nodeID 101131 non-PASSIVE ACTIVE
+                { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"           },  -- nodeID 101133 non-PASSIVE ACTIVE
+                { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE"  },  -- nodeID 101129 non-PASSIVE ACTIVE (was Yu'lon 322118 — wrong)
+                { id = 116849, label = "Life Cocoon",       expectedUses = "tank emergencies"},  -- nodeID 101096 non-PASSIVE ACTIVE
+                { id = 443028, label = "Celestial Conduit", expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110067 non-PASSIVE ACTIVE
+                { id = 116705, label = "Spear Hand Strike", expectedUses = "situational",    isInterrupt = true },  -- baseline confirmed Mistweaver spell list
             },
             rotationalSpells = {
-                { id = 119611, label = "Renewing Mist",  minFightSeconds = 20 },
-                { id = 107428, label = "Rising Sun Kick", minFightSeconds = 20 },
+                { id = 115151, label = "Renewing Mist",   minFightSeconds = 15 },  -- baseline confirmed Mistweaver spell list (was 119611 — wrong ID)
+                { id = 107428, label = "Rising Sun Kick",  minFightSeconds = 15 },  -- nodeID 101186 non-PASSIVE ACTIVE
+                { id = 124682, label = "Enveloping Mist",  minFightSeconds = 20 },  -- nodeID 101134 non-PASSIVE ACTIVE; primary ST heal
             },
             healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
             priorityNotes = {
                 "Keep Renewing Mist rolling on as many injured targets as possible",
                 "Rising Sun Kick on cooldown — damage amp and healing bonus",
-                "Vivify to proc Renewing Mist bouncing to other targets",
+                "Enveloping Mist for sustained single-target healing",
                 "Thunder Focus Tea on cooldown — empowers next major heal",
+                "Life Cocoon on the tank for heavy damage",
+                "Invoke Chi-Ji for sustained AoE healing phases",
                 "Revival for emergency full-group healing — do not hold it",
             },
             scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-            sourceNote = "Adapted from Icy Veins Mistweaver Monk guide",
+            sourceNote = "Midnight 12.0 verified against full Mistweaver talent tree 124 nodes (April 2026)",
         },
 
-        -- Windwalker
-        -- Added:    rotationalSpells: Fists of Fury (113656), Rising Sun Kick (107428)
-        --           Both are high-priority abilities with short CDs, not true burst cooldowns
+        -- Windwalker (Midnight 12.0 PASSIVE audit — April 2026)
+        -- Storm, Earth and Fire (137639) removed — not in Windwalker talent tree or spell list
+        -- Serenity (152173) removed — not in Windwalker talent tree or spell list
+        -- Zenith (1249625) added to majorCooldowns — nodeID 101053 non-PASSIVE ACTIVE
+        -- Spear Hand Strike (116705) added as isInterrupt — nodeID 110098 non-PASSIVE ACTIVE
+        -- Combo Breaker: BoK (116768) removed from procBuffs — not in talent tree or spell list
+        -- Tiger Palm (100780) added to rotational — baseline confirmed WW spell list; primary filler
+        -- Blackout Kick (100784) added to rotational — baseline confirmed WW spell list; core filler
+        -- Whirling Dragon Punch (152175) added to rotational — nodeID 101207 non-PASSIVE ACTIVE
         [3] = {
             name = "Windwalker", role = "DPS",
             resourceType = 12, resourceLabel = "CHI", overcapAt = 6,
             majorCooldowns = {
-                { id = 137639, label = "Storm, Earth and Fire", expectedUses = "on CD"          },
-                { id = 123904, label = "Invoke Xuen",           expectedUses = "burst windows"  },
-                { id = 152173, label = "Serenity",              expectedUses = "burst (talent)" },
+                { id = 123904,  label = "Invoke Xuen",        expectedUses = "burst windows"   },  -- nodeID 101243 non-PASSIVE ACTIVE
+                { id = 1249625, label = "Zenith",             expectedUses = "on CD"           },  -- nodeID 101053 non-PASSIVE ACTIVE
+                { id = 116705,  label = "Spear Hand Strike",  expectedUses = "situational",    isInterrupt = true },  -- nodeID 110098 non-PASSIVE ACTIVE
+                -- Storm, Earth and Fire (137639) removed — not in talent tree or spell list
+                -- Serenity (152173) removed — not in talent tree or spell list
             },
             rotationalSpells = {
-                -- Short-CD high-priority abilities; tracked for presence not frequency
-                { id = 113656, label = "Fists of Fury",   minFightSeconds = 15 },  -- highest damage CD ~12s
-                { id = 107428, label = "Rising Sun Kick",  minFightSeconds = 15 },  -- ~10s CD
-            },
-            procBuffs = {
-                { id = 116768, label = "Combo Breaker: BoK", maxStackTime = 15 },
+                { id = 113656, label = "Fists of Fury",         minFightSeconds = 15 },  -- nodeID 101218 non-PASSIVE ACTIVE; highest damage CD
+                { id = 107428, label = "Rising Sun Kick",        minFightSeconds = 15 },  -- nodeID 101186 non-PASSIVE ACTIVE
+                { id = 152175, label = "Whirling Dragon Punch",  minFightSeconds = 15, talentGated = true },  -- nodeID 101207 non-PASSIVE ACTIVE
+                { id = 100780, label = "Tiger Palm",             minFightSeconds = 15 },  -- baseline confirmed WW spell list; primary filler
+                { id = 100784, label = "Blackout Kick",          minFightSeconds = 15 },  -- baseline confirmed WW spell list; core filler
             },
             priorityNotes = {
-                "Fists of Fury on cooldown — highest single-target damage ability",
+                "Fists of Fury on cooldown — highest damage ability",
                 "Rising Sun Kick on cooldown — damage and Mortal Wounds debuff",
-                "Storm, Earth and Fire on cooldown — sustained DPS, not a burst CD",
-                "Blackout Kick as filler to generate Chi and trigger Combo Breaker",
-                "Serenity / Invoke Xuen for burst — align with trinkets and lust",
+                "Whirling Dragon Punch on cooldown when talented",
+                "Tiger Palm and Blackout Kick as fillers — generate Chi and procs",
+                "Zenith on cooldown — major burst window",
+                "Invoke Xuen for additional burst — align with Zenith",
+                "Never overcap Chi at 6",
             },
-            scoreWeights = { cooldownUsage = 35, procUsage = 20, activity = 30, resourceMgmt = 15 },
-            sourceNote = "Adapted from Icy Veins Windwalker Monk guide",
+            scoreWeights = { cooldownUsage = 35, procUsage = 15, activity = 35, resourceMgmt = 15 },
+            sourceNote = "Midnight 12.0 verified against full Windwalker talent tree 129 nodes (April 2026)",
         },
     },
 
@@ -2512,7 +2762,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         C_Timer.After(1.0, function() Core.MigrateEncounters() end)
         Core.Emit(Core.EVENTS.SESSION_READY)
         print("|cff00D1FFMidnight Sensei|r v" .. Core.VERSION ..
-              " loaded.  Type |cffFFD700/ms|r for commands.")
+              " loaded.  |cffFFFFFF/ms show|r to open the HUD  ·  |cffFFFFFF/ms help|r for commands.")
         -- Level check — delayed so UnitLevel is accurate after world load
         C_Timer.After(2.0, function()
             local level = UnitLevel("player") or 0
@@ -2824,7 +3074,7 @@ SLASH_MIDNIGHTSENSEI2 = "/midnightsensei"
 local function MSSlashHandler(msg)
     msg = (msg or ""):lower():trim()
     if msg == "" then
-        print("|cff00D1FFMidnight Sensei:|r Type |cffFFFFFF/ms show|r to open the HUD  ·  |cffFFFFFF/ms hide|r to close it  ·  |cffFFFFFF/ms help|r for all commands.")
+        print("|cff00D1FFMidnight Sensei:|r  |cffFFFFFF/ms show|r  ·  |cffFFFFFF/ms hide|r  ·  |cffFFFFFF/ms history|r  ·  |cffFFFFFF/ms lb|r  ·  |cffFFFFFF/ms options|r  ·  |cffFFFFFF/ms help|r")
     elseif msg == "show" then
         Call(MS.UI, "ShowMainFrame")
     elseif msg == "hide" then
@@ -2841,17 +3091,9 @@ local function MSSlashHandler(msg)
         print("  /ms faq           Help & FAQ panel")
         print("  /ms credits       Credits & about")
         print("  /ms report        Report a bug on GitHub")
-        print("  /ms reset         Clear fight history")
         print("  /ms update        Show changelog")
-        print("  /ms versions      Show addon versions passively collected this session")
-        print("  /ms debug         Current spec / class IDs")
-        print("  /ms debug guild         Diagnose guild score routing")
-        print("  /ms debug guild inject  Send a test score to guild (pipeline test)")
-        print("  /ms debug guild broadcast  Re-broadcast all your best scores")
-        print("  /ms debug self    Diagnose your delve encounter history")
-        print("  /ms debug zone    Show current instance/zone context and diffID")
-        print("  /ms friend <Name> Query a player's last score directly (addon whisper)")
-        print("  /ms verify report Print verify findings for current spec")
+        print("  /ms versions      Show addon versions seen this session")
+        print("  /ms friend <n>    Query a player's last score directly")
     elseif msg == "faq"                        then Call(MS.UI, "ShowFAQ")
     elseif msg == "credits"                    then Call(MS.UI, "ShowCredits")
     elseif msg == "report"                     then Call(MS.UI, "ShowReportPopup")
@@ -3247,52 +3489,6 @@ local function MSSlashHandler(msg)
             end
         end
         -- ── END PILOT RECOVERY TOOL ──────────────────────────────────────────
-
-    elseif msg == "debug guild inject" then
-        -- Send a synthetic SCORE message to the guild channel.
-        -- Uses a real checksum so it passes validation on the receiver.
-        -- This tests the full receive → MergeEntry → display pipeline.
-        if not IsInGuild() then
-            print("|cffFF4444Midnight Sensei:|r Not in a guild.")
-        else
-            local spec = Core.ActiveSpec
-            local className = spec and spec.className or "Mage"
-            local specName  = spec and spec.name      or "Frost"
-            local role      = spec and spec.role      or "DPS"
-            local score     = 77
-            local duration  = 120
-            local encType   = "dungeon"
-            local charName  = UnitName("player") or "?"
-            -- Compute real checksum so receiver accepts it
-            local a = (score * 7) % 251
-            local b = (math.floor(duration) * 11) % 251
-            local c = (#encType * 17) % 251
-            local cs = string.format("%03d", (a + b + c) % 251)
-            local payload = table.concat({
-                "SCORE", Core.VERSION,
-                className, specName, role,
-                "B",                          -- grade
-                tostring(score),
-                tostring(duration),
-                "1",                          -- isBoss
-                "TEST_BOSS",                  -- bossName
-                encType,
-                cs,
-                "TEST_Difficulty",            -- diffLabel
-                "0",                          -- keystoneLevel
-                charName,
-                "TEST_Dungeon",               -- instanceName
-            }, "|")
-            if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-                local ok, err = pcall(C_ChatInfo.SendAddonMessage, "MS_LB", payload, "GUILD")
-                if ok then
-                    print("|cff00D1FFMidnight Sensei:|r Injected test dungeon score (" ..
-                          score .. ") to GUILD. Check Polkatron's leaderboard.")
-                else
-                    print("|cffFF4444Midnight Sensei:|r Send failed: " .. tostring(err))
-                end
-            end
-        end
 
     elseif msg == "debug guild ping" then
         -- Send a PING to GUILD channel and check if we receive it back
