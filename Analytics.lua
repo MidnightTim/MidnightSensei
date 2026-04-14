@@ -776,6 +776,7 @@ function Analytics.CalculateGrade()
         grade        = grade,   -- shorthand alias for leaderboard
         -- Feedback
         feedback     = feedback,
+        addonVersion = Core.VERSION or "?",
         -- Raw counters
         totalGCDs    = totalGCDs,
         activeGCDs   = activeGCDs,

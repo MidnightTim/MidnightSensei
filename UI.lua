@@ -1058,6 +1058,18 @@ ShowResultPanel = function(result)
         local closeBtn = MakeButton(resultFrame, 70, 22, "Close")
         closeBtn:SetPoint("BOTTOMRIGHT", resultFrame, "BOTTOMRIGHT", -10, 8)
         closeBtn:SetScript("OnClick", function() resultFrame:Hide() end)
+
+        -- Version watermark — small, dim, sits above the Close button, clear of the scrollbar arrow
+        local verLabel = MakeFont(resultFrame, 8, "RIGHT")
+        verLabel:SetPoint("BOTTOMRIGHT", resultFrame, "BOTTOMRIGHT", -88, 34)
+        verLabel:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 0.5)
+        resultFrame._verLabel = verLabel
+    end
+
+    -- Update version label from stored result — shows version that generated this feedback
+    if resultFrame._verLabel then
+        local v = result.addonVersion or Core.VERSION or "?"
+        resultFrame._verLabel:SetText("v" .. v)
     end
 
     local hex = GradeHex(result.finalScore)
@@ -1841,9 +1853,8 @@ function UI.ShowFAQ()
         "  /ms update       View changelog",
         "  /ms credits      Credits & about",
         "  /ms report       Report a bug on GitHub",
-        "  /ms reset        Clear fight history",
-        "  /ms verify       Toggle spell ID verification mode (dev)",
-        "  /ms debug        Show current spec / class IDs",
+        "  /ms versions     Show addon versions seen this session",
+        "  /ms friend <n>   Query a player's last score directly",
     }
 
     if not faqFrame then

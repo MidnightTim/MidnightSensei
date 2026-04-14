@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.2"
+    Core.VERSION = ver or "1.4.3"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,20 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.3",
+        tagline = "Version Watermark, Feedback Version Snapshot & Devourer Fixes",
+        date    = "April 2026",
+        changes = {
+            -- Version watermark
+            "Fight Complete window: version number shown bottom-right above button row — small (8pt), dimmed at 50% opacity, unobtrusive",
+            "Version label now reflects the addon version that generated that specific feedback, not the currently running version",
+            "addonVersion field added to result struct — stored permanently with each encounter going forward",
+            -- Devourer
+            "Devourer: Void Metamorphosis (191427) removed from rotationalSpells — shapeshifting spell fires UPDATE_SHAPESHIFT_FORM not UNIT_SPELLCAST_SUCCEEDED; useCount permanently 0, false 'never used' feedback eliminated",
+            "Devourer: Reap (344862) flagged VERIFY — ID is in rotationalTracking at fight start but useCount stays 0 despite casts registering in damage meters; game likely fires a different spell ID at runtime",
+        },
+    },
     {
         version = "1.4.2",
         tagline = "Class Tuning — Paladin, Death Knight, Mage, Rogue, Monk + UX Polish",
@@ -2501,7 +2515,11 @@ Core.SPEC_DATABASE = {
         -- PASSIVE — removed from rotational: Eradicate (1226033)
         -- PASSIVE — removed from validSpells: 471306 (talent node), 1221167 (talent node), 1250094
         -- Soul Immolation (1241937) confirmed non-PASSIVE ACTIVE nodeID 107344 — retained as sole majorCD
-        -- Void Metamorphosis castable: 191427 confirmed in spellbook, non-passive — retained in rotational
+        -- Void Metamorphosis (191427): removed from rotational — shapeshifting spell, fires UPDATE_SHAPESHIFT_FORM
+        --   not UNIT_SPELLCAST_SUCCEEDED, so useCount never increments. Cannot be tracked via cast events.
+        -- Reap (344862): in rotationalTracking at fight start but useCount stays 0 despite being cast.
+        --   Suspected: game fires a different spell ID for the Devourer-specific Reap at runtime.
+        --   Flagged VERIFY — needs /ms verify in-game to confirm actual cast ID.
         -- Collapsing Star: 1221150 (castable) not in talent tree — retained via combatGated, no change
         [3] = {
             name = "Devourer", role = "DPS",
@@ -2545,9 +2563,10 @@ Core.SPEC_DATABASE = {
                 -- Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
             },
             rotationalSpells = {
-                { id = 191427,  label = "Void Metamorphosis", minFightSeconds = 30 },                    -- castable, non-PASSIVE, confirmed spellbook
+                -- Void Metamorphosis (191427) removed — shapeshifting spell, fires UPDATE_SHAPESHIFT_FORM
+                --   not UNIT_SPELLCAST_SUCCEEDED. useCount never increments. Not trackable via cast events.
                 { id = 1221150, label = "Collapsing Star",    minFightSeconds = 45, combatGated = true }, -- inside Void Metamorphosis window only
-                { id = 344862,  label = "Reap",               minFightSeconds = 20 },                    -- confirmed spell snapshot
+                { id = 344862,  label = "Reap",               minFightSeconds = 20 },                    -- VERIFY — in tracking but useCount stays 0; game may fire different ID at runtime
                 { id = 473728,  label = "Void Ray",           minFightSeconds = 15 },                    -- non-PASSIVE ACTIVE nodeID 107336
                 { id = 1245412, label = "Voidblade",          minFightSeconds = 15, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 108723
                 { id = 1234195, label = "Void Nova",          minFightSeconds = 20, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 107347
