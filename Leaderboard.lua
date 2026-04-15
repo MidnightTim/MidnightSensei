@@ -54,6 +54,17 @@ local function GetWeekKey()
     return string.format("%04d%02d%02d", tue.year, tue.month, tue.mday)
 end
 
+-- Returns the Unix epoch of the start of the current WoW week (Tuesday 14:00 UTC).
+-- Uses pure arithmetic — immune to date() timezone edge cases that can affect GetWeekKey().
+-- Unix epoch 0 = Thursday Jan 1 1970 00:00 UTC.
+-- Tuesday 14:00 UTC = Thursday + 5 days + 14 hours = 432000 + 50400 = 482400 seconds.
+local WEEK_SEC    = 7 * 86400       -- 604800: seconds per WoW week
+local RESET_EPOCH = 5 * 86400 + 14 * 3600  -- 482400: offset of first Tue 14:00 from epoch
+local function GetWeekStartEpoch()
+    local now = time()
+    return now - ((now - RESET_EPOCH) % WEEK_SEC)
+end
+
 --------------------------------------------------------------------------------
 -- Instance context snapshot
 -- Called at fight start (PLAYER_REGEN_DISABLED) to capture full instance info.
@@ -194,8 +205,24 @@ local function WhisperOnlineGuildMembers(payload)
             local short = name:match("^([^%-]+)") or name
             if short ~= myShort then
                 local delay = count * 0.1
+                local targetName = name  -- capture for closure
                 C_Timer.After(delay, function()
-                    SafeSend(LB_PREFIX, payload, "WHISPER", name)
+                    -- Re-check online status at fire time — player may have gone
+                    -- offline during the stagger window, causing "not available" spam.
+                    local stillOnline = false
+                    local targetShort = targetName:match("^([^%-]+)") or targetName
+                    local n2 = GetNumGuildMembers()
+                    for j = 1, n2 do
+                        local rName, _, _, _, _, _, _, _, rOnline = GetGuildRosterInfo(j)
+                        if rName and rOnline then
+                            if (rName:match("^([^%-]+)") or rName) == targetShort then
+                                stillOnline = true ; break
+                            end
+                        end
+                    end
+                    if stillOnline then
+                        SafeSend(LB_PREFIX, payload, "WHISPER", targetName)
+                    end
                 end)
                 count = count + 1
             end
@@ -341,8 +368,9 @@ end
 --------------------------------------------------------------------------------
 -- Data stores
 --------------------------------------------------------------------------------
-local partyData   = {}   -- [playerName] = entry  (session-only)
-local friendsData = {}   -- [playerName] = entry  (session-only)
+local partyData          = {}   -- [playerName] = entry  (session-only)
+local friendsData        = {}   -- [playerName] = entry  (session-only)
+local helloWhisperReplied = {}  -- senders we've already whispered HELLO back to this session
 -- Guild data lives in MidnightSenseiDB.leaderboard.guild
 
 --------------------------------------------------------------------------------
@@ -1100,7 +1128,10 @@ local function OnAddonMessage(prefix, payload, channel, sender)
 
             -- If this arrived via whisper, whisper back our HELLO so they also
             -- get our entry (mutual handshake — otherwise only one side registers).
-            if channel == "WHISPER" and Core.ActiveSpec then
+            -- Guard: only reply once per sender per session to prevent an infinite
+            -- ping-pong loop where both clients keep whispering HELLO back and forth.
+            if channel == "WHISPER" and Core.ActiveSpec and not helloWhisperReplied[sender] then
+                helloWhisperReplied[sender] = true
                 local replyPayload = table.concat({
                     "HELLO", Core.VERSION,
                     Core.ActiveSpec.className or "?",
@@ -1297,10 +1328,10 @@ function LB.GetPartyData()
             end
             lastEnc = lastEnc or lastEncAny -- no delve/normal fallback
         end
-        local wk      = GetWeekKey()
-        local wAvg    = ComputeWeeklyAvg(history, wk)
-
-        -- Compute all-time and category bests from full history
+        local wk             = GetWeekKey()
+        local weekStartEpoch = GetWeekStartEpoch()
+        -- Weekly avg using epoch comparison — immune to GetWeekKey() shift edge cases.
+        local wSum, wCount = 0, 0
         local allBest, dungBest, raidBest, delvBest = 0, 0, 0, 0
         if history then
             for _, enc in ipairs(history) do
@@ -1310,8 +1341,12 @@ function LB.GetPartyData()
                 elseif enc.encType == "raid"    then raidBest = math.max(raidBest, s)
                 elseif enc.encType == "delve"   then delvBest = math.max(delvBest, s)
                 end
+                if enc.isBoss and enc.timestamp and enc.timestamp >= weekStartEpoch then
+                    wSum = wSum + s ; wCount = wCount + 1
+                end
             end
         end
+        local wAvg = wCount > 0 and math.floor(wSum / wCount) or 0
 
         result[myName] = {
             name        = UnitName("player"),
@@ -1334,6 +1369,8 @@ function LB.GetPartyData()
             instanceName = lastEnc and lastEnc.instanceName or "",
             bossName     = lastEnc and lastEnc.bossName     or "",
         }
+        -- Epoch-based: no fights this week if wCount == 0
+        local hasThisWeek = wCount > 0
         -- Merge CharDB.bests so scores beyond the encounter cap are preserved
         local cb = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
         if cb then
@@ -1342,11 +1379,17 @@ function LB.GetPartyData()
             e.dungeonBest = math.max(e.dungeonBest, cb.dungeonBest or 0)
             e.raidBest    = math.max(e.raidBest,    cb.raidBest    or 0)
             e.delveBest   = math.max(e.delveBest,   cb.delveBest   or 0)
-            if cb.weekKey == wk then
+            -- Only merge cb weekly data when there are confirmed this-week boss kills.
+            if hasThisWeek then
                 if cb.weeklyAvg         > e.weeklyAvg      then e.weeklyAvg      = cb.weeklyAvg         end
                 if (cb.weeklyDungeonBest or 0) > (e.dungeonWeekBest or 0) then e.dungeonWeekBest = cb.weeklyDungeonBest end
                 if (cb.weeklyRaidBest    or 0) > (e.raidWeekBest    or 0) then e.raidWeekBest    = cb.weeklyRaidBest    end
                 if (cb.weeklyDelveBest   or 0) > (e.delveWeekBest   or 0) then e.delveWeekBest   = cb.weeklyDelveBest   end
+            end
+            -- No epoch-confirmed fights this week: surface last week's avg and flag (prev).
+            if not hasThisWeek and (cb.weeklyAvg or 0) > 0 then
+                e.weeklyAvg = cb.weeklyAvg
+                e.prevWeek  = true
             end
         end
     end
@@ -1385,28 +1428,28 @@ function LB.GetGuildData()
             end
             -- Generic lastEnc for top-level grade/score display (prefer boss, either type)
             local lastEnc = lastDungEnc or lastRaidEnc
-            local wk      = GetWeekKey()
+            local wk             = GetWeekKey()
+            local weekStartEpoch = GetWeekStartEpoch()
 
-            -- Boss-only weekly avg (always hardcoded)
-            local wAvg = ComputeWeeklyAvg(history, wk)
-
-            -- Category bests from full history
+            -- Category bests from full history; per-content weekly avgs use epoch comparison
+            -- so they are immune to GetWeekKey() timezone/shift edge cases.
             local allBest, dungBest, raidBest, delvBest, normBest = 0, 0, 0, 0, 0
-            -- Per-content weekly averages (boss kills this week only)
             local dungSum, dungCount, raidSum, raidCount = 0, 0, 0, 0
+            local wSum, wCount = 0, 0
             if history then
                 for _, enc in ipairs(history) do
                     local s = enc.finalScore or 0
                     allBest = math.max(allBest, s)
+                    local inThisWeek = enc.timestamp and enc.timestamp >= weekStartEpoch
                     if enc.encType == "dungeon" then
                         dungBest = math.max(dungBest, s)
-                        if enc.isBoss and (enc.weekKey == wk) then
+                        if enc.isBoss and inThisWeek then
                             dungSum   = dungSum   + s
                             dungCount = dungCount + 1
                         end
                     elseif enc.encType == "raid" then
                         raidBest = math.max(raidBest, s)
-                        if enc.isBoss and (enc.weekKey == wk) then
+                        if enc.isBoss and inThisWeek then
                             raidSum   = raidSum   + s
                             raidCount = raidCount + 1
                         end
@@ -1415,8 +1458,12 @@ function LB.GetGuildData()
                     elseif enc.encType ~= "delve" then
                         normBest = math.max(normBest, s)
                     end
+                    if enc.isBoss and inThisWeek then
+                        wSum = wSum + s ; wCount = wCount + 1
+                    end
                 end
             end
+            local wAvg        = wCount > 0 and math.floor(wSum    / wCount)    or 0
             local selfDungAvg = dungCount > 0 and math.floor(dungSum / dungCount) or 0
             local selfRaidAvg = raidCount > 0 and math.floor(raidSum / raidCount) or 0
 
@@ -1461,6 +1508,11 @@ function LB.GetGuildData()
                 selfEntry.raidBest    = math.max(selfEntry.raidBest,    existing.raidBest    or 0)
                 selfEntry.delveBest   = math.max(selfEntry.delveBest,   existing.delveBest   or 0)
             end
+            -- Epoch-based: does the player have any boss kills in the current WoW week?
+            -- Computed from the history loop above using weekStartEpoch — immune to
+            -- GetWeekKey() timezone/shift edge cases where wk can equal the old week key.
+            local hasThisWeek = wCount > 0 or dungCount > 0 or raidCount > 0
+
             -- Merge with CharDB.bests — the permanent per-character record
             local cb = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
             if cb then
@@ -1468,11 +1520,19 @@ function LB.GetGuildData()
                 selfEntry.dungeonBest = math.max(selfEntry.dungeonBest, cb.dungeonBest or 0)
                 selfEntry.raidBest    = math.max(selfEntry.raidBest,    cb.raidBest    or 0)
                 selfEntry.delveBest   = math.max(selfEntry.delveBest,   cb.delveBest   or 0)
-                if cb.weekKey == wk then
+                -- Only merge cb weekly data when there are confirmed this-week boss kills.
+                -- If cb.weekKey == wk but hasThisWeek is false, both keys are stuck on the
+                -- old (pre-reset) value — merging would make the avg look current when it isn't.
+                if hasThisWeek then
                     if cb.weeklyAvg > selfEntry.weeklyAvg then selfEntry.weeklyAvg = cb.weeklyAvg end
                     if (cb.weeklyDungeonBest or 0) > (selfEntry.dungeonWeekBest or 0) then selfEntry.dungeonWeekBest = cb.weeklyDungeonBest end
                     if (cb.weeklyRaidBest    or 0) > (selfEntry.raidWeekBest    or 0) then selfEntry.raidWeekBest    = cb.weeklyRaidBest    end
                     if (cb.weeklyDelveBest   or 0) > (selfEntry.delveWeekBest   or 0) then selfEntry.delveWeekBest   = cb.weeklyDelveBest   end
+                end
+                -- No epoch-confirmed fights this week: surface last week's avg and flag (prev).
+                if not hasThisWeek and (cb.weeklyAvg or 0) > 0 then
+                    selfEntry.weeklyAvg = cb.weeklyAvg
+                    selfEntry.prevWeek  = true
                 end
             end
             local rb = MidnightSenseiDB
@@ -1523,8 +1583,10 @@ function LB.GetFriendsData()
             end
             lastEnc = lastEnc or lastEncAny -- no delve/normal fallback
         end
-        local wk   = GetWeekKey()
-        local wAvg = ComputeWeeklyAvg(history, wk)
+        local wk             = GetWeekKey()
+        local weekStartEpoch = GetWeekStartEpoch()
+        -- Weekly avg using epoch comparison — immune to GetWeekKey() shift edge cases.
+        local wSum, wCount = 0, 0
         local allBest, dungBest, raidBest, delvBest = 0, 0, 0, 0
         if history then
             for _, enc in ipairs(history) do
@@ -1532,10 +1594,14 @@ function LB.GetFriendsData()
                 allBest = math.max(allBest, s)
                 if     enc.encType == "dungeon" then dungBest = math.max(dungBest, s)
                 elseif enc.encType == "raid"    then raidBest = math.max(raidBest, s)
-                elseif enc.encType == "delve" then delvBest = math.max(delvBest, s)
+                elseif enc.encType == "delve"   then delvBest = math.max(delvBest, s)
+                end
+                if enc.isBoss and enc.timestamp and enc.timestamp >= weekStartEpoch then
+                    wSum = wSum + s ; wCount = wCount + 1
                 end
             end
         end
+        local wAvg = wCount > 0 and math.floor(wSum / wCount) or 0
         result[myName] = {
             name         = UnitName("player"),
             className    = spec.className or "?",
@@ -1557,6 +1623,8 @@ function LB.GetFriendsData()
             instanceName = lastEnc and lastEnc.instanceName or "",
             bossName     = lastEnc and lastEnc.bossName     or "",
         }
+        -- Epoch-based: no fights this week if wCount == 0
+        local hasThisWeek = wCount > 0
         -- Merge CharDB.bests so scores beyond the encounter cap are preserved
         local cb = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
         if cb then
@@ -1565,11 +1633,17 @@ function LB.GetFriendsData()
             e.dungeonBest = math.max(e.dungeonBest, cb.dungeonBest or 0)
             e.raidBest    = math.max(e.raidBest,    cb.raidBest    or 0)
             e.delveBest   = math.max(e.delveBest,   cb.delveBest   or 0)
-            if cb.weekKey == wk then
+            -- Only merge cb weekly data when there are confirmed this-week boss kills.
+            if hasThisWeek then
                 if cb.weeklyAvg         > e.weeklyAvg      then e.weeklyAvg      = cb.weeklyAvg         end
                 if (cb.weeklyDungeonBest or 0) > (e.dungeonWeekBest or 0) then e.dungeonWeekBest = cb.weeklyDungeonBest end
                 if (cb.weeklyRaidBest    or 0) > (e.raidWeekBest    or 0) then e.raidWeekBest    = cb.weeklyRaidBest    end
                 if (cb.weeklyDelveBest   or 0) > (e.delveWeekBest   or 0) then e.delveWeekBest   = cb.weeklyDelveBest   end
+            end
+            -- No epoch-confirmed fights this week: surface last week's avg and flag (prev).
+            if not hasThisWeek and (cb.weeklyAvg or 0) > 0 then
+                e.weeklyAvg = cb.weeklyAvg
+                e.prevWeek  = true
             end
         end
     end
@@ -2038,7 +2112,9 @@ local function PopulateRows(scrollChild, entries)
         end
         if wAvg > 0 then
             weekStr = GradeScore(wAvg)
-            if entry.weekKey and entry.weekKey ~= wk then
+            local isPrev = (entry.weekKey and entry.weekKey ~= wk)
+                        or (entry.isSelf and entry.prevWeek)
+            if isPrev then
                 weekStr = weekStr .. " |cff888888(prev)|r"
             end
         else

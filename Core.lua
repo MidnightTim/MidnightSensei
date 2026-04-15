@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.4"
+    Core.VERSION = ver or "1.4.5"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -3379,18 +3379,36 @@ local function MSSlashHandler(msg)
             L("SPELL ID CHECK (majorCooldowns + rotationalSpells)")
             local allTracked = {}
             for _, cd in ipairs(spec.majorCooldowns or {}) do
-                allTracked[cd.id] = { label = cd.label, bucket = "majorCooldowns" }
+                allTracked[cd.id] = { label = cd.label, bucket = "majorCooldowns",
+                    talentGated = cd.talentGated, suppressIfTalent = cd.suppressIfTalent, combatGated = cd.combatGated }
             end
             for _, rs in ipairs(spec.rotationalSpells or {}) do
-                allTracked[rs.id] = { label = rs.label, bucket = "rotationalSpells" }
+                allTracked[rs.id] = { label = rs.label, bucket = "rotationalSpells",
+                    talentGated = rs.talentGated, suppressIfTalent = rs.suppressIfTalent, combatGated = rs.combatGated }
             end
 
             local seen = Core.VerifySeenSpells or {}
             for id, info in pairs(allTracked) do
                 local fired = seen[id]
+                -- Check whether this spell is gated out of the current build
+                local skipReason
+                if info.talentGated and not info.combatGated then
+                    if not IsPlayerSpell(id) then
+                        skipReason = "not talented"
+                    end
+                end
+                if not skipReason and info.suppressIfTalent then
+                    if IsPlayerSpell(info.suppressIfTalent) or IsTalentActive(info.suppressIfTalent) then
+                        local suppressName = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(info.suppressIfTalent) or tostring(info.suppressIfTalent)
+                        skipReason = "suppressed by " .. (suppressName or tostring(info.suppressIfTalent))
+                    end
+                end
                 if fired then
                     L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]",
                       info.label, id, fired, info.bucket))
+                elseif skipReason then
+                    L(string.format("  SKIP  %-30s id=%-8d %s  [%s]",
+                      info.label, id, skipReason, info.bucket))
                 else
                     L(string.format("  FAIL  %-30s id=%-8d NOT SEEN    [%s]",
                       info.label, id, info.bucket))
@@ -3762,6 +3780,41 @@ local function MSSlashHandler(msg)
             print("  Type /ms debug guild broadcast to re-broadcast ALL content type bests")
         else
             print("  No encounter in history — fight something first")
+        end
+        -- Self-entry weekly avg debug
+        print("  --- Self-entry weekly avg state ---")
+        local cb2 = MidnightSenseiCharDB and MidnightSenseiCharDB.bests
+        local wk2 = MS.Leaderboard and MS.Leaderboard.GetWeekKey and MS.Leaderboard.GetWeekKey()
+        print("  GetWeekKey(): " .. tostring(wk2))
+        if cb2 then
+            print("  cb.weekKey:   " .. tostring(cb2.weekKey))
+            print("  cb.weeklyAvg: " .. tostring(cb2.weeklyAvg))
+            print("  cb.weekKey==wk: " .. tostring(cb2.weekKey == wk2))
+        else
+            print("  CharDB.bests: nil")
+        end
+        -- Pull the actual self-entry from GetGuildData and show key fields
+        if MS.Leaderboard and MS.Leaderboard.GetGuildData then
+            local gdata = MS.Leaderboard.GetGuildData()
+            local selfName = UnitName("player") .. "-" .. (GetRealmName() or "")
+            local se = gdata and gdata[selfName]
+            if se then
+                print("  selfEntry.weekKey:    " .. tostring(se.weekKey))
+                print("  selfEntry.weeklyAvg:  " .. tostring(se.weeklyAvg))
+                print("  selfEntry.dungeonAvg: " .. tostring(se.dungeonAvg))
+                print("  selfEntry.raidAvg:    " .. tostring(se.raidAvg))
+                print("  selfEntry.dungeonBest:" .. tostring(se.dungeonBest))
+                print("  selfEntry.prevWeek:   " .. tostring(se.prevWeek))
+                local prevFires = (se.weekKey and se.weekKey ~= wk2) or (se.isSelf and se.prevWeek)
+                print("  (prev) would fire: " .. tostring(prevFires))
+            else
+                print("  selfEntry not found in GetGuildData() under key: " .. tostring(selfName))
+                -- Print available keys for diagnosis
+                if gdata then
+                    print("  Available keys:")
+                    for k in pairs(gdata) do print("    " .. tostring(k)) end
+                end
+            end
         end
 
     elseif msg == "debug guild broadcast" then
