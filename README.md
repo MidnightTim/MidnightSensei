@@ -268,3 +268,4 @@ If something looks off, especially after a class update or patch, use the built-
 Midnight Sensei is built around practical feedback and steady improvement. As the game changes, the addon continues to evolve with spec updates, scoring improvements, UI additions, and better recovery and debugging tools.
 
 If you want an in-game coach that helps you understand your habits pull by pull, that is exactly what Midnight Sensei is built to do.
+
