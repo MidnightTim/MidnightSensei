@@ -1,0 +1,166 @@
+﻿local Core = MidnightSensei.Core
+
+Core.RegisterSpec(11, {
+    className = "Druid",
+
+    -- Balance (Midnight 12.0 rotation guide pass — April 2026)
+    -- Rotation priority sourced from Icy Veins / Wowhead Balance Druid guide
+    -- Starfall moved from majorCooldowns to rotationalSpells — it's a spender, not a burst CD
+    -- Force of Nature (205636) added as talentGated CD — appears in both hero talent priority lists
+    -- Fury of Elune (202770) added to rotational — high priority during Eclipse in both priority lists
+    -- Wrath (5176) added to rotational — baseline filler, primary AP generator
+    -- Hero talent builds differ (Incarnation vs Celestial Alignment) — both tracked as talentGated
+    [1] = {
+        name = "Balance", role = "DPS",
+        resourceType = 8, resourceLabel = "ASTRAL POWER", overcapAt = 90,
+        majorCooldowns = {
+            { id = 194223, label = "Celestial Alignment",          expectedUses = "on CD",           talentGated = true },  -- hero talent build 1
+            { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)",  talentGated = true },  -- hero talent build 2
+            { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true },  -- priority #3-5 in both builds
+        },
+        uptimeBuffs = {},
+        rotationalSpells = {
+            { id = 8921,   label = "Moonfire",      minFightSeconds = 15 },                      -- priority #1 — maintain DoT
+            { id = 93402,  label = "Sunfire",       minFightSeconds = 15 },                      -- priority #2 — maintain DoT
+            { id = 202770, label = "Fury of Elune", minFightSeconds = 20, talentGated = true },  -- priority #3 — use during Eclipse
+            { id = 191034, label = "Starfall",      minFightSeconds = 20 },                      -- priority #8 — AoE AP spender
+            { id = 78674,  label = "Starsurge",     minFightSeconds = 20 },                      -- priority #9 — main ST spender
+            { id = 5176,   label = "Wrath",         minFightSeconds = 15 },                      -- priority #10 — AP generator filler
+        },
+        priorityNotes = {
+            "Maintain Moonfire and Sunfire on all targets — refresh within pandemic (not directly tracked)",
+            "Fury of Elune during Eclipse or before Force of Nature when talented",
+            "Force of Nature when not in Eclipse and about to enter Solar Eclipse",
+            "Celestial Alignment / Incarnation as burst window — use Force of Nature first",
+            "Starfall to consume Starweaver's Warp procs and for AoE",
+            "Starsurge as main spender — use on movement, near AP cap, or Starweaver's Weft procs",
+            "Wrath to generate Astral Power — never overcap at 90",
+        },
+        scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
+        sourceNote = "Midnight 12.0 verified against full Balance talent tree snapshot v1.4.3 113 nodes (April 2026)",
+    },
+
+    -- Feral (PASSIVE audit — April 2026)
+    -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
+    -- Predatory Swiftness (69369) removed from procBuffs — not in talent tree or spell list, VERIFY never confirmed
+    -- Frantic Frenzy (1243807) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82111, confirmed spell list
+    -- Feral Frenzy (274837) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82112, confirmed spell list
+    -- Primal Wrath (285381) added as talentGated rotational — non-PASSIVE ACTIVE nodeID 82120; AoE finisher
+    [2] = {
+        name = "Feral", role = "DPS",
+        resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
+        majorCooldowns = {
+            { id = 5217,   label = "Tiger's Fury",       expectedUses = "on CD"          },  -- non-PASSIVE ACTIVE nodeID 82124
+            { id = 106951, label = "Berserk",             expectedUses = "burst windows"  },  -- non-PASSIVE ACTIVE nodeID 82101
+            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82114
+            { id = 1243807, label = "Frantic Frenzy",    expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82111
+            { id = 274837, label = "Feral Frenzy",        expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82112
+            -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
+        },
+        uptimeBuffs = {},
+        rotationalSpells = {
+            { id = 1079,   label = "Rip",            minFightSeconds = 15 },                      -- non-PASSIVE ACTIVE nodeID 82222
+            { id = 1822,   label = "Rake",           minFightSeconds = 15 },                      -- non-PASSIVE ACTIVE nodeID 82199
+            { id = 22568,  label = "Ferocious Bite", minFightSeconds = 20 },                      -- baseline confirmed spell list
+            { id = 5221,   label = "Shred",          minFightSeconds = 15 },                      -- baseline confirmed spell list; primary CP builder
+            { id = 285381, label = "Primal Wrath",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82120; AoE finisher
+        },
+        priorityNotes = {
+            "Ferocious Bite on Apex Predator's Craving procs — highest priority",
+            "Maintain Rip at 4+ combo points with Tiger's Fury active when possible",
+            "Ferocious Bite at 5 CP with Berserk active, 4 CP without",
+            "Sync Berserk and Convoke the Spirits with Tiger's Fury for burst",
+            "Tiger's Fury on cooldown — Energy refill and damage buff",
+            "Maintain Rake — refresh in pandemic, prioritise Tiger's Fury snapshots",
+            "Shred to generate combo points — primary filler",
+            "Primal Wrath as AoE finisher when talented — replaces Ferocious Bite on multi-target",
+        },
+        scoreWeights = { cooldownUsage = 25, procUsage = 15, activity = 35, resourceMgmt = 25 },
+        sourceNote = "Midnight 12.0 verified against full Feral talent tree snapshot v1.4.3 114 nodes (April 2026)",
+    },
+
+    -- Guardian (PASSIVE audit — April 2026)
+    -- Maul/Raze (6807) added to rotational — non-PASSIVE ACTIVE nodeID 82127; Rage spender
+    --   Note: 6807 shows as "Raze" in Guardian spell list (spec-variant)
+    -- Lunar Beam (204066) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 92587
+    -- Red Moon: confirmed in Balance spell list only — NOT present in Guardian files, not tracked
+    -- Catform spells excluded — Bear form only for Guardian
+    [3] = {
+        name = "Guardian", role = "TANK",
+        resourceType = 8, resourceLabel = "RAGE", overcapAt = 100,
+        majorCooldowns = {
+            { id = 102558, label = "Incarnation: Guardian", expectedUses = "on CD"           },  -- non-PASSIVE ACTIVE nodeID 82136
+            { id = 22812,  label = "Barkskin",              expectedUses = "magic damage"    },  -- baseline confirmed spell list
+            { id = 22842,  label = "Frenzied Regeneration", expectedUses = "low health"      },  -- non-PASSIVE ACTIVE nodeID 82220
+            { id = 204066, label = "Lunar Beam",            expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 92587
+        },
+        uptimeBuffs = {
+            { id = 192081, label = "Ironfur", targetUptime = 70 },  -- non-PASSIVE ACTIVE nodeID 82227
+        },
+        rotationalSpells = {
+            { id = 8921,    label = "Moonfire",  minFightSeconds = 15 },                      -- baseline; rotation priority #1
+            { id = 33917,   label = "Mangle",    minFightSeconds = 15 },                      -- baseline; rotation priority #4
+            { id = 77758,   label = "Thrash",    minFightSeconds = 15 },                      -- baseline; rotation priority #5
+            { id = 6807,    label = "Maul",      minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82127; Rage spender
+            { id = 213764,  label = "Swipe",     minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82223; filler only
+            -- Red Moon (1252871) removed — confirmed in Balance spell list only, not Guardian
+        },
+        tankMetrics = { targetMitigationUptime = 70 },
+        priorityNotes = {
+            "Maintain Moonfire on your primary target at all times",
+            "Keep Ironfur active — spend Rage for 70%+ uptime (tracked via uptimeBuffs)",
+            "Mangle on cooldown — primary Rage generator",
+            "Thrash on cooldown — maintain 3-5 stacks",
+            "Spend Rage on Ironfur defensively or Maul offensively",
+            "Lunar Beam on cooldown when talented — healing and damage",
+            "Frenzied Regeneration when health dips low — reactive self-heal",
+            "Barkskin and Incarnation on cooldown — use as frequently as possible",
+            "Swipe as a filler only — never delay Mangle or Thrash for it",
+        },
+        scoreWeights = { cooldownUsage = 25, mitigationUptime = 40, activity = 20, resourceMgmt = 15 },
+        sourceNote = "Midnight 12.0 verified against full Guardian talent tree snapshot v1.4.3 116 nodes (April 2026)",
+    },
+
+    -- Restoration (PASSIVE audit — April 2026)
+    -- Incarnation: Tree of Life (33891) removed — not in Restoration talent tree
+    -- Flourish (197721) removed — not in Restoration talent tree or spell list
+    -- Wild Growth moved from majorCooldowns to rotational — it's a maintenance spell, not a burst CD
+    -- Convoke the Spirits (391528) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82064
+    -- Ironbark (102342) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82082; external defensive
+    -- Nature's Swiftness (132158) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82050; instant cast CD
+    -- Lifebloom (33763) added to rotational — non-PASSIVE ACTIVE nodeID 82049; core HoT
+    -- Innervate (29166) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82244; mana CD
+    [4] = {
+        name = "Restoration", role = "HEALER",
+        resourceType = 0,
+        majorCooldowns = {
+            { id = 740,    label = "Tranquility",       expectedUses = "heavy damage windows"  },  -- non-PASSIVE ACTIVE nodeID 82054
+            { id = 102342, label = "Ironbark",          expectedUses = "tank busters"          },  -- non-PASSIVE ACTIVE nodeID 82082
+            { id = 132158, label = "Nature's Swiftness", expectedUses = "emergency instant"    },  -- non-PASSIVE ACTIVE nodeID 82050
+            { id = 29166,  label = "Innervate",         expectedUses = "mana recovery",        talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82244
+            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst throughput",   talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82064
+            -- Incarnation: Tree of Life (33891) removed — not in talent tree
+            -- Flourish (197721) removed — not in talent tree or spell list
+        },
+        rotationalSpells = {
+            { id = 774,   label = "Rejuvenation",  minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82217
+            { id = 18562, label = "Swiftmend",     minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82047
+            { id = 33763, label = "Lifebloom",     minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82049; core single-target HoT
+            { id = 48438, label = "Wild Growth",   minFightSeconds = 30 },  -- non-PASSIVE ACTIVE nodeID 82205; AoE HoT
+        },
+        healerMetrics = { targetOverheal = 35, targetActivity = 75, targetManaEnd = 15 },
+        priorityNotes = {
+            "Keep Rejuvenation rolling on injured targets — core HoT foundation",
+            "Maintain Lifebloom on the tank — primary single-target HoT",
+            "Wild Growth for efficient AoE healing on grouped targets",
+            "Swiftmend for emergency instant healing",
+            "Nature's Swiftness for an instant cast of any spell in an emergency",
+            "Ironbark on the tank for heavy physical damage",
+            "Innervate during heavy casting phases to recover mana when talented",
+            "Tranquility for heavy sustained raid damage — hold for peak damage",
+            "Convoke the Spirits for burst throughput when talented",
+        },
+        scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
+        sourceNote = "Midnight 12.0 verified against full Restoration Druid talent tree snapshot v1.4.3 119 nodes (April 2026)",
+    },
+})

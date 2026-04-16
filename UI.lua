@@ -957,14 +957,15 @@ function UI.ShowMainCtxMenu()
         AddItem("Leaderboard",    -58, function() Core.Call(MS.Leaderboard, "Toggle") end)
         AddItem("Boss Board",     -82, function() Core.Call(MS.BossBoard, "Toggle") end)
         AddItem("Options",       -106, function() UI.OpenOptions() end)
-        AddItem("Help / FAQ",    -130, function() UI.ShowFAQ() end)
-        AddItem("Credits",       -154, function() UI.ShowCredits() end)
-        AddItem("Debug Tools",   -178, function() UI.ShowDebugWindow() end)
-        AddItem("Close HUD",     -202, function()
+        AddItem("My Spell List", -130, function() UI.ShowSpellList() end)
+        AddItem("Help / FAQ",    -154, function() UI.ShowFAQ() end)
+        AddItem("Credits",       -178, function() UI.ShowCredits() end)
+        AddItem("Debug Tools",   -202, function() UI.ShowDebugWindow() end)
+        AddItem("Close HUD",     -226, function()
             if mainFrame then mainFrame:Hide() end
         end)
 
-        mainCtxMenu:SetSize(164, 230)
+        mainCtxMenu:SetSize(164, 254)
         mainCtxMenu:SetScript("OnHide", CloseAllMenus)
     end
 
@@ -1381,6 +1382,278 @@ end
 --------------------------------------------------------------------------------
 -- Debug Window
 --------------------------------------------------------------------------------
+-- My Spell List window
+--------------------------------------------------------------------------------
+-- C_Traits strict check — mirrors Analytics.IsTalentActive(spellID, true).
+-- Returns true only if an active talent tree node resolves to spellID.
+-- No IsPlayerSpell fallback, so cross-spec grayed spells can't trigger it.
+local function UiTalentCheck(spellID)
+    if C_Traits and C_Traits.GetNodeInfo then
+        local configID = C_ClassTalents and C_ClassTalents.GetActiveConfigID
+                         and C_ClassTalents.GetActiveConfigID()
+        if configID then
+            local config = C_Traits.GetConfigInfo and C_Traits.GetConfigInfo(configID)
+            if config and config.treeIDs then
+                for _, treeID in ipairs(config.treeIDs) do
+                    local nodes = C_Traits.GetTreeNodes and C_Traits.GetTreeNodes(treeID)
+                    if nodes then
+                        for _, nodeID in ipairs(nodes) do
+                            local node = C_Traits.GetNodeInfo(configID, nodeID)
+                            if node and node.activeRank and node.activeRank > 0 then
+                                local entry = node.activeEntry
+                                if entry then
+                                    local def = C_Traits.GetEntryInfo and C_Traits.GetEntryInfo(configID, entry.entryID)
+                                    if def and def.definitionID then
+                                        local defInfo = C_Traits.GetDefinitionInfo and C_Traits.GetDefinitionInfo(def.definitionID)
+                                        if defInfo and defInfo.spellID == spellID then
+                                            return true
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return false
+end
+
+local spellListFrame = nil
+
+function UI.ShowSpellList()
+    if spellListFrame then
+        spellListFrame:SetShown(not spellListFrame:IsShown())
+        if spellListFrame:IsShown() then UI.RefreshSpellList() end
+        return
+    end
+
+    spellListFrame = CreateFrame("Frame", "MidnightSenseiSpellList", UIParent, "BackdropTemplate")
+    spellListFrame:SetSize(310, 460)
+    spellListFrame:SetPoint("CENTER")
+    spellListFrame:SetFrameStrata("DIALOG")
+    spellListFrame:SetMovable(true)
+    spellListFrame:SetClampedToScreen(true)
+    spellListFrame:EnableMouse(true)
+    spellListFrame:RegisterForDrag("LeftButton")
+    spellListFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
+    spellListFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
+    ApplyBackdrop(spellListFrame, C.BG, C.BORDER_GOLD)
+    MakeTitleBar(spellListFrame, "Midnight Sensei - My Spell List")
+
+    -- Spec label
+    local specLabel = MakeFont(spellListFrame, 11, "CENTER")
+    specLabel:SetPoint("TOPLEFT",  spellListFrame, "TOPLEFT",  10, -32)
+    specLabel:SetPoint("TOPRIGHT", spellListFrame, "TOPRIGHT", -10, -32)
+    specLabel:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
+    spellListFrame.specLabel = specLabel
+
+    -- Subtitle
+    local sub = MakeFont(spellListFrame, 10, "CENTER")
+    sub:SetPoint("TOPLEFT",  spellListFrame, "TOPLEFT",  10, -46)
+    sub:SetPoint("TOPRIGHT", spellListFrame, "TOPRIGHT", -10, -46)
+    sub:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+    sub:SetText("Spells shown here are what Midnight Sensei is currently monitoring.")
+    spellListFrame.sub = sub
+
+    -- Scroll frame
+    local sf = CreateFrame("ScrollFrame", nil, spellListFrame, "UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT",     spellListFrame, "TOPLEFT",   10, -62)
+    sf:SetPoint("BOTTOMRIGHT", spellListFrame, "BOTTOMRIGHT", -26, 36)
+    local sc = CreateFrame("Frame", nil, sf)
+    sc:SetWidth(sf:GetWidth())
+    sc:SetHeight(10)
+    sf:SetScrollChild(sc)
+    spellListFrame._sc = sc
+
+    -- Close button
+    local closeBtn = MakeButton(spellListFrame, 60, 22, "Close")
+    closeBtn:SetPoint("BOTTOM", spellListFrame, "BOTTOM", 0, 8)
+    closeBtn:SetScript("OnClick", function() spellListFrame:Hide() end)
+
+    UI.RefreshSpellList()
+end
+
+function UI.RefreshSpellList()
+    if not spellListFrame or not spellListFrame:IsShown() then return end
+
+    local sc = spellListFrame._sc
+    -- Clear existing rows
+    for _, child in ipairs({sc:GetChildren()}) do child:Hide(); child:SetParent(nil) end
+    for _, child in ipairs({sc:GetRegions()}) do child:Hide() end
+
+    local spec = Core.ActiveSpec
+    if not spec then
+        local lbl = MakeFont(sc, 11, "CENTER")
+        lbl:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, -10)
+        lbl:SetPoint("TOPRIGHT", sc, "TOPRIGHT",  0, -10)
+        lbl:SetText("No spec detected. Enter a fight first.")
+        lbl:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+        sc:SetHeight(40)
+        spellListFrame.specLabel:SetText("")
+        return
+    end
+
+    -- Class / spec header — className is stamped onto ActiveSpec by DetectSpec()
+    local className = spec.className or "Unknown Class"
+    spellListFrame.specLabel:SetText(className .. " - " .. (spec.name or "Unknown Spec")
+        .. "  |cff888888(" .. (spec.role or "") .. ")|r")
+
+    local yOff = -4
+    local ICON_SIZE = 20
+    local ROW_H     = 26
+    local COL_W     = sc:GetWidth() or 264
+
+    -- Helper: draw a section header
+    local function SectionHeader(title)
+        local sep = sc:CreateTexture(nil, "ARTWORK")
+        sep:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, yOff - 2)
+        sep:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, yOff - 2)
+        sep:SetHeight(1)
+        sep:SetColorTexture(C.SEP[1], C.SEP[2], C.SEP[3], C.SEP[4])
+        yOff = yOff - 5
+
+        local hdr = MakeFont(sc, 11, "LEFT")
+        hdr:SetPoint("TOPLEFT", sc, "TOPLEFT", 2, yOff)
+        hdr:SetText(title)
+        hdr:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
+        yOff = yOff - 18
+    end
+
+    -- Helper: draw one spell row — only called for active/baseline spells
+    local function SpellRow(spellID, label, note, rowIdx)
+        local bg = sc:CreateTexture(nil, "BACKGROUND")
+        bg:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, yOff)
+        bg:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, yOff)
+        bg:SetHeight(ROW_H)
+        local rc = (rowIdx % 2 == 0) and C.ROW_EVEN or C.ROW_ODD
+        bg:SetColorTexture(rc[1], rc[2], rc[3], rc[4])
+
+        -- Spell icon
+        local tex = sc:CreateTexture(nil, "ARTWORK")
+        tex:SetSize(ICON_SIZE, ICON_SIZE)
+        tex:SetPoint("TOPLEFT", sc, "TOPLEFT", 4, yOff - 3)
+        local iconPath = GetSpellTexture and GetSpellTexture(spellID)
+        if iconPath then
+            tex:SetTexture(iconPath)
+            tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        end
+
+        -- Spell name — narrower when a note is present to prevent overlap
+        local nameStr = MakeFont(sc, 11, "LEFT")
+        nameStr:SetPoint("TOPLEFT", sc, "TOPLEFT", 30, yOff - 4)
+        nameStr:SetWidth(note and (COL_W - 155) or (COL_W - 34))
+        nameStr:SetText(label or "Unknown")
+
+        -- Usage note — fixed 115px right column, size 9 to fit longer notes
+        if note then
+            local noteStr = MakeFont(sc, 9, "RIGHT")
+            noteStr:SetPoint("TOPRIGHT", sc, "TOPRIGHT", -4, yOff - 5)
+            noteStr:SetWidth(115)
+            noteStr:SetText("|cff888888" .. note .. "|r")
+        end
+
+        yOff = yOff - ROW_H
+    end
+
+    -- Determine which spells are active and not suppressed.
+    -- talentGated: uses strict C_Traits check — no IsPlayerSpell fallback
+    --   (cross-spec grayed spells return true from IsPlayerSpell even when not taken).
+    -- suppressIfTalent: hide this entry when the replacing talent is active.
+    -- combatGated: always show (combat-granted, no spellbook entry).
+    local function isActive(entry)
+        if entry.suppressIfTalent then
+            if (IsPlayerSpell and IsPlayerSpell(entry.suppressIfTalent))
+            or UiTalentCheck(entry.suppressIfTalent) then
+                return false
+            end
+        end
+        if entry.talentGated then
+            return UiTalentCheck(entry.id)
+        end
+        if entry.combatGated then
+            return true
+        end
+        return true  -- baseline spells are always active
+    end
+
+    local rowIdx = 0
+
+    -- COOLDOWN SPELLS
+    if spec.majorCooldowns and #spec.majorCooldowns > 0 then
+        local hasCDs = false
+        for _, cd in ipairs(spec.majorCooldowns) do
+            if not cd.isInterrupt and isActive(cd) then hasCDs = true; break end
+        end
+        if hasCDs then
+            SectionHeader("Cooldown Spells")
+            for _, cd in ipairs(spec.majorCooldowns) do
+                if not cd.isInterrupt and isActive(cd) then
+                    rowIdx = rowIdx + 1
+                    SpellRow(cd.id, cd.label, cd.expectedUses or "", rowIdx)
+                end
+            end
+        end
+    end
+
+    -- INTERRUPT / UTILITY (isInterrupt entries)
+    local hasInterrupts = false
+    if spec.majorCooldowns then
+        for _, cd in ipairs(spec.majorCooldowns) do
+            if cd.isInterrupt and isActive(cd) then hasInterrupts = true; break end
+        end
+    end
+    if hasInterrupts then
+        SectionHeader("Interrupt & Utility")
+        for _, cd in ipairs(spec.majorCooldowns) do
+            if cd.isInterrupt and isActive(cd) then
+                rowIdx = rowIdx + 1
+                SpellRow(cd.id, cd.label, "situational", rowIdx)
+            end
+        end
+    end
+
+    -- ROTATIONAL SPELLS
+    if spec.rotationalSpells and #spec.rotationalSpells > 0 then
+        local hasRS = false
+        for _, rs in ipairs(spec.rotationalSpells) do
+            if isActive(rs) then hasRS = true; break end
+        end
+        if hasRS then
+            SectionHeader("Rotational Spells")
+            for _, rs in ipairs(spec.rotationalSpells) do
+                if isActive(rs) then
+                    rowIdx = rowIdx + 1
+                    SpellRow(rs.id, rs.label, rs.combatGated and "Requires Metamorphosis" or nil, rowIdx)
+                end
+            end
+        end
+    end
+
+    -- UPTIME BUFFS
+    if spec.uptimeBuffs and #spec.uptimeBuffs > 0 then
+        SectionHeader("Uptime Buffs")
+        for _, ub in ipairs(spec.uptimeBuffs) do
+            rowIdx = rowIdx + 1
+            SpellRow(ub.id, ub.label, "target " .. (ub.targetUptime or "?") .. "% uptime", rowIdx)
+        end
+    end
+
+    -- PROC BUFFS
+    if spec.procBuffs and #spec.procBuffs > 0 then
+        SectionHeader("Proc Buffs")
+        for _, pb in ipairs(spec.procBuffs) do
+            rowIdx = rowIdx + 1
+            SpellRow(pb.id, pb.label, "spend quickly", rowIdx)
+        end
+    end
+
+    yOff = yOff - 6
+    sc:SetHeight(math.abs(yOff) + 10)
+end
+
+--------------------------------------------------------------------------------
 local debugFrame = nil
 
 function UI.ShowDebugWindow()
@@ -1486,7 +1759,7 @@ function UI.ShowDebugWindow()
     AddDebugBtn("Self — Delve History", "Show your delve encounter history and boss count",     "debug self")
     AddDebugBtn("Zone / Instance",      "Show current instance type, diffID, and encType",      "debug zone")
     AddDebugBtn("Version",              "Show addon version from TOC and metadata APIs",        "debug version")
-    AddDebugBtn("Rotational Spells",    "Show tracked rotational spells for your current spec", "debug rotational")
+    AddDebugBtn("Rotation Tracker",     "Open the Rotation Tracker window — cast counts, status, and flag explanations for each spell", "debug rotational")
     AddDebugBtn("Debug Log",            "Print the last 50 checksum/routing log entries",       "debuglog")
 
     -- ── Class Debugging ──────────────────────────────────────────────────────
@@ -1855,6 +2128,7 @@ function UI.ShowFAQ()
         "  /ms report       Report a bug on GitHub",
         "  /ms versions     Show addon versions seen this session",
         "  /ms friend <n>   Query a player's last score directly",
+        "  /ms tracker      Open the Rotation Tracker (cast counts + spell explanations)",
     }
 
     if not faqFrame then
@@ -1898,6 +2172,265 @@ function UI.ShowFAQ()
             faqFrame._sc:SetHeight(faqFrame.contentText:GetStringHeight() + 20)
         end
     end)
+end
+
+--------------------------------------------------------------------------------
+-- Rotation Tracker window
+-- Opens via /ms tracker or from the Debug Tools panel.
+-- Shows the live rotationalTracking table from the last fight with cast counts,
+-- status badges, and a plain-English explanation for every flag on each spell.
+--------------------------------------------------------------------------------
+local rotTrackerFrame = nil
+
+function UI.ShowRotationalTracker()
+    if rotTrackerFrame then
+        rotTrackerFrame:SetShown(not rotTrackerFrame:IsShown())
+        if rotTrackerFrame:IsShown() then UI.RefreshRotationalTracker() end
+        return
+    end
+
+    rotTrackerFrame = CreateFrame("Frame", "MidnightSenseiRotTracker", UIParent, "BackdropTemplate")
+    rotTrackerFrame:SetSize(510, 460)
+    rotTrackerFrame:SetPoint("CENTER")
+    rotTrackerFrame:SetFrameStrata("DIALOG")
+    rotTrackerFrame:SetMovable(true)
+    rotTrackerFrame:SetClampedToScreen(true)
+    rotTrackerFrame:EnableMouse(true)
+    rotTrackerFrame:RegisterForDrag("LeftButton")
+    rotTrackerFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
+    rotTrackerFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
+    ApplyBackdrop(rotTrackerFrame, C.BG, C.BORDER_GOLD)
+    MakeTitleBar(rotTrackerFrame, "Midnight Sensei - Rotation Tracker")
+
+    -- Subtitle
+    local sub = MakeFont(rotTrackerFrame, 10, "LEFT")
+    sub:SetPoint("TOPLEFT",  rotTrackerFrame, "TOPLEFT",  10, -34)
+    sub:SetPoint("TOPRIGHT", rotTrackerFrame, "TOPRIGHT", -10, -34)
+    sub:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+    sub:SetText("Cast counts from your last fight. Each spell shows how many times it was used and why it is tracked.")
+
+    -- Fight duration (top-right)
+    local fightInfo = MakeFont(rotTrackerFrame, 10, "RIGHT")
+    fightInfo:SetPoint("TOPRIGHT", rotTrackerFrame, "TOPRIGHT", -28, -50)
+    fightInfo:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
+    rotTrackerFrame.fightInfo = fightInfo
+
+    -- Column headers bar
+    local hdrBg = rotTrackerFrame:CreateTexture(nil, "BACKGROUND")
+    hdrBg:SetPoint("TOPLEFT",  rotTrackerFrame, "TOPLEFT",  10, -62)
+    hdrBg:SetPoint("TOPRIGHT", rotTrackerFrame, "TOPRIGHT", -26, -62)
+    hdrBg:SetHeight(18)
+    hdrBg:SetColorTexture(C.TITLE_BG[1], C.TITLE_BG[2], C.TITLE_BG[3], 0.9)
+
+    local function ColHdr(label, xOff, w, align)
+        local fs = MakeFont(rotTrackerFrame, 9, align or "LEFT")
+        fs:SetPoint("TOPLEFT", rotTrackerFrame, "TOPLEFT", xOff, -64)
+        fs:SetWidth(w)
+        fs:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+        fs:SetText(label)
+    end
+    ColHdr("SPELL",   36,  220)
+    ColHdr("CASTS",  318,   50, "CENTER")
+    ColHdr("MIN FIGHT", 378, 60, "CENTER")
+    ColHdr("STATUS", 444,   50, "CENTER")
+
+    -- Scroll frame
+    local sf = CreateFrame("ScrollFrame", nil, rotTrackerFrame, "UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT",     rotTrackerFrame, "TOPLEFT",   10, -82)
+    sf:SetPoint("BOTTOMRIGHT", rotTrackerFrame, "BOTTOMRIGHT", -26, 36)
+    local sc = CreateFrame("Frame", nil, sf)
+    sc:SetWidth(sf:GetWidth())
+    sc:SetHeight(10)
+    sf:SetScrollChild(sc)
+    rotTrackerFrame._sc = sc
+
+    local closeBtn = MakeButton(rotTrackerFrame, 60, 22, "Close")
+    closeBtn:SetPoint("BOTTOM", rotTrackerFrame, "BOTTOM", 0, 8)
+    closeBtn:SetScript("OnClick", function() rotTrackerFrame:Hide() end)
+
+    UI.RefreshRotationalTracker()
+end
+
+function UI.RefreshRotationalTracker()
+    if not rotTrackerFrame or not rotTrackerFrame:IsShown() then return end
+
+    local sc = rotTrackerFrame._sc
+    for _, child in ipairs({sc:GetChildren()}) do child:Hide(); child:SetParent(nil) end
+    for _, child in ipairs({sc:GetRegions()}) do child:Hide() end
+
+    local rt   = MS.Analytics and MS.Analytics.GetRotationalTracking and MS.Analytics.GetRotationalTracking()
+    local last = MS.Analytics and MS.Analytics.GetLastEncounter    and MS.Analytics.GetLastEncounter()
+    local dur  = last and last.duration or 0
+    local spec = Core.ActiveSpec
+
+    -- Update fight duration label
+    if dur > 0 then
+        rotTrackerFrame.fightInfo:SetText("Last fight: " .. FormatDuration(dur))
+    else
+        rotTrackerFrame.fightInfo:SetText("No fight recorded yet")
+    end
+
+    -- Build a lookup: spell ID → spec definition entry (for flags)
+    local specDef = {}
+    if spec and spec.rotationalSpells then
+        for _, rs in ipairs(spec.rotationalSpells) do
+            specDef[rs.id] = rs
+        end
+    end
+
+    local W      = sc:GetWidth() or 458
+    local ROW_H  = 44
+    local ICON_SZ = 20
+    local yOff   = -4
+    local rowIdx = 0
+
+    -- Empty state
+    if not rt or not next(rt) then
+        local lbl = MakeFont(sc, 11, "CENTER")
+        lbl:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, -20)
+        lbl:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, -20)
+        lbl:SetText("|cff888888No fight data yet — run a fight to see tracking results.|r")
+        sc:SetHeight(60)
+        return
+    end
+
+    -- Sort alphabetically by label for consistent order
+    local sorted = {}
+    for id, entry in pairs(rt) do
+        table.insert(sorted, { id = id, entry = entry })
+    end
+    table.sort(sorted, function(a, b)
+        return (a.entry.label or "") < (b.entry.label or "")
+    end)
+
+    for _, item in ipairs(sorted) do
+        local id  = item.id
+        local rs  = item.entry
+        local def = specDef[id] or {}
+
+        rowIdx = rowIdx + 1
+        local rc = (rowIdx % 2 == 0) and C.ROW_EVEN or C.ROW_ODD
+
+        -- Row background
+        local bg = sc:CreateTexture(nil, "BACKGROUND")
+        bg:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, yOff)
+        bg:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, yOff)
+        bg:SetHeight(ROW_H)
+        bg:SetColorTexture(rc[1], rc[2], rc[3], rc[4])
+
+        -- Spell icon
+        local tex = sc:CreateTexture(nil, "ARTWORK")
+        tex:SetSize(ICON_SZ, ICON_SZ)
+        tex:SetPoint("TOPLEFT", sc, "TOPLEFT", 4, yOff - 12)
+        local iconPath = GetSpellTexture and GetSpellTexture(id)
+        if iconPath then
+            tex:SetTexture(iconPath)
+            tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        end
+
+        -- Spell name (line 1)
+        local nameStr = MakeFont(sc, 11, "LEFT")
+        nameStr:SetPoint("TOPLEFT", sc, "TOPLEFT", 30, yOff - 5)
+        nameStr:SetWidth(W - 175)
+        nameStr:SetText(rs.label or "Unknown")
+
+        -- Description (line 2) — plain-English explanation of flags
+        local parts = {}
+        if def.combatGated and def.talentGated then
+            table.insert(parts, "Requires talent; only castable during a transformation window")
+        elseif def.combatGated then
+            table.insert(parts, "Only castable during a transformation window (e.g. Void Metamorphosis)")
+        elseif def.talentGated then
+            table.insert(parts, "Only tracked when this talent is active in your build")
+        else
+            table.insert(parts, "Core rotational ability — expected every fight")
+        end
+        if rs.minFightSeconds and rs.minFightSeconds > 15 then
+            table.insert(parts, "flagged missed only if fight > " .. rs.minFightSeconds .. "s")
+        end
+
+        local descStr = MakeFont(sc, 9, "LEFT")
+        descStr:SetPoint("TOPLEFT", sc, "TOPLEFT", 30, yOff - 22)
+        descStr:SetWidth(W - 175)
+        descStr:SetText("|cff777777" .. table.concat(parts, " — ") .. "|r")
+
+        -- Cast count column
+        local castStr = MakeFont(sc, 11, "CENTER")
+        castStr:SetPoint("TOPLEFT", sc, "TOPLEFT", W - 148, yOff - 5)
+        castStr:SetWidth(50)
+        if dur > 0 then
+            castStr:SetText(rs.useCount > 0 and ("|cff22EE22" .. rs.useCount .. "|r") or "|cff888888 0|r")
+        else
+            castStr:SetText("|cff888888—|r")
+        end
+
+        -- Min fight column
+        local minStr = MakeFont(sc, 10, "CENTER")
+        minStr:SetPoint("TOPLEFT", sc, "TOPLEFT", W - 98, yOff - 5)
+        minStr:SetWidth(50)
+        local minSec = rs.minFightSeconds or 15
+        minStr:SetText("|cff666666" .. minSec .. "s|r")
+
+        -- Status badge column
+        local statusStr = MakeFont(sc, 10, "CENTER")
+        statusStr:SetPoint("TOPLEFT", sc, "TOPLEFT", W - 50, yOff - 5)
+        statusStr:SetWidth(46)
+        if dur == 0 then
+            statusStr:SetText("|cff666666—|r")
+        elseif rs.useCount > 0 then
+            statusStr:SetText("|cff22EE22CAST|r")
+        elseif dur >= minSec then
+            statusStr:SetText("|cffFF4444MISSED|r")
+        else
+            statusStr:SetText("|cff888888SHORT|r")
+        end
+
+        yOff = yOff - ROW_H
+    end
+
+    -- Footer: count of spec spells excluded from this build
+    if spec and spec.rotationalSpells then
+        local excluded = {}
+        for _, rs in ipairs(spec.rotationalSpells) do
+            if not rt[rs.id] then table.insert(excluded, rs.label) end
+        end
+        if #excluded > 0 then
+            yOff = yOff - 6
+            local sepLine = sc:CreateTexture(nil, "ARTWORK")
+            sepLine:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, yOff)
+            sepLine:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, yOff)
+            sepLine:SetHeight(1)
+            sepLine:SetColorTexture(C.SEP[1], C.SEP[2], C.SEP[3], C.SEP[4])
+            yOff = yOff - 4
+
+            local noteLbl = MakeFont(sc, 9, "LEFT")
+            noteLbl:SetPoint("TOPLEFT", sc, "TOPLEFT", 6, yOff)
+            noteLbl:SetWidth(W - 10)
+            noteLbl:SetWordWrap(true)
+            noteLbl:SetText("|cff666666Not tracked this build (talent not taken or replaced): " ..
+                table.concat(excluded, ", ") .. "|r")
+            yOff = yOff - 26
+        end
+    end
+
+    -- Legend
+    yOff = yOff - 6
+    local legendSep = sc:CreateTexture(nil, "ARTWORK")
+    legendSep:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, yOff)
+    legendSep:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, yOff)
+    legendSep:SetHeight(1)
+    legendSep:SetColorTexture(C.SEP[1], C.SEP[2], C.SEP[3], C.SEP[4])
+    yOff = yOff - 4
+
+    local legendStr = MakeFont(sc, 9, "LEFT")
+    legendStr:SetPoint("TOPLEFT", sc, "TOPLEFT", 6, yOff)
+    legendStr:SetWidth(W - 10)
+    legendStr:SetText("|cff22EE22CAST|r  used at least once  " ..
+        "|cffFF4444MISSED|r  fight was long enough but spell was not used  " ..
+        "|cff888888SHORT|r  fight too short to evaluate")
+    yOff = yOff - 18
+
+    sc:SetHeight(math.abs(yOff) + 10)
 end
 
 --------------------------------------------------------------------------------

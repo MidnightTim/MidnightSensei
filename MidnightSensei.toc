@@ -2,7 +2,7 @@
 ## Title: Midnight Sensei
 ## Notes: Combat performance coaching for all 13 classes — grade your fights A+ to F.
 ## Author: Midnight - Thrall (US)
-## Version: 1.4.6
+## Version: 1.4.7
 ## IconTexture: Interface\AddOns\MidnightSensei\logo
 ## SavedVariables: MidnightSenseiDB
 ## SavedVariablesPerCharacter: MidnightSenseiCharDB
@@ -14,8 +14,29 @@ libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 
 Utils.lua
 Core.lua
-CombatLog.lua
-Analytics.lua
+Specs/Warrior.lua
+Specs/Paladin.lua
+Specs/Hunter.lua
+Specs/Rogue.lua
+Specs/Priest.lua
+Specs/DeathKnight.lua
+Specs/Shaman.lua
+Specs/Mage.lua
+Specs/Warlock.lua
+Specs/Monk.lua
+Specs/Druid.lua
+Specs/DemonHunter.lua
+Specs/Evoker.lua
+Combat/CombatLog.lua
+Combat/CastTracker.lua
+Combat/AuraTracker.lua
+Combat/ProcTracker.lua
+Combat/ResourceTracker.lua
+Combat/HealingTracker.lua
+Analytics/EncounterStore.lua
+Analytics/Scoring.lua
+Analytics/Feedback.lua
+Analytics/Engine.lua
 Leaderboard.lua
 BossBoard.lua
 UI.lua

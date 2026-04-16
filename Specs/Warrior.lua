@@ -1,0 +1,147 @@
+﻿local Core = MidnightSensei.Core
+
+Core.RegisterSpec(1, {
+    className = "Warrior",
+
+    -- Arms (Midnight 12.0 PASSIVE audit — April 2026)
+    -- Verified against v1.4.3 talent snapshot (99 nodes, descriptions)
+    -- Bladestorm (227847) removed — not in Arms talent tree; only in Fury spell list
+    -- Warbreaker (262161) removed — not in Arms talent tree or spell list
+    -- Avatar (107574) confirmed non-PASSIVE ACTIVE nodeID 110176
+    -- Ravager (228920) added as talentGated CD — nodeID 90441 non-PASSIVE ACTIVE
+    -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+    -- Shockwave (46968) added as talentGated CD — non-PASSIVE ACTIVE; shared class node
+    -- Colossus Smash (167105) added to rotational — nodeID 90290 non-PASSIVE ACTIVE
+    -- Overpower (7384) added to rotational — nodeID 90271 non-PASSIVE ACTIVE
+    -- Rend (772) added to rotational — nodeID 109391 non-PASSIVE ACTIVE
+    -- Flags: Battlefield Commander/Deep Wounds/Mortal Wounds — Causes/Grants = effect
+    --   descriptions only, no spell-replacement pattern. No suppressIfTalent needed.
+    [1] = {
+        name = "Arms", role = "DPS",
+        resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
+        majorCooldowns = {
+            { id = 107574, label = "Avatar",     expectedUses = "on CD", talentGated = true },  -- nodeID 110176 non-PASSIVE ACTIVE; class talent
+            { id = 228920, label = "Ravager",    expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90441 non-PASSIVE ACTIVE
+            { id = 436358, label = "Demolish",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+            { id = 46968,  label = "Shockwave",  expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+            -- Bladestorm (227847) removed — not in Arms talent tree
+            -- Warbreaker (262161) removed — not in Arms talent tree or spell list
+        },
+        uptimeBuffs = {},
+        rotationalSpells = {
+            { id = 12294,  label = "Mortal Strike",  minFightSeconds = 15 },  -- nodeID 90270 non-PASSIVE ACTIVE
+            { id = 167105, label = "Colossus Smash", minFightSeconds = 20 },  -- nodeID 90290 non-PASSIVE ACTIVE
+            { id = 7384,   label = "Overpower",      minFightSeconds = 15 },  -- nodeID 90271 non-PASSIVE ACTIVE
+            { id = 772,    label = "Rend",            minFightSeconds = 15 },  -- nodeID 109391 non-PASSIVE ACTIVE
+            { id = 163201, label = "Execute",         minFightSeconds = 45 },  -- confirmed spell list; execute phase
+        },
+        priorityNotes = {
+            "Maintain Rend on target — DoT setup before Colossus Smash",
+            "Mortal Strike on cooldown — primary damage and healing debuff",
+            "Colossus Smash to open damage windows — high priority",
+            "Overpower on cooldown — free proc-based filler",
+            "Execute during execute phase — replaces Mortal Strike below 20%",
+            "Avatar and Ravager for burst — align with Colossus Smash",
+            "Shockwave on cooldown when talented — AoE stun and damage",
+            "Pool Rage for Colossus Smash windows — avoid overcapping at 100",
+        },
+        scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
+        sourceNote = "Midnight 12.0 verified against full Arms talent tree snapshot v1.4.3 99 nodes (April 2026)",
+    },
+
+    -- Fury (Midnight 12.0 PASSIVE audit — April 2026)
+    -- Verified against v1.4.3 talent snapshot (101 nodes, descriptions)
+    -- Onslaught (315720) removed — not in Fury talent tree or spell list
+    -- Avatar (107574) added to majorCooldowns — nodeID 90415 non-PASSIVE ACTIVE
+    -- Odyn's Fury (385059) added to majorCooldowns — nodeID 110203 non-PASSIVE ACTIVE
+    -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+    -- Shockwave (46968) added as talentGated CD — non-PASSIVE ACTIVE; shared class node
+    -- Champion's Spear (376079) added as talentGated CD — non-PASSIVE ACTIVE; shared class node
+    -- Raging Blow (85288) added to rotational — nodeID 90396 non-PASSIVE ACTIVE
+    -- Berserker Stance (386196) added to rotational — nodeID 90325 non-PASSIVE ACTIVE
+    -- Rend (772) added to rotational — non-PASSIVE ACTIVE; shared class node, DoT maintenance
+    -- Enrage uptime buff: 184362 retained (VERIFY — spell list shows 184361; 184362 may be enhanced version)
+    -- Flags: Battlefield Commander/Deep Wounds — Grants/Causes = effect descriptions only
+    [2] = {
+        name = "Fury", role = "DPS",
+        resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
+        majorCooldowns = {
+            { id = 1719,   label = "Recklessness",    expectedUses = "on CD"           },  -- nodeID 90412 non-PASSIVE ACTIVE
+            { id = 107574, label = "Avatar",           expectedUses = "on CD", talentGated = true },  -- nodeID 90415 non-PASSIVE ACTIVE; class talent
+            { id = 385059, label = "Odyn's Fury",      expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110203 non-PASSIVE ACTIVE
+            { id = 436358, label = "Demolish",         expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+            { id = 46968,  label = "Shockwave",        expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+            { id = 376079, label = "Champion's Spear", expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+            -- Onslaught (315720) removed — not in Fury talent tree or spell list
+        },
+        uptimeBuffs = {
+            { id = 184362, label = "Enrage", targetUptime = 60 },  -- VERIFY aura ID — spell list shows 184361; 184362 may be enhanced version
+        },
+        rotationalSpells = {
+            { id = 23881,  label = "Bloodthirst",     minFightSeconds = 15 },  -- nodeID 90392 non-PASSIVE ACTIVE; primary Enrage trigger
+            { id = 184367, label = "Rampage",          minFightSeconds = 20 },  -- nodeID 90408 non-PASSIVE ACTIVE; primary Rage spender
+            { id = 85288,  label = "Raging Blow",      minFightSeconds = 15 },  -- nodeID 90396 non-PASSIVE ACTIVE; core filler
+            { id = 386196, label = "Berserker Stance", minFightSeconds = 15 },  -- nodeID 90325 non-PASSIVE ACTIVE
+            { id = 772,    label = "Rend",             minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE; shared class node; DoT maintenance
+        },
+        priorityNotes = {
+            "Bloodthirst on cooldown — primary Enrage trigger and Rage builder",
+            "Rampage to refresh Enrage and spend Rage — never sit on 100 Rage",
+            "Raging Blow as filler during Enrage — high priority",
+            "Maintain Rend for the DoT when talented",
+            "Recklessness to align with Enrage and trinkets for burst",
+            "Odyn's Fury, Avatar, Champion's Spear on cooldown when talented",
+            "Shockwave and Demolish inside burst windows when talented",
+        },
+        scoreWeights = { cooldownUsage = 30, mitigationUptime = 25, activity = 25, resourceMgmt = 20 },
+        sourceNote = "Midnight 12.0 verified against full Fury talent tree snapshot v1.4.3 101 nodes (April 2026)",
+    },
+
+    -- Protection (Midnight 12.0 PASSIVE audit — April 2026)
+    -- Verified against v1.4.3 talent snapshot (102 nodes, descriptions)
+    -- Last Stand (12975) removed — talent tree shows 1243659 Last Stand as PASSIVE INACTIVE
+    -- Demolish (436358) added as talentGated CD — nodeID 94818 non-PASSIVE ACTIVE
+    -- Demoralizing Shout (1160) added to majorCooldowns — nodeID 90305 non-PASSIVE ACTIVE; debuff CD
+    -- Disrupting Shout (386071) added as isInterrupt — nodeID 107579 non-PASSIVE ACTIVE
+    -- Revenge (6572) added to rotational — nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
+    -- Rend (772) added to rotational — non-PASSIVE ACTIVE; shared class node; DoT maintenance
+    -- Shield Slam (23922) baseline confirmed in spell list; not in talent tree node — fine
+    -- Flags: Battlefield Commander/Deep Wounds/Intimidating Shout — Causes/Grants = effect
+    --   descriptions only, no spell-replacement pattern. No suppressIfTalent needed.
+    [3] = {
+        name = "Protection", role = "TANK",
+        resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
+        majorCooldowns = {
+            { id = 871,    label = "Shield Wall",        expectedUses = "big hits"        },  -- nodeID 90302 non-PASSIVE ACTIVE
+            { id = 107574, label = "Avatar",             expectedUses = "on CD", talentGated = true },  -- nodeID 90433 non-PASSIVE ACTIVE; class talent
+            { id = 190456, label = "Ignore Pain",        expectedUses = "physical hits"   },  -- nodeID 90295 non-PASSIVE ACTIVE
+            { id = 1160,   label = "Demoralizing Shout", expectedUses = "on CD"           },  -- nodeID 90305 non-PASSIVE ACTIVE
+            { id = 436358, label = "Demolish",           expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
+            { id = 386071, label = "Disrupting Shout",   expectedUses = "situational",    isInterrupt = true },  -- nodeID 107579 non-PASSIVE ACTIVE
+            -- Last Stand (12975) removed — confirmed PASSIVE in talent tree
+        },
+        uptimeBuffs = {
+            { id = 2565, label = "Shield Block", targetUptime = 50 },  -- baseline confirmed spell list
+        },
+        rotationalSpells = {
+            { id = 6343,  label = "Thunder Clap", minFightSeconds = 15 },  -- nodeID 90343 non-PASSIVE ACTIVE
+            { id = 23922, label = "Shield Slam",  minFightSeconds = 15 },  -- baseline confirmed spell list
+            { id = 6572,  label = "Revenge",      minFightSeconds = 15 },  -- nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
+            { id = 772,   label = "Rend",         minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE; shared class node; DoT maintenance
+        },
+        tankMetrics = { targetMitigationUptime = 50 },
+        priorityNotes = {
+            "Maintain Shield Block for physical mitigation (tracked via uptimeBuffs)",
+            "Shield Slam on cooldown — primary Rage generator and damage",
+            "Thunder Clap on cooldown — AoE damage and slowing",
+            "Revenge to spend Rage — free when proc fires",
+            "Maintain Rend for the DoT when talented",
+            "Ignore Pain to absorb incoming physical hits",
+            "Demoralizing Shout on cooldown — damage reduction for the group",
+            "Shield Wall for heavy magic or unavoidable damage",
+            "Demolish inside burst windows when talented",
+        },
+        scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
+        sourceNote = "Midnight 12.0 verified against full Protection talent tree snapshot v1.4.3 102 nodes (April 2026)",
+    },
+})
