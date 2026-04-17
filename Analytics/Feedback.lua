@@ -144,11 +144,42 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
     -- combatGated spells (e.g. Collapsing Star) generate feedback just like any
     -- other spell — the minFightSeconds gate handles fights where the window didn't open.
     if next(rotationalTracking) then
+        -- Pre-compute orGroup state: which groups had a cast, and a combined label
+        -- ("Wrath / Starfire") for groups where nothing was cast.
+        local orGroupUsed     = {}
+        local orGroupLabels   = {}
+        local orGroupReported = {}
+        for _, rs in pairs(rotationalTracking) do
+            if rs.orGroup then
+                if rs.useCount > 0 then
+                    orGroupUsed[rs.orGroup] = true
+                end
+                -- Build combined label sorted so output is deterministic
+                if not orGroupLabels[rs.orGroup] then
+                    orGroupLabels[rs.orGroup] = { rs.label }
+                else
+                    table.insert(orGroupLabels[rs.orGroup], rs.label)
+                    table.sort(orGroupLabels[rs.orGroup])
+                end
+            end
+        end
+
         local unused  = {}
         local lowUsed = {}
         for id, rs in pairs(rotationalTracking) do
             if rs.useCount == 0 and duration >= rs.minFightSeconds then
-                table.insert(unused, rs.label)
+                if rs.orGroup then
+                    if orGroupUsed[rs.orGroup] then
+                        -- a sibling was cast — not a miss
+                    elseif not orGroupReported[rs.orGroup] then
+                        -- neither cast — report once as combined "Wrath / Starfire"
+                        orGroupReported[rs.orGroup] = true
+                        local labels = orGroupLabels[rs.orGroup]
+                        table.insert(unused, table.concat(labels, " / "))
+                    end
+                else
+                    table.insert(unused, rs.label)
+                end
             elseif rs.useCount > 0 then
                 local cdSec = rs.cdSec
                 if cdSec and cdSec > 0 and duration >= rs.minFightSeconds then

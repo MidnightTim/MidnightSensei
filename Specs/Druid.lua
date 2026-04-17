@@ -9,13 +9,16 @@ Core.RegisterSpec(11, {
     -- Force of Nature (205636) added as talentGated CD — appears in both hero talent priority lists
     -- Fury of Elune (202770) added to rotational — high priority during Eclipse in both priority lists
     -- Wrath (5176) added to rotational — baseline filler, primary AP generator
-    -- Hero talent builds differ (Incarnation vs Celestial Alignment) — both tracked as talentGated
+    -- Hero talent builds differ (Incarnation vs Celestial Alignment) — both talentGated
+    -- CA (194223) is a prerequisite node for Incarnation — IsTalentActive returns true on both builds
+    -- suppressIfTalent = 102560 on CA: if Incarnation is taken, CA is suppressed from tracking
     [1] = {
         name = "Balance", role = "DPS",
         resourceType = 8, resourceLabel = "ASTRAL POWER", overcapAt = 90,
         majorCooldowns = {
-            { id = 194223, label = "Celestial Alignment",          expectedUses = "on CD",           talentGated = true },  -- hero talent build 1
-            { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)",  talentGated = true },  -- hero talent build 2
+            { id = 194223, label = "Celestial Alignment",          expectedUses = "on CD",          talentGated = true, suppressIfTalent = 102560 },  -- CA build; suppress when Incarnation taken (CA is a prereq node — IsTalentActive returns true on both builds)
+            -- 383410 (Orbital Strike) removed — PASSIVE modifier to Incarnation, never fires UNIT_SPELLCAST_SUCCEEDED
+            { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)", talentGated = true },  -- Incarnation build; confirmed fires UNIT_SPELLCAST_SUCCEEDED (verify 2x)
             { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true },  -- priority #3-5 in both builds
         },
         uptimeBuffs = {},
@@ -23,9 +26,10 @@ Core.RegisterSpec(11, {
             { id = 8921,   label = "Moonfire",      minFightSeconds = 15 },                      -- priority #1 — maintain DoT
             { id = 93402,  label = "Sunfire",       minFightSeconds = 15 },                      -- priority #2 — maintain DoT
             { id = 202770, label = "Fury of Elune", minFightSeconds = 20, talentGated = true },  -- priority #3 — use during Eclipse
-            { id = 191034, label = "Starfall",      minFightSeconds = 20 },                      -- priority #8 — AoE AP spender
-            { id = 78674,  label = "Starsurge",     minFightSeconds = 20 },                      -- priority #9 — main ST spender
-            { id = 5176,   label = "Wrath",         minFightSeconds = 15 },                      -- priority #10 — AP generator filler
+            { id = 191034, label = "Starfall",  minFightSeconds = 20 },                                                   -- priority #8 — AoE AP spender
+            { id = 78674,  label = "Starsurge", minFightSeconds = 20, suppressIfTalent = 1271206 },                   -- priority #9 — main ST spender; suppress when Star Cascade (1271206) auto-fires it passively
+            { id = 5176,   label = "Wrath",     minFightSeconds = 15, orGroup = "filler", suppressIfTalent = 429523 }, -- Solar Eclipse filler; suppress when Lunar Calling (429523) — Elune's Chosen Lunar Eclipse only
+            { id = 194153, label = "Starfire",  minFightSeconds = 15, orGroup = "filler" },                           -- Lunar Eclipse filler / AoE; live-verified cast ID 194153
         },
         priorityNotes = {
             "Maintain Moonfire and Sunfire on all targets — refresh within pandemic (not directly tracked)",
@@ -53,8 +57,8 @@ Core.RegisterSpec(11, {
             { id = 5217,   label = "Tiger's Fury",       expectedUses = "on CD"          },  -- non-PASSIVE ACTIVE nodeID 82124
             { id = 106951, label = "Berserk",             expectedUses = "burst windows"  },  -- non-PASSIVE ACTIVE nodeID 82101
             { id = 391528, label = "Convoke the Spirits", expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82114
-            { id = 1243807, label = "Frantic Frenzy",    expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82111
-            { id = 274837, label = "Feral Frenzy",        expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82112
+            { id = 1243807, label = "Frantic Frenzy", expectedUses = "on CD (talent)", talentGated = true },                              -- non-PASSIVE ACTIVE nodeID 82111; replaces Feral Frenzy
+            { id = 274837,  label = "Feral Frenzy",  expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 1243807 },  -- non-PASSIVE ACTIVE nodeID 82112; suppress when Frantic Frenzy taken (Frantic replaces Feral — IsTalentActive returns true on both)
             -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
         },
         uptimeBuffs = {},

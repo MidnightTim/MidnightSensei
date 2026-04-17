@@ -155,6 +155,7 @@ Core.On(Core.EVENTS.COMBAT_START, function()
                         minFightSeconds = rs.minFightSeconds or 60,
                         combatGated     = rs.combatGated or false,
                         cdSec           = rs.cdSec or nil,
+                        orGroup         = rs.orGroup or nil,
                     }
                 end
             end
