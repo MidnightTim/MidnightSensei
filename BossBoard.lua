@@ -817,18 +817,56 @@ function BB.CleanupHistory(dryRun)
             .. "Run |cffFFFFFF/ms debug cleanup history confirm|r to apply.",
             #wipes))
     else
-        -- Silent apply: mark wipes, rebuild all bests (leaderboard + boss board)
+        -- Silent apply: mark wipes, then selectively correct bossBests only for
+        -- bosses where wipes were found.  Never wipe the full bossBests table —
+        -- encounter history covers only the last 200 fights; entries outside that
+        -- window may be legitimate kills that would be lost in a full rebuild.
         for _, w in ipairs(wipes) do
             w.enc.isKill = false
         end
-        local EncounterStore = MS.Analytics and MS.Analytics.EncounterStore
-        if EncounterStore and EncounterStore.RebuildBests then
-            EncounterStore.RebuildBests()
+
+        if cdb.bests and cdb.bests.bossBests then
+            -- Build best kill score per bossID from the now-corrected history
+            local killBests = {}
+            for _, enc in ipairs(cdb.encounters) do
+                if enc.isBoss and enc.bossID and enc.isKill ~= false then
+                    local bid = tostring(enc.bossID)
+                    local s   = enc.finalScore or 0
+                    if not killBests[bid] or s > killBests[bid].score then
+                        killBests[bid] = { score = s, enc = enc }
+                    end
+                end
+            end
+
+            -- Only touch entries for bosses where this pass found wipes
+            local wipedBosses = {}
+            for _, w in ipairs(wipes) do
+                wipedBosses[tostring(w.enc.bossID)] = true
+            end
+
+            for bid in pairs(wipedBosses) do
+                local existing = cdb.bests.bossBests[bid]
+                local best     = killBests[bid]
+                if existing and best and best.score < (existing.bestScore or 0) then
+                    -- Record was inflated by a wipe; replace with best kill in history
+                    local enc = best.enc
+                    existing.bestScore      = best.score
+                    existing.bestGrade      = enc.finalGrade      or "--"
+                    existing.bestGradeLabel = enc.gradeLabel      or ""
+                    existing.bestTimestamp  = enc.timestamp       or 0
+                    existing.bestWeekKey    = enc.weekKey         or ""
+                    existing.bestFeedback   = enc.feedback        or {}
+                    existing.bestComponents = enc.componentScores or {}
+                    existing.bestDuration   = enc.duration        or 0
+                end
+                -- If no kill found in history: leave the entry alone —
+                -- the best may be from a kill outside the history window.
+            end
         end
-        if cdb.bests then cdb.bests.bossBests = {} end
-        BB.IngestFromHistory()
+
+        BB.RefreshUI()
         print(string.format(
-            "|cff00D1FFMidnight Sensei:|r History cleanup — %d legacy wipe(s) corrected; bests and leaderboard scores rebuilt.",
+            "|cff00D1FFMidnight Sensei:|r History cleanup — %d legacy wipe(s) corrected; Boss Board updated where history data was available.",
             #wipes))
     end
 end
@@ -847,7 +885,89 @@ Core.On(Core.EVENTS.SESSION_READY, function()
 end)
 
 --------------------------------------------------------------------------------
+-- BB.RestoreFromSnapshot
+-- Recovers bossBests entries that were wiped by the old cleanup script by
+-- reading MidnightSenseiDB.bossBoardShared (account-wide snapshot).
+--
+-- The shared snapshot is written at SESSION_READY+3s (before the cleanup
+-- fires at +5s) and is never destructively cleared — UpdateSharedSnapshot
+-- only overwrites an entry when the incoming score is higher.  So the
+-- snapshot holds pre-cleanup data for any boss that wasn't rebuilt with a
+-- better score, making it a reliable recovery source.
+--
+-- Restored entries have score/grade/timestamp/metadata but NOT feedback,
+-- component scores, duration, or killCount (those aren't in the snapshot).
+-- Existing bossBests entries are only replaced when the snapshot has a
+-- higher score, so running this is always safe to repeat.
+--------------------------------------------------------------------------------
+function BB.RestoreFromSnapshot()
+    local cdb = MidnightSenseiCharDB
+    local adb = MidnightSenseiDB
+    if not cdb or not adb or not adb.bossBoardShared then
+        print("|cffFF4444Midnight Sensei:|r No shared snapshot found.")
+        return
+    end
+
+    local charName  = UnitName("player") or "?"
+    local realmName = GetRealmName() or "?"
+    local prefix    = charName .. "-" .. realmName .. "|"
+    local prefixLen = #prefix
+
+    cdb.bests         = cdb.bests         or {}
+    cdb.bests.bossBests = cdb.bests.bossBests or {}
+    local bossBests   = cdb.bests.bossBests
+
+    local restored, skipped = 0, 0
+
+    for key, snap in pairs(adb.bossBoardShared) do
+        -- Only process entries belonging to this character
+        if key:sub(1, prefixLen) == prefix then
+            local bid      = tostring(snap.bossID or key:sub(prefixLen + 1))
+            local existing = bossBests[bid]
+            local snapScore = snap.bestScore or 0
+
+            if snapScore > 0 and (not existing or snapScore > (existing.bestScore or 0)) then
+                bossBests[bid] = {
+                    bossName      = snap.bossName      or "?",
+                    instanceName  = snap.instanceName  or "",
+                    encType       = snap.encType       or "normal",
+                    diffLabel     = snap.diffLabel     or "",
+                    keystoneLevel = snap.keystoneLevel or nil,
+                    charName      = snap.charName      or charName,
+                    specName      = snap.specName      or "?",
+                    className     = snap.className     or "?",
+                    bestScore     = snapScore,
+                    bestGrade     = snap.bestGrade     or "--",
+                    bestGradeLabel= "",
+                    bestTimestamp = snap.bestTimestamp or 0,
+                    bestWeekKey   = "",
+                    bestFeedback  = {},
+                    bestComponents= {},
+                    bestDuration  = 0,
+                    killCount     = existing and existing.killCount or 0,
+                    firstSeen     = existing and existing.firstSeen or (snap.bestTimestamp or 0),
+                }
+                restored = restored + 1
+            else
+                skipped = skipped + 1
+            end
+        end
+    end
+
+    UpdateSharedSnapshot()
+    BB.RefreshUI()
+
+    print(string.format(
+        "|cff00D1FFMidnight Sensei:|r Snapshot restore complete — recovered: %d  already current: %d",
+        restored, skipped))
+    if restored > 0 then
+        print("|cffFFAA00Note:|r Restored entries have score/grade/date but no fight feedback or component scores.")
+    end
+end
+
+--------------------------------------------------------------------------------
 -- Slash commands wired in via Core.lua: /ms bossboard, /ms bb
--- Debug ingest:   /ms debug bossboard ingest
+-- Debug ingest:    /ms debug bossboard ingest
 -- History cleanup: /ms debug cleanup history [confirm]
+-- Snapshot restore:/ms debug bossboard restore
 --------------------------------------------------------------------------------

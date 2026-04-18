@@ -2439,6 +2439,13 @@ local function MSSlashHandler(msg)
             print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
         end
 
+    elseif msg == "debug bossboard restore" then
+        if MS.BossBoard and MS.BossBoard.RestoreFromSnapshot then
+            MS.BossBoard.RestoreFromSnapshot()
+        else
+            print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
+        end
+
     elseif msg == "debug cleanup history" then
         if MS.BossBoard and MS.BossBoard.CleanupHistory then
             MS.BossBoard.CleanupHistory(true)  -- dry run
