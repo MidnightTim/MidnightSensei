@@ -46,9 +46,10 @@ end
 --------------------------------------------------------------------------------
 -- Fight state — only what Engine.lua still owns after the Combat/* split
 --------------------------------------------------------------------------------
-local fightActive    = false
-local fightStartTime = 0
-local fightEndTime   = 0
+local fightActive      = false
+local fightStartTime   = 0
+local fightEndTime     = 0
+local bossKillSuccess  = false  -- set true by BOSS_END with success=1; false if boss wipe
 
 -- Real-time feedback queue (displayed in UI ticker)
 local feedbackQueue = {}
@@ -85,6 +86,9 @@ local function BuildState()
         totalGCDs          = CT and CT.GetTotalGCDs          and CT.GetTotalGCDs()          or 0,
         activeGCDs         = CT and CT.GetActiveGCDs         and CT.GetActiveGCDs()         or 0,
         currentBossContext = currentBossContext,
+        -- fightSuccess: true for non-boss content (survived = success); for boss
+        -- encounters, reflects whether BOSS_END fired with success=1 before fight end.
+        fightSuccess       = (currentBossContext == nil) or bossKillSuccess,
         CL                 = MS.CombatLog,
     }
 end
@@ -122,9 +126,10 @@ end
 -- Engine.lua only resets fight timing and context snapshots here.
 --------------------------------------------------------------------------------
 local function OnCombatStart()
-    fightActive    = true
-    fightStartTime = Now()
-    fightEndTime   = 0
+    fightActive      = true
+    fightStartTime   = Now()
+    fightEndTime     = 0
+    bossKillSuccess  = false
     FlushFeedback()
 
     -- Snapshot boss context (will be overwritten by BOSS_START if one fires)
@@ -205,8 +210,9 @@ end)
 
 -- Keep boss context live until fight ends so CalculateGrade can read it.
 -- OnCombatEnd fires after ENCOUNTER_END; context is cleared by the next OnCombatStart.
+-- Capture success here so healerConditional scoring knows if the boss was killed.
 Core.On(Core.EVENTS.BOSS_END, function(encID, encName, diffID, success)
-    -- intentionally empty — see comment above
+    bossKillSuccess = (success == 1 or success == true)
 end)
 
 -- ResourceTracker emits MS_OVERCAP_DETECTED when the player enters overcap.

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(C:/Projects/MidnightSensei/**)",
+      "Edit(C:/Projects/MidnightSensei/**)",
+      "Write(C:/Projects/MidnightSensei/**)",
+      "Read(C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/MidnightSensei/**)",
+      "Edit(C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/MidnightSensei/**)",
+      "Write(C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/MidnightSensei/**)",
+      "Read(C:/working/claude.md)",
+      "Edit(C:/working/claude.md)",
+      "Bash(cp C:/Projects/MidnightSensei/**)"
+    ]
+  }
+}

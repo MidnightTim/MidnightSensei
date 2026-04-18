@@ -59,13 +59,13 @@ Core.RegisterSpec(10, {
         name = "Mistweaver", role = "HEALER",
         resourceType = 0,
         majorCooldowns = {
-            { id = 115310, label = "Revival",           expectedUses = "raid emergency"  },  -- nodeID 101131 non-PASSIVE ACTIVE
-            { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"           },  -- nodeID 101133 non-PASSIVE ACTIVE
-            { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE"  },  -- nodeID 101129 non-PASSIVE ACTIVE
-            { id = 116849, label = "Life Cocoon",       expectedUses = "tank emergencies"},  -- nodeID 101096 non-PASSIVE ACTIVE
-            { id = 399491, label = "Sheilun's Gift",    expectedUses = "on CD"           },  -- nodeID 101120 non-PASSIVE ACTIVE; draws in mist clouds for burst heal
-            { id = 443028, label = "Celestial Conduit", expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110067 non-PASSIVE ACTIVE
-            { id = 116705, label = "Spear Hand Strike", expectedUses = "situational",    isInterrupt = true },
+            { id = 115310, label = "Revival",           expectedUses = "raid emergency",   healerConditional = true        },  -- nodeID 101131 non-PASSIVE ACTIVE
+            { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"                                             },  -- nodeID 101133 non-PASSIVE ACTIVE
+            { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE",    healerConditional = true        },  -- nodeID 101129 non-PASSIVE ACTIVE
+            { id = 116849, label = "Life Cocoon",       expectedUses = "tank emergencies",  healerConditional = true        },  -- nodeID 101096 non-PASSIVE ACTIVE
+            { id = 399491, label = "Sheilun's Gift",    expectedUses = "on CD"                                             },  -- nodeID 101120 non-PASSIVE ACTIVE; draws in mist clouds for burst heal
+            { id = 443028, label = "Celestial Conduit", expectedUses = "on CD (talent)",   talentGated = true              },  -- nodeID 110067 non-PASSIVE ACTIVE
+            { id = 116705, label = "Spear Hand Strike", expectedUses = "situational",       isInterrupt = true              },
         },
         rotationalSpells = {
             { id = 115151, label = "Renewing Mist",   minFightSeconds = 15 },  -- baseline confirmed Mistweaver spell list (was 119611 — wrong ID)

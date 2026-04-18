@@ -18,10 +18,10 @@ Core.RegisterSpec(5, {
         name = "Discipline", role = "HEALER",
         resourceType = 0,
         majorCooldowns = {
-            { id = 421453, label = "Ultimate Penitence", expectedUses = "ramp windows"   },  -- nodeID 82564 non-PASSIVE ACTIVE
-            { id = 33206,  label = "Pain Suppression",   expectedUses = "tank busters"   },  -- nodeID 82587 non-PASSIVE ACTIVE
-            { id = 472433, label = "Evangelism",         expectedUses = "ramp windows"   },  -- nodeID 82577 non-PASSIVE ACTIVE (was 246287)
-            { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows",  talentGated = true },  -- nodeID 82556 non-PASSIVE ACTIVE; class talent
+            { id = 421453, label = "Ultimate Penitence", expectedUses = "ramp windows"                                    },  -- nodeID 82564 non-PASSIVE ACTIVE
+            { id = 33206,  label = "Pain Suppression",   expectedUses = "tank busters",   healerConditional = true        },  -- nodeID 82587 non-PASSIVE ACTIVE
+            { id = 472433, label = "Evangelism",         expectedUses = "ramp windows"                                    },  -- nodeID 82577 non-PASSIVE ACTIVE (was 246287)
+            { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows",  talentGated = true              },  -- nodeID 82556 non-PASSIVE ACTIVE; class talent
             -- Power Word: Barrier (62618) removed — not in talent tree
             -- Rapture (47536) removed — not in talent tree or spell list
             -- Schism (204263) removed — not in talent tree or spell list
@@ -60,10 +60,10 @@ Core.RegisterSpec(5, {
         name = "Holy", role = "HEALER",
         resourceType = 0,
         majorCooldowns = {
-            { id = 64843,  label = "Divine Hymn",       expectedUses = "heavy raid damage"    },  -- nodeID 82621 non-PASSIVE ACTIVE
-            { id = 200183, label = "Apotheosis",         expectedUses = "high damage phases"   },  -- nodeID 82614 non-PASSIVE ACTIVE
-            { id = 47788,  label = "Guardian Spirit",    expectedUses = "tank emergencies"     },  -- nodeID 82637 non-PASSIVE ACTIVE
-            { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows",  talentGated = true },  -- nodeID 82556 non-PASSIVE ACTIVE; class talent
+            { id = 64843,  label = "Divine Hymn",       expectedUses = "heavy raid damage",   healerConditional = true        },  -- nodeID 82621 non-PASSIVE ACTIVE
+            { id = 200183, label = "Apotheosis",         expectedUses = "high damage phases",  healerConditional = true        },  -- nodeID 82614 non-PASSIVE ACTIVE
+            { id = 47788,  label = "Guardian Spirit",    expectedUses = "tank emergencies",    healerConditional = true        },  -- nodeID 82637 non-PASSIVE ACTIVE
+            { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows",       talentGated = true              },  -- nodeID 82556 non-PASSIVE ACTIVE; class talent
             -- Prayer of Mending: 33076 removed — Disc spec-variant; 17 is Holy baseline (rotational)
         },
         rotationalSpells = {

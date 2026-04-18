@@ -14,13 +14,13 @@ Core.RegisterSpec(2, {
         name = "Holy", role = "HEALER",
         resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
         majorCooldowns = {
-            { id = 31884,  label = "Avenging Wrath",        expectedUses = "burst phases",         talentGated = true },  -- confirmed spell list; class talent
-            { id = 375576, label = "Divine Toll",           expectedUses = "on CD",              talentGated = true },  -- confirmed spell list; class talent
-            { id = 31821,  label = "Aura Mastery",          expectedUses = "heavy magic damage"    },  -- nodeID 81567 non-PASSIVE ACTIVE
-            { id = 86659,  label = "Guardian of Anc. Kings",expectedUses = "emergency throughput"  },  -- confirmed spell list
-            { id = 633,    label = "Lay on Hands",          expectedUses = "emergencies"           },  -- nodeID 81597 non-PASSIVE ACTIVE
-            { id = 432459, label = "Holy Bulwark",          expectedUses = "on CD"                 },  -- nodeID 110257 non-PASSIVE ACTIVE
-            { id = 6940,   label = "Blessing of Sacrifice", expectedUses = "tank busters",         talentGated = true },  -- nodeID 81614 INACTIVE this build
+            { id = 31884,  label = "Avenging Wrath",        expectedUses = "burst phases",        talentGated = true                            },  -- confirmed spell list; class talent
+            { id = 375576, label = "Divine Toll",           expectedUses = "on CD",               talentGated = true                            },  -- confirmed spell list; class talent
+            { id = 31821,  label = "Aura Mastery",          expectedUses = "heavy magic damage",  healerConditional = true                      },  -- nodeID 81567 non-PASSIVE ACTIVE
+            { id = 86659,  label = "Guardian of Anc. Kings",expectedUses = "emergency throughput",healerConditional = true                      },  -- confirmed spell list
+            { id = 633,    label = "Lay on Hands",          expectedUses = "emergencies",         healerConditional = true                      },  -- nodeID 81597 non-PASSIVE ACTIVE
+            { id = 432459, label = "Holy Bulwark",          expectedUses = "on CD"                                                              },  -- nodeID 110257 non-PASSIVE ACTIVE
+            { id = 6940,   label = "Blessing of Sacrifice", expectedUses = "tank busters",        healerConditional = true, talentGated = true   },  -- nodeID 81614 INACTIVE this build
         },
         uptimeBuffs = {},
         rotationalSpells = {

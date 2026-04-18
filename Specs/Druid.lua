@@ -138,11 +138,11 @@ Core.RegisterSpec(11, {
         name = "Restoration", role = "HEALER",
         resourceType = 0,
         majorCooldowns = {
-            { id = 740,    label = "Tranquility",       expectedUses = "heavy damage windows"  },  -- non-PASSIVE ACTIVE nodeID 82054
-            { id = 102342, label = "Ironbark",          expectedUses = "tank busters"          },  -- non-PASSIVE ACTIVE nodeID 82082
-            { id = 132158, label = "Nature's Swiftness", expectedUses = "emergency instant"    },  -- non-PASSIVE ACTIVE nodeID 82050
-            { id = 29166,  label = "Innervate",         expectedUses = "mana recovery",        talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82244
-            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst throughput",   talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82064
+            { id = 740,    label = "Tranquility",         expectedUses = "heavy damage windows", healerConditional = true              },  -- non-PASSIVE ACTIVE nodeID 82054
+            { id = 102342, label = "Ironbark",            expectedUses = "tank busters",         healerConditional = true              },  -- non-PASSIVE ACTIVE nodeID 82082
+            { id = 132158, label = "Nature's Swiftness",  expectedUses = "emergency instant",    healerConditional = true              },  -- non-PASSIVE ACTIVE nodeID 82050
+            { id = 29166,  label = "Innervate",           expectedUses = "mana recovery",        healerConditional = true, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82244
+            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst throughput",     healerConditional = true, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82064
             -- Incarnation: Tree of Life (33891) removed — not in talent tree
             -- Flourish (197721) removed — not in talent tree or spell list
         },

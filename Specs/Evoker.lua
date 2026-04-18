@@ -45,10 +45,10 @@ Core.RegisterSpec(13, {
         name = "Preservation", role = "HEALER",
         resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,
         majorCooldowns = {
-            { id = 363534, label = "Rewind",          expectedUses = "emergency"     },  -- non-PASSIVE ACTIVE nodeID 93337
-            { id = 355936, label = "Dream Breath",    expectedUses = "on CD AoE"     },  -- non-PASSIVE ACTIVE nodeID 93240
-            { id = 370553, label = "Tip the Scales",  expectedUses = "burst ramp"    },  -- non-PASSIVE ACTIVE nodeID 93350 (was 374348 — wrong)
-            { id = 357170, label = "Time Dilation",   expectedUses = "emergency HoT" },  -- non-PASSIVE ACTIVE nodeID 93336
+            { id = 363534, label = "Rewind",          expectedUses = "emergency",     healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93337
+            { id = 355936, label = "Dream Breath",    expectedUses = "on CD AoE"                              },  -- non-PASSIVE ACTIVE nodeID 93240
+            { id = 370553, label = "Tip the Scales",  expectedUses = "burst ramp"                             },  -- non-PASSIVE ACTIVE nodeID 93350 (was 374348 — wrong)
+            { id = 357170, label = "Time Dilation",   expectedUses = "emergency HoT", healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93336
             -- Emerald Communion (370960) removed — not in Preservation talent tree or spell list
         },
         rotationalSpells = {

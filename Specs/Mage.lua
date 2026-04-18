@@ -58,10 +58,10 @@ Core.RegisterSpec(8, {
     -- Phoenix Flames (257541) removed — not in Fire talent tree or spell list
     -- Supernova (157980) added to majorCooldowns — nodeID 101883 non-PASSIVE ACTIVE
     -- Frostfire Bolt (431044) added to majorCooldowns — nodeID 109956 non-PASSIVE ACTIVE
-    -- Fireball corrected 133 → 116 — Fire spec-variant; 116 shows as "Fireball" in Fire spell list
+    -- Fireball corrected 116 → 133 — live-verified id=133 fired=10x; id=116 is Arcane Blast
     -- Pyroblast (11366) added to rotational — nodeID 100998 non-PASSIVE ACTIVE; Hot Streak proc consumer
-    -- Scorch (2948) added to rotational — nodeID 110322 non-PASSIVE ACTIVE; filler/execute
-    -- Hot Streak procBuff: 48108 (old aura ID) — VERIFY; spell list shows 195283 Hot Streak
+    -- Scorch (2948) removed — situational/rarely used; penalises players more than it rewards
+    -- Hot Streak procBuff 48108 live-verified (seen not active = aura ID confirmed)
     [2] = {
         name = "Fire", role = "DPS",
         resourceType = 0,
@@ -78,21 +78,20 @@ Core.RegisterSpec(8, {
             { id = 1459, label = "Arcane Intellect", targetUptime = 100, infoOnly = true },
         },
         rotationalSpells = {
-            { id = 116,     label = "Fireball",    minFightSeconds = 15 },  -- Fire spec-variant confirmed spell list (was 133 — Arcane/Frost variant)
+            { id = 133,     label = "Fireball",    minFightSeconds = 15 },  -- live-verified id=133 fired=10x (was 116 — Arcane Blast)
             { id = 108853,  label = "Fire Blast",  minFightSeconds = 15 },  -- nodeID 100989 non-PASSIVE ACTIVE; instant Hot Streak proc
             { id = 11366,   label = "Pyroblast",   minFightSeconds = 15 },  -- nodeID 100998 non-PASSIVE ACTIVE; Hot Streak proc consumer
-            { id = 2948,    label = "Scorch",      minFightSeconds = 20, talentGated = true },  -- nodeID 110322 non-PASSIVE ACTIVE; filler/execute
+            -- Scorch (2948) removed — situational; penalises more than rewards
             { id = 1254851, label = "Flamestrike", minFightSeconds = 20, talentGated = true },  -- nodeID 109409 non-PASSIVE ACTIVE; Fire spec-variant AoE
         },
         procBuffs = {
-            { id = 48108, label = "Hot Streak", maxStackTime = 10 },  -- VERIFY aura ID — spell list shows 195283 Hot Streak
+            { id = 48108, label = "Hot Streak", maxStackTime = 10 },  -- live-verified aura ID (seen not active confirmed)
         },
         priorityNotes = {
             "Build Hot Streak with Fireball + Fire Blast crits",
             "Spend Hot Streak procs on Pyroblast immediately — do not sit on them",
             "Combustion for burst — align with trinkets and lust",
             "Fire Blast on cooldown to proc or extend Hot Streak",
-            "Scorch as filler during execute phase and while moving when talented",
             "Flamestrike for AoE when talented",
             "Meteor and Supernova on cooldown when talented",
         },
@@ -110,7 +109,7 @@ Core.RegisterSpec(8, {
     -- Glacial Spike (199786) added to rotational — talentGated; live-verified id=199786 fired=2x
     -- Brain Freeze procBuff 190446 live-verified (seen not active = aura ID confirmed)
     -- Fingers of Frost procBuff 44544 live-verified (seen not active = aura ID confirmed)
-    -- INVESTIGATE: id=228597 "Frostbolt" fires in lockstep with id=116 (equal cast counts) — unknown talent interaction
+    -- id=228597 "Frostbolt" — confirmed passive auto-cast from Glacial Spike Icicle-building mechanic; not a player cast, do not track
     [3] = {
         name = "Frost", role = "DPS",
         resourceType = 0,

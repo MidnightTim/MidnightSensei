@@ -50,6 +50,10 @@ local function ScoreCooldownUsage(state, duration)
                 local expectedUses = math.max(1, math.floor(duration / 120))
                 local useRatio     = math.min(data.useCount / expectedUses, 1)
                 earnedWeight = earnedWeight + w * 0.30 * useRatio
+            elseif cd.healerConditional and state.fightSuccess then
+                -- Fight-dependent healer CDs (e.g. Spirit Link, Ascendance) that were
+                -- never needed — award 90% credit on a successful (non-wipe) fight.
+                earnedWeight = earnedWeight + w * 0.90
             end
         end
     end
