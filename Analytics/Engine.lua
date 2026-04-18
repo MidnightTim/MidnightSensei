@@ -161,7 +161,10 @@ end
 --------------------------------------------------------------------------------
 local function OnCombatEnd(duration)
     fightActive  = false
-    fightEndTime = Now()
+    -- Use fightStartTime + duration rather than Now() — COMBAT_END may fire up to
+    -- COMBAT_END_GRACE seconds after the actual end due to the debounce in Core.lua.
+    -- Duration was captured at PLAYER_REGEN_ENABLED time so this is the real end.
+    fightEndTime = fightStartTime + (duration or 0)
 
     -- Minimum fight threshold
     local minFight = Core.GetSetting("minimumFight") or 15

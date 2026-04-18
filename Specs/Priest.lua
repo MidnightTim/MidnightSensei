@@ -112,7 +112,11 @@ Core.RegisterSpec(5, {
             { id = 34914,  label = "Vampiric Touch",     minFightSeconds = 15,
               suppressIfTalent = 1227280 },  -- Tentacle Slam auto-applies VT to up to 6 targets
             { id = 335467, label = "Shadow Word: Madness", minFightSeconds = 20 },
-            { id = 8092,   label = "Mind Blast",           minFightSeconds = 20, talentGated = true },  -- class talent
+            { id = 8092,   label = "Mind Blast",           minFightSeconds = 20, talentGated = true },  -- class talent; nodeID 82713
+            { id = 15407,  label = "Mind Flay",            minFightSeconds = 15 },                      -- baseline filler
+            { id = 32379,  label = "Shadow Word: Death",   minFightSeconds = 20, talentGated = true },  -- class talent; nodeID 82712
+            { id = 450983, label = "Void Blast",           minFightSeconds = 20, talentGated = true },  -- Voidweaver: empowered MB during Voidform
+            { id = 1242173, label = "Void Volley",         minFightSeconds = 20, talentGated = true },  -- Voidweaver AoE
             { id = 120644, label = "Halo",                 minFightSeconds = 30, talentGated = true },  -- Shadow spec-variant; nodeID 94697 non-PASSIVE ACTIVE
         },
         priorityNotes = {
@@ -124,6 +128,10 @@ Core.RegisterSpec(5, {
             "Power Infusion on cooldown — sync with Voidform for maximum burst",
             "Shadow Word: Madness to spend Insanity — never overcap at 90",
             "Mind Blast on cooldown for Insanity generation",
+            "Mind Flay as filler when no higher-priority cast is available",
+            "Shadow Word: Death on cooldown — execute below 20% HP",
+            "Void Blast during Voidform (Voidweaver) — empowered Mind Blast",
+            "Void Volley on cooldown (Voidweaver) — AoE damage",
             "Void Torrent on cooldown (Voidweaver) — strong channel, do not cancel",
             "Tentacle Slam on cooldown (talent) — applies Vampiric Touch to up to 6 targets",
             "Halo on cooldown when talented — strong AoE damage",

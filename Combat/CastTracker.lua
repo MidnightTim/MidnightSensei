@@ -26,6 +26,12 @@ local totalGCDs          = 0
 local activeGCDs         = 0
 local fightActive        = false
 
+-- Pre-combat cast buffer — opener spells (e.g. Frozen Orb used to pull) fire
+-- UNIT_SPELLCAST_SUCCEEDED before PLAYER_REGEN_DISABLED, so cdTracking doesn't
+-- exist yet.  Buffer casts outside combat and replay them at COMBAT_START.
+local preCombatBuffer   = {}
+local PRE_COMBAT_WINDOW = 5   -- seconds before combat start to credit
+
 -- ── Public getters ───────────────────────────────────────────────────────────
 function CL.GetCdTracking()         return cdTracking         end
 function CL.GetRotationalTracking() return rotationalTracking end
@@ -96,7 +102,12 @@ Core.On(Core.EVENTS.COMBAT_START, function()
             else
                 local known
                 if cd.talentGated then
+                    -- Require both checks: IsTalentActive(strict) blocks grayed cross-spec
+                    -- spells (IsPlayerSpell=true but not really talented), while IsPlayerSpell
+                    -- blocks passive prereq nodes that are "active" in C_Traits but not
+                    -- castable (e.g. Frostfire Bolt in the Frostfire hero talent path).
                     known = IsTalentActive(cd.id, true)
+                        and (IsPlayerSpell and IsPlayerSpell(cd.id) or false)
                 else
                     known = (IsPlayerSpell and IsPlayerSpell(cd.id))
                            or IsTalentActive(cd.id)
@@ -142,6 +153,7 @@ Core.On(Core.EVENTS.COMBAT_START, function()
                     include = true  -- always include; minFightSeconds gates feedback
                 elseif rs.talentGated then
                     include = IsTalentActive(rs.id, true)
+                        and (IsPlayerSpell and IsPlayerSpell(rs.id) or false)
                 end
                 if include and rs.suppressIfTalent then
                     if IsTalentActive(rs.suppressIfTalent) then
@@ -161,16 +173,48 @@ Core.On(Core.EVENTS.COMBAT_START, function()
             end
         end
     end
+
+    -- Replay pre-combat opener casts against the freshly-built tracking tables.
+    -- Covers spells used to pull (e.g. Frozen Orb) that fired UNIT_SPELLCAST_SUCCEEDED
+    -- before PLAYER_REGEN_DISABLED — those casts would otherwise count as zero uses.
+    local now = GetTime()
+    for _, cast in ipairs(preCombatBuffer) do
+        if (now - cast.timestamp) <= PRE_COMBAT_WINDOW then
+            local cd = cdTracking[cast.spellID]
+            if cd then
+                cd.lastUsed = cast.timestamp
+                cd.useCount = cd.useCount + 1
+            end
+            local rs = rotationalTracking[cast.spellID]
+            if rs then
+                rs.useCount = rs.useCount + 1
+            end
+            totalGCDs  = totalGCDs  + 1
+            activeGCDs = activeGCDs + 1
+        end
+    end
+    preCombatBuffer = {}
 end)
 
 Core.On(Core.EVENTS.COMBAT_END, function()
-    fightActive = false
+    fightActive     = false
+    preCombatBuffer = {}
 end)
 
 -- ── Ability used hook ────────────────────────────────────────────────────────
 -- Increments GCD counters, CD use counts, and rotational spell use counts.
+-- Outside combat: buffer the cast so opener spells used to pull are credited
+-- when COMBAT_START fires and tracking tables are built.
 Core.On(Core.EVENTS.ABILITY_USED, function(spellID, timestamp)
-    if not fightActive then return end
+    if not fightActive then
+        -- Buffer and trim to PRE_COMBAT_WINDOW
+        table.insert(preCombatBuffer, { spellID = spellID, timestamp = timestamp })
+        local cutoff = timestamp - PRE_COMBAT_WINDOW
+        while #preCombatBuffer > 0 and preCombatBuffer[1].timestamp < cutoff do
+            table.remove(preCombatBuffer, 1)
+        end
+        return
+    end
 
     totalGCDs  = totalGCDs  + 1
     activeGCDs = activeGCDs + 1

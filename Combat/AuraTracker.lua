@@ -97,6 +97,19 @@ Core.On(Core.EVENTS.COMBAT_START, function()
             targetUptime = buff.targetUptime or 80,
         }
     end
+
+    -- Detect buffs already active at combat start (e.g. Arcane Intellect cast pre-pull).
+    -- Sets isActive/lastApplied so uptime accumulates correctly; appCount stays 0 so
+    -- Scoring.lua's appCount>0 gate excludes these from the scored uptime calculation.
+    local now = GetTime()
+    for _, buff in ipairs(spec.uptimeBuffs) do
+        local aura = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+                     and C_UnitAuras.GetPlayerAuraBySpellID(buff.id)
+        if aura and auraData[buff.id] then
+            auraData[buff.id].isActive    = true
+            auraData[buff.id].lastApplied = now
+        end
+    end
 end)
 
 -- ── Combat end — close any open windows ──────────────────────────────────────

@@ -61,6 +61,7 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
     local neverUsed          = {}
     local underused          = {}
     local interruptNeverUsed = {}   -- informational only — never penalised
+    local utilityNeverUsed   = {}   -- informational only — never penalised
 
     if next(cdTracking) then
         for _, cd in ipairs(spec.majorCooldowns or {}) do
@@ -72,6 +73,11 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                     -- Interrupts: track but never penalise — surface as informational note
                     if data.useCount == 0 and duration >= minSecs then
                         table.insert(interruptNeverUsed, label)
+                    end
+                elseif cd.isUtility then
+                    -- Utility spells: track but never penalise — surface as informational note
+                    if data.useCount == 0 and duration >= minSecs then
+                        table.insert(utilityNeverUsed, label)
                     end
                 elseif data.useCount == 0 and duration >= minSecs then
                     table.insert(neverUsed, label)
@@ -86,7 +92,7 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
         -- all displayOnly, etc.).  Apply same gates as setup loop.
         if duration >= 30 then
             for _, cd in ipairs(spec.majorCooldowns or {}) do
-                if not cd.isInterrupt and not cd.displayOnly
+                if not cd.isInterrupt and not cd.isUtility and not cd.displayOnly
                 and not cd.talentGated and not cd.suppressIfTalent
                 and cd.label then
                     table.insert(neverUsed, cd.label)
@@ -287,6 +293,22 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                 end
             end
         end
+
+        -- Info-only buffs (e.g. group buffs cast pre-combat): note if never detected.
+        -- appCount=0 means AuraTracker never saw it applied, so Scoring skips it.
+        -- actualPct=0 means it wasn't active at combat start either.
+        if CL and CL.GetAllUptimes then
+            local uptimeData = CL.GetAllUptimes(duration)
+            for _, buff in ipairs(spec.uptimeBuffs or {}) do
+                if buff.infoOnly then
+                    local data = uptimeData[buff.id]
+                    if data and data.actualPct < 5 and duration >= 20 then
+                        table.insert(utilityNeverUsed,
+                            (buff.label or "Buff") .. " (group buff — ensure it's active before combat)")
+                    end
+                end
+            end
+        end
     end
 
     -- ── Healer feedback ──────────────────────────────────────────────────────
@@ -378,6 +400,12 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
     if #interruptNeverUsed > 0 then
         table.insert(feedback, "Note: " .. table.concat(interruptNeverUsed, ", ") ..
             " — this is your interrupt. Not used this fight — no penalty.")
+    end
+
+    -- Utility note — informational, never penalised (Spellsteal, missing group buffs, etc.)
+    if #utilityNeverUsed > 0 then
+        table.insert(feedback, "Note: " .. table.concat(utilityNeverUsed, "; ") ..
+            " — not used or detected this fight. No penalty.")
     end
 
     return feedback

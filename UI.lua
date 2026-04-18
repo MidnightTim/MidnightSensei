@@ -1570,7 +1570,7 @@ function UI.RefreshSpellList()
             end
         end
         if entry.talentGated then
-            return UiTalentCheck(entry.id)
+            return UiTalentCheck(entry.id) and (IsPlayerSpell and IsPlayerSpell(entry.id) or false)
         end
         if entry.combatGated then
             return true
@@ -1584,12 +1584,12 @@ function UI.RefreshSpellList()
     if spec.majorCooldowns and #spec.majorCooldowns > 0 then
         local hasCDs = false
         for _, cd in ipairs(spec.majorCooldowns) do
-            if not cd.isInterrupt and isActive(cd) then hasCDs = true; break end
+            if not cd.isInterrupt and not cd.isUtility and isActive(cd) then hasCDs = true; break end
         end
         if hasCDs then
             SectionHeader("Cooldown Spells")
             for _, cd in ipairs(spec.majorCooldowns) do
-                if not cd.isInterrupt and isActive(cd) then
+                if not cd.isInterrupt and not cd.isUtility and isActive(cd) then
                     rowIdx = rowIdx + 1
                     SpellRow(cd.id, cd.label, cd.expectedUses or "", rowIdx)
                 end
@@ -1597,17 +1597,17 @@ function UI.RefreshSpellList()
         end
     end
 
-    -- INTERRUPT / UTILITY (isInterrupt entries)
+    -- INTERRUPT / UTILITY (isInterrupt and isUtility entries)
     local hasInterrupts = false
     if spec.majorCooldowns then
         for _, cd in ipairs(spec.majorCooldowns) do
-            if cd.isInterrupt and isActive(cd) then hasInterrupts = true; break end
+            if (cd.isInterrupt or cd.isUtility) and isActive(cd) then hasInterrupts = true; break end
         end
     end
     if hasInterrupts then
         SectionHeader("Interrupt & Utility")
         for _, cd in ipairs(spec.majorCooldowns) do
-            if cd.isInterrupt and isActive(cd) then
+            if (cd.isInterrupt or cd.isUtility) and isActive(cd) then
                 rowIdx = rowIdx + 1
                 SpellRow(cd.id, cd.label, "situational", rowIdx)
             end

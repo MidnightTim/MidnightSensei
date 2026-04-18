@@ -26,6 +26,8 @@ Core.RegisterSpec(8, {
             { id = 321507, label = "Touch of the Magi",expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102468 INACTIVE (was 210824 — wrong ID)
             { id = 153626, label = "Arcane Orb",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 104113 INACTIVE this build
             { id = 1241462,label = "Arcane Pulse",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102439 INACTIVE this build
+            { id = 2139,   label = "Counterspell",     isInterrupt = true, minFightSeconds = 20 },
+            { id = 30449,  label = "Spellsteal",       isUtility   = true, minFightSeconds = 20 },
         },
         rotationalSpells = {
             { id = 116,    label = "Arcane Blast",     minFightSeconds = 15 },  -- baseline confirmed spell list; primary charge builder
@@ -35,6 +37,9 @@ Core.RegisterSpec(8, {
         },
         procBuffs = {
             { id = 79684, label = "Clearcasting", maxStackTime = 15 },  -- confirmed Arcane spell list (was 276743 — old aura ID)
+        },
+        uptimeBuffs = {
+            { id = 1459, label = "Arcane Intellect", targetUptime = 100, infoOnly = true },
         },
         priorityNotes = {
             "Build to 4 Arcane Charges with Arcane Blast before spending",
@@ -66,8 +71,12 @@ Core.RegisterSpec(8, {
             { id = 157980, label = "Supernova",      expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 101883 non-PASSIVE ACTIVE
             { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 109956 non-PASSIVE ACTIVE
             -- Phoenix Flames (257541) removed — not in Fire talent tree or spell list
+            { id = 2139,   label = "Counterspell",   isInterrupt = true, minFightSeconds = 20 },
+            { id = 30449,  label = "Spellsteal",     isUtility   = true, minFightSeconds = 20 },
         },
-        uptimeBuffs = {},
+        uptimeBuffs = {
+            { id = 1459, label = "Arcane Intellect", targetUptime = 100, infoOnly = true },
+        },
         rotationalSpells = {
             { id = 116,     label = "Fireball",    minFightSeconds = 15 },  -- Fire spec-variant confirmed spell list (was 133 — Arcane/Frost variant)
             { id = 108853,  label = "Fire Blast",  minFightSeconds = 15 },  -- nodeID 100989 non-PASSIVE ACTIVE; instant Hot Streak proc
@@ -96,29 +105,37 @@ Core.RegisterSpec(8, {
     -- Flurry (44614) added to majorCooldowns — nodeID 62178 non-PASSIVE ACTIVE; key burst/proc cast
     -- Frostfire Bolt (431044) added to majorCooldowns — nodeID 94636 non-PASSIVE ACTIVE
     -- Ray of Frost (205021) added to majorCooldowns — nodeID 62153 non-PASSIVE ACTIVE; talentGated
-    -- Dragon's Breath (31661) added to majorCooldowns — nodeID 101883 non-PASSIVE ACTIVE; talentGated
+    -- Dragon's Breath (31661) added to majorCooldowns — talentGated; live-verify pending one cast confirmation
     -- Frostbolt (116) added to rotational — baseline confirmed Frost spell list; primary filler missing entirely
-    -- Brain Freeze procBuff: 190446 (old aura ID) — VERIFY; talent tree shows 190447 at nodeID 62179
-    -- Fingers of Frost procBuff: 44544 (old aura ID) — VERIFY; talent tree shows 112965 at nodeID 62164
+    -- Glacial Spike (199786) added to rotational — talentGated; live-verified id=199786 fired=2x
+    -- Brain Freeze procBuff 190446 live-verified (seen not active = aura ID confirmed)
+    -- Fingers of Frost procBuff 44544 live-verified (seen not active = aura ID confirmed)
+    -- INVESTIGATE: id=228597 "Frostbolt" fires in lockstep with id=116 (equal cast counts) — unknown talent interaction
     [3] = {
         name = "Frost", role = "DPS",
         resourceType = 0,
         majorCooldowns = {
-            { id = 84714,  label = "Frozen Orb",    expectedUses = "on CD"           },  -- nodeID 62177 non-PASSIVE ACTIVE
-            { id = 44614,  label = "Flurry",        expectedUses = "Brain Freeze procs" },  -- nodeID 62178 non-PASSIVE ACTIVE
-            { id = 431044, label = "Frostfire Bolt",expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 94636 non-PASSIVE ACTIVE
-            { id = 205021, label = "Ray of Frost",  expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 62153 non-PASSIVE ACTIVE
-            { id = 31661,  label = "Dragon's Breath",expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 101883 non-PASSIVE ACTIVE
+            { id = 84714,  label = "Frozen Orb",     expectedUses = "on CD"              },  -- nodeID 62177 non-PASSIVE ACTIVE
+            { id = 44614,  label = "Flurry",         expectedUses = "Brain Freeze procs" },  -- nodeID 62178 non-PASSIVE ACTIVE
+            { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 94636 non-PASSIVE ACTIVE
+            { id = 205021, label = "Ray of Frost",   expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 62153 non-PASSIVE ACTIVE
+            { id = 31661,  label = "Dragon's Breath",expectedUses = "on CD (talent)",  talentGated = true },  -- talentGated; pending one live cast to confirm ID fires
             -- Icy Veins (12472) removed — not in Frost talent tree or spell list
+            { id = 2139,   label = "Counterspell",   isInterrupt = true, minFightSeconds = 20 },
+            { id = 30449,  label = "Spellsteal",     isUtility   = true, minFightSeconds = 20 },
         },
         rotationalSpells = {
-            { id = 116,   label = "Frostbolt", minFightSeconds = 15 },  -- baseline confirmed Frost spell list; primary filler was missing entirely
-            { id = 30455, label = "Ice Lance",  minFightSeconds = 15 },  -- nodeID 62176 non-PASSIVE ACTIVE; Fingers of Frost consumer
-            { id = 44614, label = "Flurry",     minFightSeconds = 15 },  -- nodeID 62178; also tracked in CDs above
+            { id = 116,    label = "Frostbolt",     minFightSeconds = 15 },  -- baseline confirmed Frost spell list; primary filler
+            { id = 30455,  label = "Ice Lance",     minFightSeconds = 15 },  -- nodeID 62176 non-PASSIVE ACTIVE; Fingers of Frost consumer
+            { id = 44614,  label = "Flurry",        minFightSeconds = 15 },  -- nodeID 62178; also tracked in CDs above
+            { id = 199786, label = "Glacial Spike", minFightSeconds = 20, talentGated = true },  -- live-verified id=199786 fired=2x; Icicle finisher
         },
         procBuffs = {
-            { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },  -- VERIFY aura ID — talent shows 190447 nodeID 62179
-            { id = 44544,  label = "Fingers of Frost", maxStackTime = 15 },  -- VERIFY aura ID — talent shows 112965 nodeID 62164
+            { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },  -- live-verified aura ID (seen not active confirmed)
+            { id = 44544,  label = "Fingers of Frost", maxStackTime = 15 },  -- live-verified aura ID (seen not active confirmed)
+        },
+        uptimeBuffs = {
+            { id = 1459, label = "Arcane Intellect", targetUptime = 100, infoOnly = true },
         },
         priorityNotes = {
             "Spend Brain Freeze procs with Flurry immediately — before Ice Lance for shatter",

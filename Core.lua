@@ -1013,6 +1013,16 @@ Core.InCombat    = false
 Core.CombatStart = 0
 Core.CombatEnd   = 0
 
+-- Grace period for brief combat drops (training dummy evade cycles, brief de-aggro).
+-- PLAYER_REGEN_ENABLED can fire mid-fight for 1-3 seconds before the player
+-- re-aggros.  Delaying COMBAT_END by this window lets PLAYER_REGEN_DISABLED cancel
+-- the pending end so the fight continues with no data reset.
+-- 3 seconds covers dummy evade cycles.  Does NOT delay the Fight Complete window
+-- for normal fights because duration is captured at PLAYER_REGEN_ENABLED time,
+-- not at timer-fire time.
+local pendingCombatEnd  = nil
+local COMBAT_END_GRACE  = 3   -- seconds
+
 --------------------------------------------------------------------------------
 -- Version Broadcast  (prefix "MS_VER")
 --------------------------------------------------------------------------------
@@ -1087,6 +1097,15 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         Core.ScheduleSnapshots()
 
     elseif event == "PLAYER_REGEN_DISABLED" then
+        if pendingCombatEnd then
+            -- Re-entering combat within the grace window — resume the existing fight.
+            -- Cancel the deferred end; do NOT emit COMBAT_START or reset CombatStart.
+            -- All tracker fightActive flags are still true (COMBAT_END never fired).
+            pendingCombatEnd:Cancel()
+            pendingCombatEnd = nil
+            Core.InCombat    = true
+            return
+        end
         Core.InCombat    = true
         Core.CombatStart = GetTime()
         -- Snapshot full instance context at fight start
@@ -1094,17 +1113,25 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         local instName, instType, diffID, diffName,
               maxPlayers, dynDiff, isDynamic, instMapID = GetInstanceInfo()
         Core.CombatInstanceContext = {
-            instanceName = instName  or "",
-            instanceType = instType  or "none",
-            difficultyID = diffID    or 0,
-            difficultyName = diffName or "",
+            instanceName   = instName  or "",
+            instanceType   = instType  or "none",
+            difficultyID   = diffID    or 0,
+            difficultyName = diffName  or "",
         }
         Core.Emit(Core.EVENTS.COMBAT_START)
 
     elseif event == "PLAYER_REGEN_ENABLED" then
         Core.InCombat  = false
         Core.CombatEnd = GetTime()
-        Core.Emit(Core.EVENTS.COMBAT_END, Core.CombatEnd - Core.CombatStart)
+        -- Capture duration now (at the real combat-end moment) so the deferred
+        -- timer fires with the correct value even after the grace delay.
+        local endedAt  = Core.CombatEnd
+        local startedAt = Core.CombatStart
+        if pendingCombatEnd then pendingCombatEnd:Cancel() end
+        pendingCombatEnd = C_Timer.NewTimer(COMBAT_END_GRACE, function()
+            pendingCombatEnd = nil
+            Core.Emit(Core.EVENTS.COMBAT_END, endedAt - startedAt)
+        end)
 
     elseif event == "ENCOUNTER_START" then
         local encID, encName, diffID = ...
