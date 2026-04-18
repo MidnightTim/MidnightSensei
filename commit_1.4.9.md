@@ -9,7 +9,7 @@
 
 ## Summary
 
-v1.4.9 fixes two spec correctness bugs and ships Mage utility coaching. The Spell List passive prereq node issue (wrong-hero-tree spells appearing for Spellslinger Mages) is resolved by mirroring the CastTracker AND-gate fix into UI.lua. Four Shadow Priest rotational spells missing from tracking are added. Mage gets informational post-fight notes for Counterspell, Spellsteal, and Arcane Intellect, supported by two new spec flags (`isUtility`, `infoOnly`) and an AuraTracker initial scan for pre-combat buffs.
+v1.4.9 fixes three bugs and ships Mage utility coaching. The Spell List passive prereq node issue (wrong-hero-tree spells appearing for Spellslinger Mages) is resolved by mirroring the CastTracker AND-gate fix into UI.lua. Four Shadow Priest rotational spells missing from tracking are added. The Leaderboard Delve tab now correctly filters by the selected social tab instead of always showing guild data (Lua scoping bug + missing party branch). Mage gets informational post-fight notes for Counterspell, Spellsteal, and Arcane Intellect, supported by two new spec flags (`isUtility`, `infoOnly`) and an AuraTracker initial scan for pre-combat buffs.
 
 ---
 
@@ -21,6 +21,7 @@ v1.4.9 fixes two spec correctness bugs and ships Mage utility coaching. The Spel
 - `Specs/Priest.lua` — Shadow: Mind Flay, Shadow Word: Death, Void Blast, Void Volley added to rotationalSpells
 - `Analytics/Feedback.lua` — isUtility feedback path; infoOnly uptime detection; utility note at fight end
 - `Combat/AuraTracker.lua` — COMBAT_START initial scan for pre-existing buffs
+- `Leaderboard.lua` — Delve tab tab-source scoping fix; separate guild/party/friends branches; friends delve location fields corrected
 
 ---
 
@@ -62,3 +63,10 @@ v1.4.9 fixes two spec correctness bugs and ships Mage utility coaching. The Spel
 - After auraData init, scans C_UnitAuras.GetPlayerAuraBySpellID for each uptimeBuff
 - Buffs active at pull get isActive = true and lastApplied = combatStartTime so uptime accumulates from fight start
 - appCount intentionally NOT incremented — Scoring.lua's appCount > 0 gate excludes pre-existing buffs from score
+
+### fix(leaderboard): Delve tab always showed guild data regardless of selected social tab
+- Root cause 1: `local activeTab` declared at line 1908 but `GetDelveData` defined at line 1688 — Lua closure cannot capture a local declared after it; `activeTab` was always nil inside the function, so `nil ~= "friends"` was always true and the guild block always ran
+- Root cause 2: even with scoping fixed, `tab ~= "friends"` had no party branch — both guild and party fell through to `LB.GetGuildData()`
+- Fix: `GetDelveData(tab)` now takes the active tab as a parameter; call site passes `activeTab` explicitly
+- Three explicit branches: `tab == "guild"` → GetGuildData(), `tab == "party"` → GetPartyData(), `tab == "friends"` → GetFriendsData()
+- Also fixed: friends block now uses entry.delveLabel/delveInstance/delveBoss (friends routing stores these; they were previously left as empty strings)

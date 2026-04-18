@@ -1685,7 +1685,7 @@ end
 -- Delve tab: one row per player showing aggregated delve performance.
 -- Self: computed from local history. Guild peers: from broadcast data.
 -- sortOrder "weekly" = this week's avg; "alltime" = best ever.
-function LB.GetDelveData()
+function LB.GetDelveData(tab)
     local result  = {}
     local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
     local wk      = GetWeekKey()
@@ -1783,8 +1783,8 @@ function LB.GetDelveData()
         }
     end
 
-    -- Guild peers: only when on guild or party tab (not friends-only view)
-    if activeTab ~= "friends" then
+    -- Guild peers: only when on guild tab
+    if tab == "guild" then
         local guildData = LB.GetGuildData()
         for name, entry in pairs(guildData) do
             if not entry.isSelf and not result[name] then
@@ -1812,8 +1812,38 @@ function LB.GetDelveData()
         end
     end
 
-    -- Friends peers: only when on friends tab (not guild/party view)
-    if activeTab == "friends" then
+    -- Party peers: only when on party tab
+    -- partyData has no per-type delve fields; uses generic diffLabel/instanceName/bossName
+    if tab == "party" then
+        local partyResult = LB.GetPartyData()
+        for name, entry in pairs(partyResult) do
+            if not entry.isSelf and not result[name] then
+                result[name] = {
+                    name        = entry.name,
+                    className   = entry.className,
+                    specName    = entry.specName,
+                    role        = entry.role,
+                    grade       = (entry.delveBest or 0) > 0 and (entry.grade or "--") or "--",
+                    score       = entry.delveBest or 0,
+                    weeklyAvg   = (entry.delveBest or 0) > 0 and (entry.weeklyAvg or 0) or 0,
+                    allTimeBest = entry.allTimeBest or 0,
+                    delveBest   = entry.delveBest   or 0,
+                    dungeonBest = 0, raidBest = 0, normalBest = 0,
+                    diffLabel    = entry.diffLabel    or "",
+                    instanceName = entry.instanceName or "",
+                    bossName     = entry.bossName     or "",
+                    timestamp   = entry.timestamp or 0,
+                    weekKey     = entry.weekKey   or "",
+                    isSelf      = false,
+                    online      = entry.online,
+                    noDelveData = (entry.delveBest or 0) == 0,
+                }
+            end
+        end
+    end
+
+    -- Friends peers: only when on friends tab
+    if tab == "friends" then
         local friendsResult = LB.GetFriendsData()
         for name, entry in pairs(friendsResult) do
             if not entry.isSelf and not result[name] then
@@ -1828,9 +1858,9 @@ function LB.GetDelveData()
                     allTimeBest = entry.allTimeBest or 0,
                     delveBest   = entry.delveBest   or 0,
                     dungeonBest = 0, raidBest = 0, normalBest = 0,
-                    diffLabel   = "",
-                    instanceName= "",
-                    bossName    = "",
+                    diffLabel    = entry.delveLabel    or "",
+                    instanceName = entry.delveInstance or "",
+                    bossName     = entry.delveBoss     or "",
                     timestamp   = entry.timestamp or 0,
                     weekKey     = entry.weekKey   or "",
                     isSelf      = false,
@@ -2246,7 +2276,7 @@ local function RefreshContent()
     -- Delve is a separate data source; other filters show social data
     local rawData
     if contentType == "delve" then
-        rawData = LB.GetDelveData()
+        rawData = LB.GetDelveData(activeTab)
     else
         rawData = GetSocialData()
     end

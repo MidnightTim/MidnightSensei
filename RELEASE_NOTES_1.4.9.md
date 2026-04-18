@@ -2,7 +2,7 @@
 
 ## Overview
 
-v1.4.9 fixes a Spell List display bug where wrong-hero-tree spells appeared for Mage players on the Spellslinger hero talent path, adds utility feedback for all three Mage specs, introduces two new spec-definition flags (`isUtility`, `infoOnly`) for ungraded coaching, and fills four missing rotational spells in the Shadow Priest spec.
+v1.4.9 fixes three bugs and ships Mage utility coaching. The Spell List passive prereq node issue (wrong-hero-tree spells for Spellslinger Mages) is resolved. Four Shadow Priest rotational spells missing from tracking are added. The Leaderboard Delve tab now correctly filters by the selected social tab (Party/Guild/Friends) instead of always showing guild data. Mage gets informational post-fight notes for Counterspell, Spellsteal, and Arcane Intellect, supported by two new spec flags (`isUtility`, `infoOnly`) and an AuraTracker initial scan for pre-combat buffs.
 
 ---
 
@@ -64,6 +64,22 @@ v1.4.9 fixes a Spell List display bug where wrong-hero-tree spells appeared for 
 **Fix:** Added all four to Shadow's `rotationalSpells`. Mind Flay is baseline (no `talentGated`). The three others are `talentGated = true` — Shadow Word: Death is a class talent; Void Blast and Void Volley are Voidweaver-only. Priority notes updated to reflect filler usage and Voidweaver rotation context.
 
 **Files changed:** `Specs/Priest.lua`
+
+---
+
+## Fix: Leaderboard Delve Tab Always Showing Guild Data (Leaderboard.lua)
+
+**What broke:** On the Leaderboard, switching to the Delve content view always displayed guild member data regardless of whether Party, Guild, or Friends was the active social tab.
+
+**Why:** Two compounding bugs in `LB.GetDelveData()`:
+
+1. **Lua scoping:** `local activeTab` is declared at line 1908 (UI helpers), but `LB.GetDelveData()` is defined at line 1688 — before that declaration. Lua closures can only capture locals declared before the function, so `activeTab` inside `GetDelveData` was always `nil`. `nil ~= "friends"` is always `true`, so the guild block ran unconditionally.
+
+2. **Missing party branch:** Even with the scoping fixed, the condition `tab ~= "friends"` collapsed guild and party into one branch that always called `LB.GetGuildData()`. There was no party-specific path in `GetDelveData` at all.
+
+**Fix:** `LB.GetDelveData()` now takes a `tab` parameter (call site passes `activeTab` explicitly). Three explicit branches replace the old structure: `tab == "guild"` calls `GetGuildData()`, `tab == "party"` calls `GetPartyData()`, `tab == "friends"` calls `GetFriendsData()`. Also fixed: the friends block now correctly uses `entry.delveLabel`/`entry.delveInstance`/`entry.delveBoss` (previously left as empty strings, though friends routing does store these per-type fields).
+
+**Files changed:** `Leaderboard.lua`
 
 ---
 
