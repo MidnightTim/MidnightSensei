@@ -252,8 +252,8 @@ function BB.IngestFromHistory()
     local added, updated, skipped = 0, 0, 0
 
     for _, enc in ipairs(encounters) do
-        -- Only boss fights with a valid bossID and a recorded score
-        if enc.isBoss and enc.bossID and (enc.finalScore or 0) > 0 then
+        -- Only boss kills with a valid bossID and a recorded score (nil = legacy, treat as kill)
+        if enc.isBoss and enc.bossID and (enc.finalScore or 0) > 0 and (enc.isKill ~= false) then
             local bid      = tostring(enc.bossID)
             local s        = enc.finalScore or 0
             local existing = bossBests[bid]
@@ -726,6 +726,128 @@ function BB.Toggle()
 end
 
 --------------------------------------------------------------------------------
+-- BB.CleanupHistory(dryRun)
+-- Retroactively marks legacy M+ boss encounters as wipes when they are
+-- immediately followed by another attempt on the same boss+keystone within
+-- 20 minutes.  Only touches encounters where isKill == nil (pre-patch data).
+-- Raids are excluded — too risky for false positives.
+--
+-- dryRun = true  → print what would change, write nothing
+-- dryRun = false → apply changes, rebuild bossBests from corrected history
+--
+-- One-time auto-run fires at SESSION_READY (flag: CharDB.cleanupHistoryDone).
+-- Manual: /ms debug cleanup history        (dry run)
+--         /ms debug cleanup history confirm (apply)
+--------------------------------------------------------------------------------
+function BB.CleanupHistory(dryRun)
+    local cdb = MidnightSenseiCharDB
+    if not cdb or not cdb.encounters then
+        print("|cffFF4444Midnight Sensei:|r No encounter history found.")
+        return
+    end
+
+    local WINDOW = 1200  -- 20 minutes in seconds
+
+    -- Collect legacy M+ and Delve boss encounters (isKill == nil = pre-patch data).
+    -- M+ requires keystoneLevel to exclude normal-mode dungeon bosses (resettable).
+    -- Delves have no keystoneLevel but share the same "wipe and retry same boss" pattern.
+    -- Raids excluded — same boss killed on separate nights is two legitimate kills.
+    local candidates = {}
+    for idx, enc in ipairs(cdb.encounters) do
+        local eligible = enc.isBoss and enc.isKill == nil and enc.bossID and enc.timestamp
+            and ((enc.encType == "dungeon" and enc.keystoneLevel) or enc.encType == "delve")
+        if eligible then
+            table.insert(candidates, { enc = enc, idx = idx })
+        end
+    end
+
+    -- Group by bossID + encType + keystoneLevel (separates M+ tiers and delves)
+    local groups = {}
+    for _, c in ipairs(candidates) do
+        local key = tostring(c.enc.bossID) .. "|" .. (c.enc.encType or "") .. "|" .. tostring(c.enc.keystoneLevel or 0)
+        groups[key] = groups[key] or {}
+        table.insert(groups[key], c)
+    end
+
+    -- Within each group, mark earlier encounters as wipes when the next attempt
+    -- follows within WINDOW seconds (consecutive pair check)
+    local wipes = {}
+    for _, group in pairs(groups) do
+        table.sort(group, function(a, b) return a.enc.timestamp < b.enc.timestamp end)
+        for i = 1, #group - 1 do
+            local gap = group[i + 1].enc.timestamp - group[i].enc.timestamp
+            if gap < WINDOW then
+                local gm = math.floor(gap / 60)
+                local gs = gap % 60
+                table.insert(wipes, {
+                    enc    = group[i].enc,
+                    reason = string.format("followed by another attempt %dm%ds later", gm, gs),
+                })
+            end
+        end
+    end
+
+    if #wipes == 0 then
+        print("|cff00D1FFMidnight Sensei Cleanup:|r No retroactive wipe candidates found in legacy M+ history.")
+        return
+    end
+
+    table.sort(wipes, function(a, b) return a.enc.timestamp < b.enc.timestamp end)
+
+    if dryRun then
+        -- Verbose: one line per candidate so the user can review before confirming
+        for _, w in ipairs(wipes) do
+            local enc     = w.enc
+            local d       = enc.duration or 0
+            local durStr  = string.format("%d:%02d", math.floor(d / 60), math.floor(d % 60))
+            local content = (enc.keystoneLevel and enc.keystoneLevel > 0) and ("M+" .. enc.keystoneLevel)
+                         or (enc.diffLabel and enc.diffLabel ~= "" and enc.diffLabel ~= "World" and enc.diffLabel)
+                         or enc.encType or "?"
+            print(string.format(
+                "|cffFFAA00[DRY RUN]|r  %s  [%s]  %s  score=%d  %s  (%s)",
+                date("%m/%d/%Y", enc.timestamp),
+                enc.bossName or "?",
+                content,
+                enc.finalScore or 0,
+                durStr,
+                w.reason))
+        end
+        print(string.format(
+            "|cffFFAA00Midnight Sensei Cleanup:|r %d encounter(s) would be marked as wipes. "
+            .. "Run |cffFFFFFF/ms debug cleanup history confirm|r to apply.",
+            #wipes))
+    else
+        -- Silent apply: mark wipes, rebuild all bests (leaderboard + boss board)
+        for _, w in ipairs(wipes) do
+            w.enc.isKill = false
+        end
+        local EncounterStore = MS.Analytics and MS.Analytics.EncounterStore
+        if EncounterStore and EncounterStore.RebuildBests then
+            EncounterStore.RebuildBests()
+        end
+        if cdb.bests then cdb.bests.bossBests = {} end
+        BB.IngestFromHistory()
+        print(string.format(
+            "|cff00D1FFMidnight Sensei:|r History cleanup — %d legacy wipe(s) corrected; bests and leaderboard scores rebuilt.",
+            #wipes))
+    end
+end
+
+-- One-time auto-run per character at session start.
+-- Fires 5s after SESSION_READY so CharDB is stable.
+-- Gated by CharDB.cleanupHistoryDone so it never repeats.
+Core.On(Core.EVENTS.SESSION_READY, function()
+    C_Timer.After(5.0, function()
+        local cdb = MidnightSenseiCharDB
+        if cdb and not cdb.cleanupHistoryDone then
+            cdb.cleanupHistoryDone = true
+            BB.CleanupHistory(false)
+        end
+    end)
+end)
+
+--------------------------------------------------------------------------------
 -- Slash commands wired in via Core.lua: /ms bossboard, /ms bb
--- Debug ingest: /ms debug bossboard ingest
+-- Debug ingest:   /ms debug bossboard ingest
+-- History cleanup: /ms debug cleanup history [confirm]
 --------------------------------------------------------------------------------

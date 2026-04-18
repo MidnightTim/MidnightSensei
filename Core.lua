@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.10"
+    Core.VERSION = ver or "1.4.11"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,141 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.11",
+        tagline = "Kill/Wipe Tracking, History Cleanup, Kill-Only Bests",
+        date    = "April 2026",
+        changes = {
+            -- Kill/Wipe tracking
+            "Fight history now distinguishes boss kills [K] from wipes [W] — non-boss fights are always treated as kills",
+            "Grade History stats (Avg/Best/Worst) now computed from kills only; wipe count shown when present in current filter",
+            "Personal bests (all-time, content, weekly) and Boss Board now record kill scores only — wipes excluded",
+            "Weekly avg used by leaderboard now counts boss kills only",
+            -- Cleanup
+            "One-time legacy cleanup auto-runs on first login: retroactively marks M+/Delve boss wipes in existing history (same boss within 20 min = earlier attempt flagged as wipe)",
+            "Cleanup also rebuilds all bests and Boss Board from corrected kill-only data",
+            "Manual: /ms debug cleanup history (dry run) and /ms debug cleanup history confirm (apply)",
+        },
+    },
+    {
+        version = "1.4.10",
+        tagline = "healerConditional Scoring, Elemental Shaman Farseer Support, Mage Data Corrections",
+        date    = "April 2026",
+        changes = {
+            -- Scoring / Engine
+            "New healerConditional flag: fight-reactive healer CDs (Spirit Link, Lay on Hands, Tranquility, etc.) now award 90% credit when unused on a successful fight instead of 0%",
+            "Engine: BOSS_END success flag now captured — boss wipes correctly score unused conditional CDs at 0%",
+            -- Healer specs
+            "healerConditional applied to all 7 healer specs: Resto Shaman, Disc/Holy Priest, Mistweaver, Holy Paladin, Preservation Evoker, Resto Druid",
+            -- Elemental Shaman
+            "Elemental Shaman: Earth Elemental (198103) added to majorCooldowns — live-verified fired=1x",
+            "Elemental Shaman: Ancestral Swiftness (443454) added as Farseer talentGated CD — live-verified fired=1x",
+            -- Resto Shaman
+            "Resto Shaman: Healing Wave (77472) added to rotational — live-verified fired=6x; was missing entirely",
+            "Resto Shaman: Healing Stream Totem (5394) added to rotational — live-verified fired=3x",
+            "Resto Shaman: Surging Totem now correctly marked talentGated (Totem hero path)",
+            -- Mage
+            "Fire Mage: Fireball corrected id=116 → id=133 — live-verified id=133 fired=10x; id=116 is Arcane Blast",
+            "Fire Mage: Scorch removed from rotational tracking — situational movement spell; tracking penalised correct play",
+            "Frost Mage: id=228597 confirmed as passive auto-cast from Glacial Spike Icicle mechanic — not a player cast; do not track",
+        },
+    },
+    {
+        version = "1.4.9",
+        tagline = "Spell List AND-Gate Fix, Shadow Priest Spells, Mage Utility, Leaderboard Delve Tab",
+        date    = "April 2026",
+        changes = {
+            -- UI / Spell List
+            "Spell List: talentGated entries now require BOTH IsTalentActive AND IsPlayerSpell — passive prereq nodes in hero talent paths no longer cause wrong-spec spells to appear",
+            -- Shadow Priest
+            "Shadow Priest: Mind Flay (15407), Shadow Word: Death (32379), Void Blast (450983), Void Volley (1242173) added to rotational — all four were missing",
+            -- Mage
+            "Mage: Counterspell (2139) added as isInterrupt on all 3 specs — tracked but never penalised",
+            "Mage: Spellsteal (30449) added as isUtility on all 3 specs — tracked but never penalised",
+            "Mage: Arcane Intellect (1459) added as infoOnly uptimeBuff on all 3 specs — uptime noted if missing, never scored",
+            -- Infrastructure
+            "isUtility flag added: utility abilities tracked but never penalised; shown in Spell List under Interrupt & Utility",
+            "infoOnly flag added to uptimeBuffs: uptime tracked for detection but excluded from score",
+            "AuraTracker: initial scan at COMBAT_START ensures pre-pull buffs accumulate uptime from fight start",
+            -- Leaderboard
+            "Leaderboard Delve tab: Lua scoping bug fixed (activeTab was nil inside GetDelveData); three explicit guild/party/friends branches added",
+        },
+    },
+    {
+        version = "1.4.8",
+        tagline = "Feral Druid suppressIfTalent Fix + Full Cross-Spec Audit",
+        date    = "April 2026",
+        changes = {
+            -- Feral Druid
+            "Feral Druid: Feral Frenzy (274837) — suppressIfTalent = 1243807 (Frantic Frenzy) added; hero talent replacement pair now correctly shows only one at a time",
+            "Frantic Frenzy / Feral Frenzy: IsTalentActive returns true on both due to shared prereq node — suppressIfTalent resolves the double-tracking",
+            -- Audit
+            "Full suppressIfTalent audit across all 13 classes and 39 specs — no additional gaps found",
+        },
+    },
+    {
+        version = "1.4.7",
+        tagline = "Combat Module Refactor + Full Midnight 12.0 Spec Audit",
+        date    = "April 2026",
+        changes = {
+            -- Structural
+            "Combat tracking split into Combat/ module group: CombatLog, CastTracker, AuraTracker, ProcTracker, ResourceTracker, HealingTracker",
+            "All 13 class spec definitions extracted from Core.lua into individual Specs/*.lua files",
+            "AuraTracker and ProcTracker now correctly implemented — aura uptime and proc tracking silently returned fallbacks in all prior releases",
+            -- Demon Hunter / Devourer (live-verified)
+            "Devourer: Consume corrected 344859 → 473662; Reap corrected 344862 → 1226019 — snapshot IDs were damage event IDs not cast IDs",
+            "Devourer: Void Metamorphosis corrected 191427 → 1217605; marked displayOnly (shapeshift fires UPDATE_SHAPESHIFT_FORM)",
+            "Devourer: Devour (1217610) and Cull (1245453) added — both live-verified; were missing entirely",
+            "Devourer: Impending Apocalypse, Demonsurge, Midnight, Eradicate removed — confirmed PASSIVE",
+            -- Death Knight
+            "Blood DK: rotationalSpells was empty — Marrowrend, Heart Strike, Blood Boil, Death Strike all added",
+            "Unholy DK: Dark Transformation corrected 63560 → 1233448; Festering Strike corrected 85092 → 316239",
+            -- Other specs
+            "Paladin: Templar's Verdict 85256 → Final Verdict 383328 (Midnight 12.0 rename)",
+            "Evoker: Tip the Scales corrected 374348 → 370553; Zenith and Time Skip added to Augmentation CDs",
+            "Full PASSIVE audit: passive talents removed from tracked sets across all 13 classes",
+        },
+    },
+    {
+        version = "1.4.6",
+        tagline = "Verify Report SKIP Status, Weekly Reset Fix, Leaderboard Stability",
+        date    = "April 2026",
+        changes = {
+            -- Verify report
+            "/ms verify report: added SKIP status for untalented/suppressed spells — was incorrectly showing FAIL for spells not in your current build",
+            "SKIP: talentGated spells with IsPlayerSpell=false; suppressIfTalent spells when suppressing talent is active",
+            -- Leaderboard weekly reset
+            "Self-entry WK AVG: (prev) label now appears correctly after weekly reset — was not matching guild/friend entry behavior",
+            "Root cause: GetWeekKey() timezone edge case caused post-reset fights to appear as current-week, blocking (prev) flag",
+            "Fix: replaced GetWeekKey() for self-entry week detection with GetWeekStartEpoch() (epoch-based, no timezone assumptions)",
+            -- Leaderboard messaging
+            "Offline spam fix: queued login whispers now re-check roster before sending — 'Player not found' messages eliminated",
+            "HELLO whisper loop fix: each sender receives at most one HELLO reply per session via helloWhisperReplied table",
+            -- Debug
+            "/ms debug guild: added self-entry weekly avg diagnostic output for week-key and (prev) diagnosis",
+        },
+    },
+    {
+        version = "1.4.5",
+        tagline = "Balance Druid Hero Talent Fixes, Shapeshift Audit, Analytics Gate Fixes",
+        date    = "April 2026",
+        changes = {
+            -- Balance Druid
+            "Balance Druid: Incarnation: Chosen of Elune removed from majorCooldowns — shapeshift fires UPDATE_SHAPESHIFT_FORM, not UNIT_SPELLCAST_SUCCEEDED",
+            "Balance Druid: Celestial Alignment false 'never pressed' fixed — suppressIfTalent = 102560 (Incarnation) added; talentGated CDs now use IsPlayerSpell only",
+            "Balance Druid: Wrath false 'never used' fixed — suppressIfTalent = 429523 (Lunar Calling) added",
+            "Balance Druid: Starfire (194153) added as talentGated rotational — primary filler for Elune's Chosen was missing entirely",
+            "Balance Druid: Starsurge false 'never used' fixed — suppressIfTalent = 1271206 (Star Cascade) added; auto-fires passively",
+            -- Shapeshift audit
+            "Full 39-spec shapeshift audit completed using v1.4.3 description snapshots",
+            "Incarnation: Guardian of Ursoc (102558) removed from Guardian majorCooldowns — confirmed shapeshift",
+            -- Analytics gates
+            "IsTalentActive: IsPlayerSpell fast path added; C_Traits walk now iterates node.entryIDs instead of node.activeEntry only",
+            "Empty cdTracking else branch: now applies suppressIfTalent and talentGated checks instead of reporting all spec CDs as 'never pressed'",
+            -- CLEU
+            "COMBAT_LOG_EVENT_UNFILTERED confirmed fully protected in Midnight 12.0 — ADDON_ACTION_FORBIDDEN on all registration attempts; reverted",
+        },
+    },
     {
         version = "1.4.4",
         tagline = "Full Spec DB Audit — All 39 Specs Verified Against v1.4.3 Talent Snapshots",
@@ -2300,6 +2435,20 @@ local function MSSlashHandler(msg)
     elseif msg == "debug bossboard repair" then
         if MS.BossBoard and MS.BossBoard.RepairIdentity then
             MS.BossBoard.RepairIdentity()
+        else
+            print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
+        end
+
+    elseif msg == "debug cleanup history" then
+        if MS.BossBoard and MS.BossBoard.CleanupHistory then
+            MS.BossBoard.CleanupHistory(true)  -- dry run
+        else
+            print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
+        end
+
+    elseif msg == "debug cleanup history confirm" then
+        if MS.BossBoard and MS.BossBoard.CleanupHistory then
+            MS.BossBoard.CleanupHistory(false)  -- apply
         else
             print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
         end

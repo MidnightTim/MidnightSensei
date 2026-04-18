@@ -483,15 +483,17 @@ local function BuildHistoryRows(scrollChild, encounters, rowFrames)
         row.charText:SetText(enc.charName or "?")
 
         -- Spec column: show boss name on boss fights, spec+diff otherwise
+        -- [K] green = kill, [W] red = wipe; nil isKill (legacy) treated as kill
         local specLabel
         if enc.isBoss and enc.bossName and enc.bossName ~= "" then
             local ks = enc.keystoneLevel and (" M+"..enc.keystoneLevel) or ""
             local diff = (not enc.keystoneLevel and enc.diffLabel
                          and enc.diffLabel ~= "" and enc.diffLabel ~= "World")
                          and (" "..enc.diffLabel) or ""
-            specLabel = "|cffFF6600[B]|r " .. enc.bossName .. diff .. ks
+            local bTag = (enc.isKill == false) and "|cffFF4444[W]|r " or "|cff55DD55[K]|r "
+            specLabel = bTag .. enc.bossName .. diff .. ks
         else
-            local bossTag  = enc.isBoss and "[B] " or ""
+            local bossTag  = enc.isBoss and ((enc.isKill == false) and "|cffFF4444[W]|r " or "|cff55DD55[K]|r ") or ""
             local diffSuffix = ""
             if enc.keystoneLevel then
                 diffSuffix = " M+" .. enc.keystoneLevel
@@ -538,20 +540,27 @@ local function RefreshHistoryContent()
                   historyFrame.sparkContainer:GetWidth() - 8,
                   historyFrame.sparkContainer:GetHeight() - 4)
 
-    -- Stats
+    -- Stats — avg/best/worst computed from kills only; wipes excluded (nil = legacy = kill)
     if #filtered > 0 then
-        local tot, best, worst = 0, 0, 100
+        local tot, best, worst, killCount = 0, 0, 100, 0
         for _, enc in ipairs(filtered) do
-            local s = enc.finalScore or 0
-            tot = tot + s
-            if s > best  then best  = s end
-            if s < worst then worst = s end
+            if enc.isKill ~= false then
+                local s = enc.finalScore or 0
+                killCount = killCount + 1
+                tot   = tot + s
+                if s > best  then best  = s end
+                if s < worst then worst = s end
+            end
         end
-        local avg = math.floor(tot / #filtered)
+        local wipes  = #filtered - killCount
+        local avg    = killCount > 0 and math.floor(tot / killCount) or 0
+        local suffix = wipes > 0
+            and ("  -  |cffFF6644" .. wipes .. " wipe" .. (wipes == 1 and "" or "s") .. "|r")
+            or ""
         historyFrame.statsText:SetText(
             #filtered .. " fights  -  Avg: " .. avg ..
             "  -  Best: |cff" .. GradeHex(best)  .. best  .. "|r" ..
-            "  -  Worst: |cff" .. GradeHex(worst) .. worst .. "|r")
+            "  -  Worst: |cff" .. GradeHex(worst) .. worst .. "|r" .. suffix)
     else
         historyFrame.statsText:SetText("No encounters match the current filter.")
     end

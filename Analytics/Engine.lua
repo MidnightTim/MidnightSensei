@@ -304,6 +304,7 @@ function Analytics.CalculateGrade()
         realmName    = GetRealmName() or "?",
         -- Encounter type
         isBoss       = (currentBossContext ~= nil),
+        isKill       = (currentBossContext == nil) or bossKillSuccess,
         bossName     = currentBossContext and currentBossContext.name or nil,
         bossID       = currentBossContext and currentBossContext.id   or nil,
         -- Instance context

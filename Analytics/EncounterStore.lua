@@ -35,9 +35,10 @@ function EncounterStore.SaveEncounter(result)
         weeklyAvg=0, weekKey="", weekScores={},
         weeklyDungeonBest=0, weeklyRaidBest=0, weeklyDelveBest=0,
     }
-    local bests = db.bests
-    local s  = result.finalScore or 0
-    local wk = result.weekKey or ""
+    local bests  = db.bests
+    local s      = result.finalScore or 0
+    local wk     = result.weekKey or ""
+    local isKill = (result.isKill ~= false)  -- nil (legacy) treated as kill
 
     -- Reset all weekly data on a new WoW week
     if bests.weekKey ~= wk then
@@ -49,19 +50,22 @@ function EncounterStore.SaveEncounter(result)
         bests.weeklyDelveBest   = 0
     end
 
-    -- All-time best — every fight, every content type
-    if s > (bests.allTimeBest or 0) then bests.allTimeBest = s end
+    -- Bests only updated for kills — wipes cannot inflate personal records
+    if isKill then
+        -- All-time best
+        if s > (bests.allTimeBest or 0) then bests.allTimeBest = s end
 
-    -- Content-specific all-time AND weekly bests
-    if result.encType == "dungeon" then
-        if s > (bests.dungeonBest or 0)       then bests.dungeonBest       = s end
-        if s > (bests.weeklyDungeonBest or 0) then bests.weeklyDungeonBest = s end
-    elseif result.encType == "raid" then
-        if s > (bests.raidBest or 0)          then bests.raidBest          = s end
-        if s > (bests.weeklyRaidBest or 0)    then bests.weeklyRaidBest    = s end
-    elseif result.encType == "delve" then
-        if s > (bests.delveBest or 0)         then bests.delveBest         = s end
-        if s > (bests.weeklyDelveBest or 0)   then bests.weeklyDelveBest   = s end
+        -- Content-specific all-time AND weekly bests
+        if result.encType == "dungeon" then
+            if s > (bests.dungeonBest or 0)       then bests.dungeonBest       = s end
+            if s > (bests.weeklyDungeonBest or 0) then bests.weeklyDungeonBest = s end
+        elseif result.encType == "raid" then
+            if s > (bests.raidBest or 0)          then bests.raidBest          = s end
+            if s > (bests.weeklyRaidBest or 0)    then bests.weeklyRaidBest    = s end
+        elseif result.encType == "delve" then
+            if s > (bests.delveBest or 0)         then bests.delveBest         = s end
+            if s > (bests.weeklyDelveBest or 0)   then bests.weeklyDelveBest   = s end
+        end
     end
 
     -- Boss-level personal best tracking — powers the Boss Board feature.
@@ -73,7 +77,7 @@ function EncounterStore.SaveEncounter(result)
     --   bestFeedback, bestComponents, bestDuration,
     --   killCount, firstSeen
     -- }
-    if result.isBoss and result.bossID then
+    if result.isBoss and result.bossID and isKill then
         bests.bossBests = bests.bossBests or {}
         local bid      = tostring(result.bossID)
         local existing = bests.bossBests[bid]
@@ -119,8 +123,8 @@ function EncounterStore.SaveEncounter(result)
         end
     end
 
-    -- Overall weekly avg — boss kills across all content (for leaderboard sort)
-    if result.isBoss then
+    -- Overall weekly avg — boss kills only (wipes excluded)
+    if result.isBoss and isKill then
         bests.weekScores = bests.weekScores or {}
         table.insert(bests.weekScores, s)
         if #bests.weekScores > 50 then table.remove(bests.weekScores, 1) end
@@ -139,4 +143,64 @@ function EncounterStore.SaveEncounter(result)
     if isLeaderboardEligible then
         Core.Emit(Core.EVENTS.GRADE_CALCULATED, result)
     end
+end
+
+--------------------------------------------------------------------------------
+-- RebuildBests
+-- Replays all encounters from history to recompute bests from kills only.
+-- Called by BB.CleanupHistory after marking legacy wipes so leaderboard scores
+-- reflect only successful fights.  Returns the number of encounters processed.
+--------------------------------------------------------------------------------
+function EncounterStore.RebuildBests()
+    local cdb = MidnightSenseiCharDB
+    if not cdb or not cdb.encounters or not cdb.bests then return 0 end
+
+    local bests     = cdb.bests
+    local currentWk = bests.weekKey or ""
+
+    -- Reset all bests; keep weekKey so the weekly boundary is preserved
+    bests.allTimeBest       = 0
+    bests.dungeonBest       = 0
+    bests.raidBest          = 0
+    bests.delveBest         = 0
+    bests.weeklyDungeonBest = 0
+    bests.weeklyRaidBest    = 0
+    bests.weeklyDelveBest   = 0
+    bests.weekScores        = {}
+    bests.weeklyAvg         = 0
+
+    for _, enc in ipairs(cdb.encounters) do
+        if enc.isKill ~= false then  -- nil (legacy) treated as kill
+            local s          = enc.finalScore or 0
+            local isThisWeek = (enc.weekKey or "") == currentWk
+
+            if s > (bests.allTimeBest or 0) then bests.allTimeBest = s end
+
+            if enc.encType == "dungeon" then
+                if s > (bests.dungeonBest or 0)                        then bests.dungeonBest       = s end
+                if isThisWeek and s > (bests.weeklyDungeonBest or 0)   then bests.weeklyDungeonBest = s end
+            elseif enc.encType == "raid" then
+                if s > (bests.raidBest or 0)                           then bests.raidBest          = s end
+                if isThisWeek and s > (bests.weeklyRaidBest or 0)      then bests.weeklyRaidBest    = s end
+            elseif enc.encType == "delve" then
+                if s > (bests.delveBest or 0)                          then bests.delveBest         = s end
+                if isThisWeek and s > (bests.weeklyDelveBest or 0)     then bests.weeklyDelveBest   = s end
+            end
+
+            -- Weekly avg uses boss kills from current week only
+            if enc.isBoss and isThisWeek then
+                table.insert(bests.weekScores, s)
+            end
+        end
+    end
+
+    -- Cap and recompute weekly avg
+    while #bests.weekScores > 50 do table.remove(bests.weekScores, 1) end
+    if #bests.weekScores > 0 then
+        local sum = 0
+        for _, v in ipairs(bests.weekScores) do sum = sum + v end
+        bests.weeklyAvg = math.floor(sum / #bests.weekScores)
+    end
+
+    return #cdb.encounters
 end
