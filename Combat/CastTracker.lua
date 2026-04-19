@@ -22,6 +22,7 @@ local CL   = MS.CombatLog
 -- ── Private fight state ──────────────────────────────────────────────────────
 local cdTracking         = {}
 local rotationalTracking = {}
+local altIdMap           = {}   -- altId → primary rotational spellID
 local totalGCDs          = 0
 local activeGCDs         = 0
 local fightActive        = false
@@ -174,6 +175,20 @@ Core.On(Core.EVENTS.COMBAT_START, function()
         end
     end
 
+    -- Build reverse map: altId → primary rotational spellID.
+    -- Covers cases where the game fires a different ID for the same ability
+    -- (e.g. Healing Rain 73920 → 456366 when Surging Totem hero talent is active).
+    altIdMap = {}
+    if spec.rotationalSpells then
+        for _, rs in ipairs(spec.rotationalSpells) do
+            if rs.altIds and rotationalTracking[rs.id] then
+                for _, altId in ipairs(rs.altIds) do
+                    altIdMap[altId] = rs.id
+                end
+            end
+        end
+    end
+
     -- Replay pre-combat opener casts against the freshly-built tracking tables.
     -- Covers spells used to pull (e.g. Frozen Orb) that fired UNIT_SPELLCAST_SUCCEEDED
     -- before PLAYER_REGEN_DISABLED — those casts would otherwise count as zero uses.
@@ -185,7 +200,8 @@ Core.On(Core.EVENTS.COMBAT_START, function()
                 cd.lastUsed = cast.timestamp
                 cd.useCount = cd.useCount + 1
             end
-            local rs = rotationalTracking[cast.spellID]
+            local rsId = altIdMap[cast.spellID] or cast.spellID
+            local rs = rotationalTracking[rsId]
             if rs then
                 rs.useCount = rs.useCount + 1
             end
@@ -199,6 +215,7 @@ end)
 Core.On(Core.EVENTS.COMBAT_END, function()
     fightActive     = false
     preCombatBuffer = {}
+    altIdMap        = {}
 end)
 
 -- ── Ability used hook ────────────────────────────────────────────────────────
@@ -225,7 +242,8 @@ Core.On(Core.EVENTS.ABILITY_USED, function(spellID, timestamp)
         cd.useCount = cd.useCount + 1
     end
 
-    local rs = rotationalTracking[spellID]
+    local rsId = altIdMap[spellID] or spellID
+    local rs = rotationalTracking[rsId]
     if rs then
         rs.useCount = rs.useCount + 1
     end

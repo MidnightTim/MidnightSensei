@@ -126,6 +126,8 @@ Core.RegisterSpec(7, {
         name = "Restoration", role = "HEALER",
         resourceType = 0,
         majorCooldowns = {
+            { id = 57994,  label = "Wind Shear",         expectedUses = "on interrupt",                 isInterrupt = true       },  -- confirmed id=57994 fired=1x
+            { id = 77130,  label = "Purify Spirit",      expectedUses = "on magic/curse debuffs",       isUtility = true         },  -- confirmed id=77130 fired=1x; cleanse, no penalty
             { id = 98008,  label = "Spirit Link Totem", expectedUses = "dangerous health disparities", healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 81041
             { id = 444995, label = "Surging Totem",     expectedUses = "before damage windows",        healerConditional = true, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 94877; Totem hero talent
             { id = 73685,  label = "Unleash Life",      expectedUses = "on CD — pre-heal amplifier"                             },  -- non-PASSIVE ACTIVE nodeID 92675
@@ -137,7 +139,7 @@ Core.RegisterSpec(7, {
             { id = 61295,  label = "Riptide",               minFightSeconds = 15 },  -- confirmed nodeID 81027; core maintenance HoT
             { id = 77472,  label = "Healing Wave",          minFightSeconds = 15 },  -- confirmed id=77472 fired=6x; baseline filler heal
             { id = 1064,   label = "Chain Heal",            minFightSeconds = 20 },  -- confirmed in Resto files; primary group heal
-            { id = 73920,  label = "Healing Rain",          minFightSeconds = 30 },  -- confirmed nodeID 81040; high efficiency on stacked groups
+            { id = 73920,  label = "Healing Rain",          minFightSeconds = 30, altIds = {456366} },  -- confirmed nodeID 81040; 456366 fires when Surging Totem hero talent augments the cast
             { id = 5394,   label = "Healing Stream Totem",  minFightSeconds = 30 },  -- confirmed id=5394 fired=3x; use on cooldown (~30s)
         },
         healerMetrics = { targetOverheal = 30, targetActivity = 80, targetManaEnd = 15 },

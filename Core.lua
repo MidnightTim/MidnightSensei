@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.11"
+    Core.VERSION = ver or "1.4.12"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,24 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.12",
+        tagline = "Resto Shaman Fixes, Verify Alt-ID Support, Debug Aura Scanner",
+        date    = "April 2026",
+        changes = {
+            -- Resto Shaman
+            "Resto Shaman: Healing Rain (73920) now credited when Surging Totem hero talent fires alternate id=456366",
+            "Resto Shaman: Wind Shear added as tracked interrupt (no penalty)",
+            "Resto Shaman: Purify Spirit added as tracked utility (no penalty)",
+            -- Verify system
+            "Verify report: spells fired via alt ID now show PASS with '(via alt id=X)' note instead of FAIL",
+            "Verify report: registered alt IDs excluded from OTHER SPELLS list",
+            -- Feedback
+            "Fixed: generic healer low-activity note referenced 'Atonement value' — Disc Priest language removed",
+            -- Debug
+            "/ms debug auras — new command; dumps all active player buff IDs for aura identification",
+        },
+    },
     {
         version = "1.4.11",
         tagline = "Kill/Wipe Tracking, History Cleanup, Kill-Only Bests",
@@ -940,6 +958,7 @@ Core.CHANGELOG = {
             "/ms debug guild ping/receive — channel connectivity test between two clients",
             "/ms debug self — shows delve encounter history and boss count",
             "/ms debug zone — renamed from debug delve; shows instance type, diffID, encType",
+            "/ms debug auras — dumps all active player buff IDs; use while a proc/buff is active to find its spellID",
             "/ms clean payload — recovery tool: purges ghost entries, re-broadcasts all best scores",
             -- Stability
             "UnitPower wrapped in pcall — taint errors in combat no longer surface as BugSack errors",
@@ -1679,18 +1698,30 @@ local function MSSlashHandler(msg)
 
             L("SPELL ID CHECK (majorCooldowns + rotationalSpells)")
             local allTracked = {}
+            local altIdOwner = {}  -- altId → primary id, so altIds are excluded from OTHER SPELLS
             for _, cd in ipairs(spec.majorCooldowns or {}) do
                 allTracked[cd.id] = { label = cd.label, bucket = "majorCooldowns",
-                    talentGated = cd.talentGated, suppressIfTalent = cd.suppressIfTalent, combatGated = cd.combatGated }
+                    talentGated = cd.talentGated, suppressIfTalent = cd.suppressIfTalent, combatGated = cd.combatGated,
+                    altIds = cd.altIds }
             end
             for _, rs in ipairs(spec.rotationalSpells or {}) do
                 allTracked[rs.id] = { label = rs.label, bucket = "rotationalSpells",
-                    talentGated = rs.talentGated, suppressIfTalent = rs.suppressIfTalent, combatGated = rs.combatGated }
+                    talentGated = rs.talentGated, suppressIfTalent = rs.suppressIfTalent, combatGated = rs.combatGated,
+                    altIds = rs.altIds }
+                if rs.altIds then
+                    for _, altId in ipairs(rs.altIds) do altIdOwner[altId] = rs.id end
+                end
             end
 
             local seen = Core.VerifySeenSpells or {}
             for id, info in pairs(allTracked) do
+                -- Count fire from primary ID or any registered altId
                 local fired = seen[id]
+                if not fired and info.altIds then
+                    for _, altId in ipairs(info.altIds) do
+                        if seen[altId] then fired = seen[altId]; break end
+                    end
+                end
                 -- Check whether this spell is gated out of the current build
                 local skipReason
                 if info.talentGated and not info.combatGated then
@@ -1705,8 +1736,15 @@ local function MSSlashHandler(msg)
                     end
                 end
                 if fired then
-                    L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]",
-                      info.label, id, fired, info.bucket))
+                    local firedViaAlt = not seen[id] and info.altIds
+                    local altNote = ""
+                    if firedViaAlt then
+                        for _, altId in ipairs(info.altIds) do
+                            if seen[altId] then altNote = " (via alt id=" .. altId .. ")"; break end
+                        end
+                    end
+                    L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]%s",
+                      info.label, id, fired, info.bucket, altNote))
                 elseif skipReason then
                     L(string.format("  SKIP  %-30s id=%-8d %s  [%s]",
                       info.label, id, skipReason, info.bucket))
@@ -1744,7 +1782,7 @@ local function MSSlashHandler(msg)
             L("")
             local unknownCasts = {}
             for id, count in pairs(Core.VerifySeenSpells or {}) do
-                if not allTracked[id] then table.insert(unknownCasts, {id=id, count=count}) end
+                if not allTracked[id] and not altIdOwner[id] then table.insert(unknownCasts, {id=id, count=count}) end
             end
             if #unknownCasts > 0 then
                 table.sort(unknownCasts, function(a,b) return a.count > b.count end)
@@ -1881,6 +1919,26 @@ local function MSSlashHandler(msg)
             MS.UI.ShowVerifyExport(table.concat(lines, "\n"))
         else
             for _, line in ipairs(lines) do print(line) end
+        end
+
+    elseif msg == "debug auras" then
+        -- Dump all active player auras so untracked buff IDs can be identified.
+        -- Use while a proc/buff is active to find its spellID.
+        if not C_UnitAuras then
+            print("|cff00D1FFMidnight Sensei:|r C_UnitAuras not available.")
+        else
+            local found = 0
+            print("|cff00D1FFMidnight Sensei — Active Player Auras:|r")
+            for i = 1, 40 do
+                local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+                if ok and aura and aura.spellId then
+                    print(string.format("  [%d] id=%-8d %s", i, aura.spellId, aura.name or "?"))
+                    found = found + 1
+                else
+                    break
+                end
+            end
+            if found == 0 then print("  (no active buffs found)") end
         end
 
     elseif msg == "debug version" then

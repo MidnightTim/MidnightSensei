@@ -335,7 +335,7 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
         end
         if actScore < 70 and totalGCDs > 0 then
             Add("When the group is stable, fill downtime with damage spells " ..
-                "to maintain throughput and Atonement value.")
+                "to maintain throughput.")
         end
     end
 
