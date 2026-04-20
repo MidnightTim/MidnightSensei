@@ -22,7 +22,7 @@ local CL   = MS.CombatLog
 -- ── Private fight state ──────────────────────────────────────────────────────
 local cdTracking         = {}
 local rotationalTracking = {}
-local altIdMap           = {}   -- altId → primary rotational spellID
+local altIdMap           = {}   -- altId → primary spellID (rotational or CD)
 local totalGCDs          = 0
 local activeGCDs         = 0
 local fightActive        = false
@@ -175,15 +175,25 @@ Core.On(Core.EVENTS.COMBAT_START, function()
         end
     end
 
-    -- Build reverse map: altId → primary rotational spellID.
+    -- Build reverse map: altId → primary spellID (rotational or CD).
     -- Covers cases where the game fires a different ID for the same ability
-    -- (e.g. Healing Rain 73920 → 456366 when Surging Totem hero talent is active).
+    -- (e.g. Healing Rain 73920 → 456366 when Surging Totem hero talent is active,
+    --  or Grimoire: Fel Ravager 1276467 → Spell Lock 132409 when the pet uses its interrupt).
     altIdMap = {}
     if spec.rotationalSpells then
         for _, rs in ipairs(spec.rotationalSpells) do
             if rs.altIds and rotationalTracking[rs.id] then
                 for _, altId in ipairs(rs.altIds) do
                     altIdMap[altId] = rs.id
+                end
+            end
+        end
+    end
+    if spec.majorCooldowns then
+        for _, cd in ipairs(spec.majorCooldowns) do
+            if cd.altIds and cdTracking[cd.id] then
+                for _, altId in ipairs(cd.altIds) do
+                    altIdMap[altId] = cd.id
                 end
             end
         end
@@ -240,6 +250,13 @@ Core.On(Core.EVENTS.ABILITY_USED, function(spellID, timestamp)
     if cd then
         cd.lastUsed = timestamp
         cd.useCount = cd.useCount + 1
+    elseif altIdMap[spellID] then
+        -- alt ID fired for a majorCooldown (e.g. Spell Lock → Grimoire: Fel Ravager)
+        local altCd = cdTracking[altIdMap[spellID]]
+        if altCd then
+            altCd.lastUsed = timestamp
+            altCd.useCount = altCd.useCount + 1
+        end
     end
 
     local rsId = altIdMap[spellID] or spellID

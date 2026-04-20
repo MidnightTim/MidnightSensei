@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.12"
+    Core.VERSION = ver or "1.4.13"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,20 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.13",
+        tagline = "Warlock Fel Ravager Interrupt, Evoker Time Skip Gate, CD altIds Infrastructure",
+        date    = "April 2026",
+        changes = {
+            -- Demonology Warlock
+            "Demonology: Grimoire: Fel Ravager now credited when Fel Ravager pet uses Spell Lock (id=132409)",
+            -- Augmentation Evoker
+            "Augmentation: Time Skip suppressed when Interwoven Threads (id=412713) is talented — passive replacement",
+            -- Infrastructure
+            "CastTracker: altIdMap now covers majorCooldowns entries in addition to rotationalSpells",
+            "Verify report: majorCooldown alt IDs now excluded from OTHER SPELLS list",
+        },
+    },
     {
         version = "1.4.12",
         tagline = "Resto Shaman Fixes, Verify Alt-ID Support, Debug Aura Scanner",
@@ -1703,6 +1717,9 @@ local function MSSlashHandler(msg)
                 allTracked[cd.id] = { label = cd.label, bucket = "majorCooldowns",
                     talentGated = cd.talentGated, suppressIfTalent = cd.suppressIfTalent, combatGated = cd.combatGated,
                     altIds = cd.altIds }
+                if cd.altIds then
+                    for _, altId in ipairs(cd.altIds) do altIdOwner[altId] = cd.id end
+                end
             end
             for _, rs in ipairs(spec.rotationalSpells or {}) do
                 allTracked[rs.id] = { label = rs.label, bucket = "rotationalSpells",

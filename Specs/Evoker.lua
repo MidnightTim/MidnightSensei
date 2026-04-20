@@ -84,7 +84,7 @@ Core.RegisterSpec(13, {
             { id = 403631, label = "Breath of Eons",    expectedUses = "burst windows"     },  -- non-PASSIVE ACTIVE nodeID 93234
             { id = 395152, label = "Ebon Might",        expectedUses = "on CD"             },  -- non-PASSIVE ACTIVE nodeID 93198
             { id = 409311, label = "Prescience",        expectedUses = "pre-burst"         },  -- non-PASSIVE ACTIVE nodeID 93358
-            { id = 404977, label = "Time Skip",         expectedUses = "on CD",            talentGated = true },  -- non-PASSIVE ACTIVE nodeID 93232
+            { id = 404977, label = "Time Skip",         expectedUses = "on CD",            talentGated = true, suppressIfTalent = 412713 },  -- non-PASSIVE ACTIVE nodeID 93232; replaced by Interwoven Threads (412713) PASSIVE
             { id = 360827, label = "Blistering Scales", expectedUses = "party mitigation", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 93209
             { id = 351338, label = "Quell",             expectedUses = "situational",      isInterrupt = true },  -- non-PASSIVE ACTIVE nodeID 93199
         },
