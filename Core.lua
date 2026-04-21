@@ -294,7 +294,7 @@ Core.CHANGELOG = {
         tagline = "Patch Compatibility Update",
         date    = "April 2026",
         changes = {
-            "Updated TOC interface version to 12000 for new patch compatibility",
+            "Updated TOC interface version to 120005 for new patch compatibility",
         },
     },
     {

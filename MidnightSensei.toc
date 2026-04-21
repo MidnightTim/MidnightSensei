@@ -1,4 +1,4 @@
-## Interface: 12000
+## Interface: 120005
 ## Title: Midnight Sensei
 ## Notes: Combat performance coaching for all 13 classes — grade your fights A+ to F.
 ## Author: Midnight - Thrall (US)
