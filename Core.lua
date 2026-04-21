@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.13"
+    Core.VERSION = ver or "1.4.14"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,23 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.14",
+        tagline = "Frost Mage & Vengeance DH Spell Coverage",
+        date    = "April 2026",
+        changes = {
+            -- Frost Mage
+            "Frost Mage: Mirror Image added as tracked cooldown",
+            "Frost Mage: Supernova added to rotational spells",
+            "Frost Mage: Frostbolt id=228597 counted as alternate cast alongside id=116",
+            -- Vengeance Demon Hunter
+            "Vengeance: Immolation Aura (258920) added to rotational spells",
+            "Vengeance: Demon Spikes added to majorCooldowns — cast usage now scored alongside buff uptime",
+            "Vengeance: Fracture added to rotational (three variant IDs 225919/263642/225921 consolidated)",
+            "Vengeance: Infernal Strike (189110) added to rotational spells",
+            "Vengeance: Felblade alt ID 213243 credited to existing Felblade (232893) entry",
+        },
+    },
     {
         version = "1.4.13",
         tagline = "Warlock Fel Ravager Interrupt, Evoker Time Skip Gate, CD altIds Infrastructure",

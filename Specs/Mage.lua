@@ -109,13 +109,16 @@ Core.RegisterSpec(8, {
     -- Glacial Spike (199786) added to rotational — talentGated; live-verified id=199786 fired=2x
     -- Brain Freeze procBuff 190446 live-verified (seen not active = aura ID confirmed)
     -- Fingers of Frost procBuff 44544 live-verified (seen not active = aura ID confirmed)
-    -- id=228597 "Frostbolt" — confirmed passive auto-cast from Glacial Spike Icicle-building mechanic; not a player cast, do not track
+    -- id=228597 "Frostbolt" — fires UNIT_SPELLCAST_SUCCEEDED; counted as alt ID for Frostbolt (116) via altIds
+    -- Mirror Image (55342) added to majorCooldowns — live-verified x2; class talent
+    -- Supernova (157980) added to rotationalSpells — live-verified x3; class talent, use on CD
     [3] = {
         name = "Frost", role = "DPS",
         resourceType = 0,
         majorCooldowns = {
             { id = 84714,  label = "Frozen Orb",     expectedUses = "on CD"              },  -- nodeID 62177 non-PASSIVE ACTIVE
             { id = 44614,  label = "Flurry",         expectedUses = "Brain Freeze procs" },  -- nodeID 62178 non-PASSIVE ACTIVE
+            { id = 55342,  label = "Mirror Image",   expectedUses = "on CD (talent)",  talentGated = true },  -- live-verified x2; class talent
             { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 94636 non-PASSIVE ACTIVE
             { id = 205021, label = "Ray of Frost",   expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 62153 non-PASSIVE ACTIVE
             { id = 31661,  label = "Dragon's Breath",expectedUses = "on CD (talent)",  talentGated = true },  -- talentGated; pending one live cast to confirm ID fires
@@ -124,10 +127,11 @@ Core.RegisterSpec(8, {
             { id = 30449,  label = "Spellsteal",     isUtility   = true, minFightSeconds = 20 },
         },
         rotationalSpells = {
-            { id = 116,    label = "Frostbolt",     minFightSeconds = 15 },  -- baseline confirmed Frost spell list; primary filler
+            { id = 116,    label = "Frostbolt",     minFightSeconds = 15, altIds = {228597} },  -- 228597 also fires UNIT_SPELLCAST_SUCCEEDED; both count as Frostbolt
             { id = 30455,  label = "Ice Lance",     minFightSeconds = 15 },  -- nodeID 62176 non-PASSIVE ACTIVE; Fingers of Frost consumer
             { id = 44614,  label = "Flurry",        minFightSeconds = 15 },  -- nodeID 62178; also tracked in CDs above
             { id = 199786, label = "Glacial Spike", minFightSeconds = 20, talentGated = true },  -- live-verified id=199786 fired=2x; Icicle finisher
+            { id = 157980, label = "Supernova",     minFightSeconds = 20, talentGated = true },  -- live-verified x3; class talent, use on CD
         },
         procBuffs = {
             { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },  -- live-verified aura ID (seen not active confirmed)

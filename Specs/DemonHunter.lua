@@ -103,6 +103,11 @@ Core.RegisterSpec(12, {
             -- 344862 removed — Devourer's Reap ID, wrong for Vengeance
             -- 344859 removed — not in Vengeance talent tree
             [247454]=true,  -- Spirit Bomb (confirmed spell snapshot)
+            [225919]=true,  -- Fracture (variant 1)
+            [263642]=true,  -- Fracture (variant 2)
+            [225921]=true,  -- Fracture (variant 3)
+            [189110]=true,  -- Infernal Strike
+            [213243]=true,  -- Felblade (spec-variant ID)
             [278386]=true,  -- Demonic Wards
             [206478]=true,  -- Demonic Appetite
             [255260]=true,  -- Chaos Brand
@@ -124,18 +129,21 @@ Core.RegisterSpec(12, {
             -- 191427 Metamorphosis removed — shapeshifting spell, UPDATE_SHAPESHIFT_FORM not SUCCEEDED
             { id = 204021, label = "Fiery Brand",      expectedUses = "tank busters"              },  -- non-PASSIVE ACTIVE nodeID 90951
             { id = 212084, label = "Fel Devastation",  expectedUses = "on CD"                     },  -- non-PASSIVE ACTIVE nodeID 90991
+            { id = 203720, label = "Demon Spikes",     expectedUses = "on CD — physical mitigation" },  -- confirmed pressed spell; aura also tracked in uptimeBuffs
             { id = 390163, label = "Sigil of Spite",   expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 90978
             { id = 179057, label = "Chaos Nova",       expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE
             { id = 202137, label = "Sigil of Silence", expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
             { id = 207684, label = "Sigil of Misery",  expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
         },
         uptimeBuffs = {
-            { id = 203720, label = "Demon Spikes", targetUptime = 50 },  -- VERIFY aura ID — not confirmed as non-PASSIVE in tree
+            { id = 203720, label = "Demon Spikes", targetUptime = 50 },  -- buff uptime; cast usage tracked separately in majorCooldowns
         },
         rotationalSpells = {
-            { id = 247454, label = "Spirit Bomb", minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 90990
-            -- 344859 Fracture removed — not in Vengeance talent tree; Soul Cleave ID needs VERIFY
-            { id = 232893, label = "Felblade",    minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 108722
+            { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },                                          -- live-verified x5; primary Fury generator
+            { id = 225919, label = "Fracture",        minFightSeconds = 15, altIds = {263642, 225921} },               -- live-verified x15; multiple variant IDs all credit this entry
+            { id = 247454, label = "Spirit Bomb",     minFightSeconds = 20 },                                          -- non-PASSIVE ACTIVE nodeID 90990
+            { id = 189110, label = "Infernal Strike",  minFightSeconds = 15 },                                         -- live-verified x5; gap-closer with charges
+            { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true, altIds = {213243} },   -- non-PASSIVE ACTIVE nodeID 108722; 213243 is spec-variant ID
         },
         tankMetrics = { targetMitigationUptime = 50 },
         priorityNotes = {
