@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.14"
+    Core.VERSION = ver or "1.4.15"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,14 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.4.15",
+        tagline = "Patch Compatibility Update",
+        date    = "April 2026",
+        changes = {
+            "Updated TOC interface version to 12000 for new patch compatibility",
+        },
+    },
     {
         version = "1.4.14",
         tagline = "Frost Mage & Vengeance DH Spell Coverage",
