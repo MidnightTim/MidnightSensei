@@ -168,11 +168,10 @@ Core.RegisterSpec(12, {
     --   Cull:             1245453 — new; fired 5x, untracked previously
     --   Void Ray:         473728  ✓ confirmed
     --   Collapsing Star:  1221150 ✓ confirmed (CHANNEL_START)
-    --   Soul Immolation:  1241937 ✓ confirmed (suppressed correctly by Spontaneous Immolation)
+    --   Soul Immolation:  1241937 ✓ confirmed; suppressIfTalent removed — Spontaneous Immolation redesigned to buff rather than replace
     --   The Hunt:         1246167 ✓ confirmed (SKIP — talent not taken, expected)
     -- PASSIVE — removed: Impending Apocalypse (1227707), Demonsurge (452402), Midnight (1250094)
     -- PASSIVE — removed from rotational: Eradicate (1226033)
-    -- Soul Immolation (1241937): suppressIfTalent = 258920 (Spontaneous Immolation)
     [3] = {
         name = "Devourer", role = "DPS",
         resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
@@ -212,14 +211,13 @@ Core.RegisterSpec(12, {
         majorCooldowns = {
             { id = 1217605, label = "Void Metamorphosis", expectedUses = "on CD — required for Collapsing Star",
               displayOnly = true },  -- shapeshift: fires UPDATE_SHAPESHIFT_FORM not SUCCEEDED; displayOnly for My Spell List
-            { id = 1241937, label = "Soul Immolation", expectedUses = "on CD",
-              talentGated = true, suppressIfTalent = 258920 },  -- suppress when Spontaneous Immolation (258920) replaces it
             { id = 1246167, label = "The Hunt",        expectedUses = "on CD (talent)", talentGated = true },  -- Devourer spec-variant; live-verified SKIP (not talented)
             -- Removed (confirmed PASSIVE): Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
         },
         rotationalSpells = {
             { id = 473662,  label = "Consume",         minFightSeconds = 15 },                     -- live-verified cast ID; core builder
             { id = 1226019, label = "Reap",            minFightSeconds = 15 },                     -- live-verified cast ID; core spender
+            { id = 1241937, label = "Soul Immolation", minFightSeconds = 15, talentGated = true },  -- CD resets on kill; Spontaneous Immolation redesigned to buff not replace
             { id = 1217610, label = "Devour",          minFightSeconds = 15, combatGated = true },  -- live-verified cast ID; inside Void Metamorphosis window
             { id = 1245453, label = "Cull",            minFightSeconds = 15, combatGated = true },  -- live-verified cast ID; inside Void Metamorphosis window
             { id = 1221150, label = "Collapsing Star", minFightSeconds = 45, combatGated = true },  -- live-verified CHANNEL_START; inside Void Metamorphosis window

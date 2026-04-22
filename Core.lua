@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.4.15"
+    Core.VERSION = ver or "1.5.0"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -125,7 +125,6 @@ function Core.InitSavedVariables()
     MidnightSenseiDB = MidnightSenseiDB or {}
     local db = MidnightSenseiDB
     db.leaderboard      = db.leaderboard      or {}
-    db.debugLog         = db.debugLog         or {}
     -- Shared Boss Board snapshots — guild/friend all-time bests, account-wide
     -- Always stores the higher score when updated. Keyed by "Name-Realm|bossID"
     db.bossBoardShared  = db.bossBoardShared  or {}
@@ -166,6 +165,7 @@ function Core.InitSavedVariables()
     def("minimumFight",     15)
     def("encounterAdjust",  true)
     def("debugMode",        false)
+    def("verifyAutoEnable", false)
 end
 
 -- Schema v2 → v3 migration: move encounters from account-wide DB to CharDB.
@@ -289,6 +289,28 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.0",
+        tagline = "Weekly Reset, Verify HUD, Debug Cleanup",
+        date    = "April 2026",
+        changes = {
+            -- Weekly reset
+            "Weekly Reset Detected — announces once per week per character on first login after the WoW weekly reset",
+            "/ms debug weekly — prints current/stored week buckets and reset status for diagnosing weekly reset detection",
+            "/ms debug weekly fire — forces the weekly reset announcement immediately for testing",
+            -- Devourer Demon Hunter
+            "Devourer: Soul Immolation moved to rotational spells (talentGated); Spontaneous Immolation no longer suppresses it — redesigned in 12.0 to buff rather than replace",
+            -- Verify system
+            "Verify: MS Verify section added to Debug Tools window with mode toggle, Verify Report button, and auto-enable on login option",
+            "Verify: report now annotates each spell with flags: [talentGated], [combatGated], [suppress:ID], [interrupt], [utility], [displayOnly], [healerCond], [alt:ID]",
+            "Verify: HUD verify bar appears below main frame when verify mode is active — shows 'Verify Mode On' with View Report toggle button",
+            "Verify: auto-enable on login option (verifyAutoEnable) — verify mode starts automatically on PLAYER_LOGIN when enabled",
+            -- Debug tools removed
+            "Removed: Self-Delve History debug tool (/ms debug self) — no longer needed",
+            "Removed: Zone/Instance debug tool (/ms debug zone) — no longer needed",
+            "Removed: Debug Log (/ms debuglog, /ms debuglog clear) — vestigial, always empty",
+        },
+    },
     {
         version = "1.4.15",
         tagline = "Patch Compatibility Update",
@@ -1257,6 +1279,30 @@ Core.ENCOUNTER_ADJUSTMENTS = {
 }
 
 --------------------------------------------------------------------------------
+-- Weekly Reset Detection
+--------------------------------------------------------------------------------
+local WEEK_SECONDS    = 604800
+local RESET_OFFSET    = 5 * 86400  -- Unix epoch is Thursday; subtract 5 days to align week start to Tuesday 00:00 UTC
+
+local function GetWeekBucket()
+    local t = C_DateAndTime and C_DateAndTime.GetServerTime and C_DateAndTime.GetServerTime() or time()
+    return math.floor((t - RESET_OFFSET) / WEEK_SECONDS)
+end
+
+local function CheckWeeklyReset()
+    local cdb = MidnightSenseiCharDB
+    if not cdb then return end
+    local current = GetWeekBucket()
+    if cdb.lastWeeklyBucket == nil then
+        -- First login for this character — record silently, no announcement
+        cdb.lastWeeklyBucket = current
+    elseif cdb.lastWeeklyBucket < current then
+        cdb.lastWeeklyBucket = current
+        print("|cff00D1FFMidnight Sensei:|r |cffFFD700Weekly Reset Detected.|r")
+    end
+end
+
+--------------------------------------------------------------------------------
 -- Event Frame
 --------------------------------------------------------------------------------
 local eventFrame = CreateFrame("Frame", "MidnightSenseiEventFrame", UIParent)
@@ -1264,9 +1310,19 @@ local eventFrame = CreateFrame("Frame", "MidnightSenseiEventFrame", UIParent)
 eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         Core.InitSavedVariables()
+        if Core.GetSetting("verifyAutoEnable") then
+            Core.VerifyMode       = true
+            Core.VerifySeenSpells = {}
+            Core.VerifySeenAuras  = {}
+            -- Bar update deferred — mainFrame is built lazily on first show
+            C_Timer.After(0.5, function()
+                if MS.UI and MS.UI.UpdateVerifyBar then MS.UI.UpdateVerifyBar() end
+            end)
+        end
         DetectSpec()
         C_Timer.After(3.0, BroadcastVersion)
         C_Timer.After(1.0, function() Core.MigrateEncounters() end)
+        C_Timer.After(5.0, CheckWeeklyReset)
         Core.Emit(Core.EVENTS.SESSION_READY)
         print("|cff00D1FFMidnight Sensei|r v" .. Core.VERSION ..
               " loaded.  |cffFFFFFF/ms show|r to open the HUD  ·  |cffFFFFFF/ms help|r for commands.")
@@ -1691,17 +1747,6 @@ local function MSSlashHandler(msg)
             local flag  = (ver == Core.VERSION) and "" or "  |cffFF8800(outdated)|r"
             print("  " .. color .. "v" .. ver .. "|r — " .. table.concat(names, ", ") .. flag)
         end
-    elseif msg == "debuglog" then
-        local buf = MidnightSenseiDB and MidnightSenseiDB.debugLog
-        if not buf or #buf == 0 then
-            print("|cff00D1FFMidnight Sensei:|r Debug log is empty. Enable Debug Mode in /ms options then fight.")
-        else
-            print("|cff00D1FFMidnight Sensei Debug Log (" .. #buf .. " entries):|r")
-            for _, line in ipairs(buf) do print("  " .. line) end
-        end
-    elseif msg == "debuglog clear" then
-        if MidnightSenseiDB then MidnightSenseiDB.debugLog = {} end
-        print("|cff00D1FFMidnight Sensei:|r Debug log cleared.")
     elseif msg == "debug rotational" or msg == "tracker" then
         -- Open the Rotation Tracker UI window; fall back to chat print if UI not loaded
         if MS.UI and MS.UI.ShowRotationalTracker then
@@ -1721,6 +1766,7 @@ local function MSSlashHandler(msg)
         else
             print("|cff00D1FFMidnight Sensei Verify Mode: OFF|r")
         end
+        if MS.UI and MS.UI.UpdateVerifyBar then MS.UI.UpdateVerifyBar() end
 
     elseif msg == "verify report" then
         local spec = Core.ActiveSpec
@@ -1738,21 +1784,42 @@ local function MSSlashHandler(msg)
             L("SPELL ID CHECK (majorCooldowns + rotationalSpells)")
             local allTracked = {}
             local altIdOwner = {}  -- altId → primary id, so altIds are excluded from OTHER SPELLS
-            for _, cd in ipairs(spec.majorCooldowns or {}) do
-                allTracked[cd.id] = { label = cd.label, bucket = "majorCooldowns",
-                    talentGated = cd.talentGated, suppressIfTalent = cd.suppressIfTalent, combatGated = cd.combatGated,
-                    altIds = cd.altIds }
-                if cd.altIds then
-                    for _, altId in ipairs(cd.altIds) do altIdOwner[altId] = cd.id end
+            local function TrackEntry(e, bucket)
+                allTracked[e.id] = {
+                    label            = e.label,
+                    bucket           = bucket,
+                    talentGated      = e.talentGated,
+                    suppressIfTalent = e.suppressIfTalent,
+                    combatGated      = e.combatGated,
+                    isInterrupt      = e.isInterrupt,
+                    isUtility        = e.isUtility,
+                    displayOnly      = e.displayOnly,
+                    healerConditional= e.healerConditional,
+                    altIds           = e.altIds,
+                }
+                if e.altIds then
+                    for _, altId in ipairs(e.altIds) do altIdOwner[altId] = e.id end
                 end
             end
-            for _, rs in ipairs(spec.rotationalSpells or {}) do
-                allTracked[rs.id] = { label = rs.label, bucket = "rotationalSpells",
-                    talentGated = rs.talentGated, suppressIfTalent = rs.suppressIfTalent, combatGated = rs.combatGated,
-                    altIds = rs.altIds }
-                if rs.altIds then
-                    for _, altId in ipairs(rs.altIds) do altIdOwner[altId] = rs.id end
+            for _, cd in ipairs(spec.majorCooldowns   or {}) do TrackEntry(cd, "CD")  end
+            for _, rs in ipairs(spec.rotationalSpells or {}) do TrackEntry(rs, "ROT") end
+
+            -- Build compact flag annotation string for a tracked entry
+            local function BuildFlags(info)
+                local f = {}
+                if info.talentGated       then table.insert(f, "talentGated")  end
+                if info.combatGated       then table.insert(f, "combatGated")  end
+                if info.suppressIfTalent  then table.insert(f, "suppress:"..info.suppressIfTalent) end
+                if info.isInterrupt       then table.insert(f, "interrupt")    end
+                if info.isUtility         then table.insert(f, "utility")      end
+                if info.displayOnly       then table.insert(f, "displayOnly")  end
+                if info.healerConditional then table.insert(f, "healerCond")   end
+                if info.altIds then
+                    local ids = {}
+                    for _, aid in ipairs(info.altIds) do table.insert(ids, tostring(aid)) end
+                    table.insert(f, "alt:"..table.concat(ids, ","))
                 end
+                return #f > 0 and ("  ["..table.concat(f, "] [").."]") or ""
             end
 
             local seen = Core.VerifySeenSpells or {}
@@ -1777,6 +1844,7 @@ local function MSSlashHandler(msg)
                         skipReason = "suppressed by " .. (suppressName or tostring(info.suppressIfTalent))
                     end
                 end
+                local flags = BuildFlags(info)
                 if fired then
                     local firedViaAlt = not seen[id] and info.altIds
                     local altNote = ""
@@ -1785,14 +1853,14 @@ local function MSSlashHandler(msg)
                             if seen[altId] then altNote = " (via alt id=" .. altId .. ")"; break end
                         end
                     end
-                    L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]%s",
-                      info.label, id, fired, info.bucket, altNote))
+                    L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]%s%s",
+                      info.label, id, fired, info.bucket, altNote, flags))
                 elseif skipReason then
-                    L(string.format("  SKIP  %-30s id=%-8d %s  [%s]",
-                      info.label, id, skipReason, info.bucket))
+                    L(string.format("  SKIP  %-30s id=%-8d %s  [%s]%s",
+                      info.label, id, skipReason, info.bucket, flags))
                 else
-                    L(string.format("  FAIL  %-30s id=%-8d NOT SEEN    [%s]",
-                      info.label, id, info.bucket))
+                    L(string.format("  FAIL  %-30s id=%-8d NOT SEEN    [%s]%s",
+                      info.label, id, info.bucket, flags))
                 end
             end
 
@@ -1983,6 +2051,32 @@ local function MSSlashHandler(msg)
             if found == 0 then print("  (no active buffs found)") end
         end
 
+    elseif msg == "debug weekly" then
+        local cdb = MidnightSenseiCharDB
+        local current = GetWeekBucket()
+        local stored  = cdb and cdb.lastWeeklyBucket
+        print("|cff00D1FFMidnight Sensei Weekly Debug:|r")
+        print("  Current bucket : " .. tostring(current))
+        print("  Stored bucket  : " .. tostring(stored))
+        print("  API used       : " .. (C_DateAndTime and C_DateAndTime.GetServerTime and "C_DateAndTime.GetServerTime" or "time() fallback"))
+        if stored == nil then
+            print("  Status: first login — will record silently on next CheckWeeklyReset call")
+        elseif stored < current then
+            print("  Status: RESET PENDING — announcement would fire now")
+        else
+            print("  Status: same week, no announcement")
+        end
+    elseif msg == "debug weekly fire" then
+        local cdb = MidnightSenseiCharDB
+        if cdb then
+            cdb.lastWeeklyBucket = 0  -- force mismatch
+            print("|cff00D1FFMidnight Sensei:|r Forcing weekly reset check...")
+            C_Timer.After(0.1, function()
+                local current = GetWeekBucket()
+                cdb.lastWeeklyBucket = current
+                print("|cff00D1FFMidnight Sensei:|r |cffFFD700Weekly Reset Detected.|r")
+            end)
+        end
     elseif msg == "debug version" then
         print("|cff00D1FFMidnight Sensei Version Debug:|r")
         print("  Core.VERSION = " .. tostring(Core.VERSION))
@@ -2042,14 +2136,7 @@ local function MSSlashHandler(msg)
                 end
             end
 
-            -- 2. Clear debug log so bad checksum entries don't persist
-            local oldLogSize = db.debugLog and #db.debugLog or 0
-            db.debugLog = {}
-            if oldLogSize > 0 then
-                print("|cff888888  Cleared " .. oldLogSize .. " debug log entries.|r")
-            end
-
-            -- 3. Re-broadcast best encounter per encType in current payload format.
+            -- 2. Re-broadcast best encounter per encType in current payload format.
             -- This overwrites peers' stale/bad data with correctly formatted messages.
             local encounters = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
             if encounters and #encounters > 0 then
@@ -2251,82 +2338,6 @@ local function MSSlashHandler(msg)
             end
         end
 
-    elseif msg == "debug self" then
-        print("|cff00D1FFMidnight Sensei - Self Delve Debug:|r")
-        print("  UnitName('player'): " .. tostring(UnitName("player")))
-        local db = MidnightSenseiDB
-        local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
-        if not history or #history == 0 then
-            print("  No encounter history found in SavedVariables")
-        else
-            print("  Total encounters: " .. #history)
-            local delveCount = 0
-            local delveBoss  = 0
-            for _, enc in ipairs(history) do
-                if enc.encType == "delve" then
-                    delveCount = delveCount + 1
-                    if enc.isBoss then delveBoss = delveBoss + 1 end
-                end
-            end
-            print("  Delve encounters: " .. delveCount .. " (boss: " .. delveBoss .. ")")
-            if delveBoss == 0 then
-                print("  |cffFF4444No delve BOSS encounters — Delve tab requires isBoss=true|r")
-                print("  The encounter must be triggered by ENCOUNTER_START/END inside a delve")
-            end
-            -- Show last delve encounter
-            for i = #history, 1, -1 do
-                local enc = history[i]
-                if enc.encType == "delve" then
-                    print(string.format("  Last delve enc: isBoss=%s score=%s charName=%s encType=%s",
-                          tostring(enc.isBoss), tostring(enc.finalScore),
-                          tostring(enc.charName), tostring(enc.encType)))
-                    print("  diffLabel: " .. tostring(enc.diffLabel))
-                    print("  instanceName: " .. tostring(enc.instanceName))
-                    break
-                end
-            end
-        end
-
-    elseif msg == "debug zone" then
-        local instName, instType, diffID, diffName,
-              maxPlayers, dynDiff, isDynamic, instMapID = GetInstanceInfo()
-        print("|cff00D1FFMidnight Sensei - Instance Debug:|r")
-        print("  instName: " .. tostring(instName))
-        print("  instType: " .. tostring(instType))
-        print("  diffID:   " .. tostring(diffID))
-        print("  diffName: " .. tostring(diffName))
-        print("  mapID:    " .. tostring(instMapID))
-        -- Check if our DELVE_DIFF_IDS table covers this diffID
-        local ctx = MS.Leaderboard and MS.Leaderboard.GetInstanceContext
-                    and MS.Leaderboard.GetInstanceContext()
-        if ctx then
-            print("  encType:   " .. tostring(ctx.encType))
-            print("  diffLabel: " .. tostring(ctx.diffLabel))
-            print("  instLabel: " .. tostring(ctx.instanceName))
-        end
-        if instType == "raid" then
-            print("  |cff00D1FFRAID detected|r — if diffLabel shows numeric diffID,")
-            print("  add [" .. tostring(diffID) .. "] = \"" .. tostring(diffName) .. "\" to RAID_DIFF table")
-        end
-        print("  Note: C_Delves is nil in Midnight 12.0 — tier level not available via API.")
-        -- Also print the last saved encounter for comparison
-        local db = MidnightSenseiDB
-        local last = db and db.encounters and db.encounters[#db.encounters]
-        if last then
-            print("  Last enc encType:   " .. tostring(last.encType))
-            print("  Last enc diffLabel: " .. tostring(last.diffLabel))
-            print("  Last enc isBoss:    " .. tostring(last.isBoss))
-        end
-        if Core.ActiveSpec then
-            print("|cff00D1FFMidnight Sensei Debug:|r")
-            print("  Class:   " .. (Core.ActiveSpec.className or "?"))
-            print("  Spec:    " .. (Core.ActiveSpec.name      or "?"))
-            print("  Role:    " .. (Core.ActiveSpec.role      or "?"))
-            print("  ClassID: " .. tostring(Core.ActiveSpec.classID))
-            print("  SpecIdx: " .. tostring(Core.ActiveSpec.specIdx))
-        else
-            print("|cff00D1FFMidnight Sensei:|r No spec loaded for current specialization.")
-        end
     elseif msg == "debug friends" then
         print("|cff00D1FFMidnight Sensei - Friend Detection Debug:|r")
         local ok, num = pcall(BNGetNumFriends)

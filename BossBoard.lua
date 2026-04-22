@@ -788,7 +788,6 @@ function BB.CleanupHistory(dryRun)
     end
 
     if #wipes == 0 then
-        print("|cff00D1FFMidnight Sensei Cleanup:|r No retroactive wipe candidates found in legacy M+ history.")
         return
     end
 

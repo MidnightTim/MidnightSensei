@@ -81,6 +81,8 @@ The addon is content-aware and tracks context for:
 
 Boss fights are tagged and can be filtered in history so you can focus on actual encounter performance.
 
+Fight history distinguishes **boss kills** from **wipes** with [K] and [W] tags. Stats such as averages and personal bests are calculated from kills only, so wipe data does not skew your numbers.
+
 ## Leaderboard
 
 Midnight Sensei includes a social leaderboard with views for:
@@ -104,7 +106,7 @@ The leaderboard is designed for lightweight social comparison and progress track
 
 ## Boss Board
 
-Version **1.3.9** adds the **Boss Board**, a personal all-time boss best tracker.
+The **Boss Board** is a personal all-time boss best tracker.
 
 Boss Board features include:
 
@@ -198,6 +200,7 @@ Typical path:
 - `/ms verify report` - Export a verification report
 - `/ms debug talents` - Export the active talent snapshot
 - `/ms debug spells` - Export the known spell snapshot
+- `/ms debug auras` - Dump all active player buff IDs for aura identification
 - `/ms debug bossboard ingest` - Seed Boss Board from existing encounter history
 - `/ms friend Name` - Query a player directly
 - `/ms friend Name-Realm` - Query a cross-realm player directly
@@ -241,20 +244,13 @@ That includes:
 
 It is not trying to replace Warcraft Logs or other deep analysis tools. It is trying to make improvement visible and actionable **inside the game**.
 
-## Version 1.3.9 highlights
+## Recent highlights
 
-Version **1.3.9** includes:
-
-- Boss Board added as a new personal all-time best system
-- Boss-specific best tracking by boss encounter ID
-- Shared Boss Board recovery snapshots
-- Boss Board ingest tooling for older encounter history
-- Talent Snapshot export
-- Spell Snapshot export
-- Debug window cleanup and expansion
-- Better identity backfill for older encounter data
-- Boss Board access from minimap and HUD context paths
-- Grade History cleanup related to per-character data separation
+- Kill and wipe tracking — fight history tags boss kills [K] and wipes [W]; averages and bests use kills only
+- Alt spell ID support — abilities that fire different spell IDs under certain hero talent paths are tracked correctly
+- Talent-gated spell suppression — replacement talents automatically suppress the ability they replace so unused CDs are not penalized incorrectly
+- Full spec coverage pass across all 13 classes for Midnight 12.0
+- Built-in aura dump tool (`/ms debug auras`) for spell ID discovery during spec validation
 
 ## Reporting issues
 

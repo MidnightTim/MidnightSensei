@@ -908,6 +908,29 @@ local function CreateMainFrame()
     end)
     lbBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
+    -- Verify bar — anchored below mainFrame; shown only when verify mode is active
+    local vBar = CreateFrame("Frame", nil, mainFrame, "BackdropTemplate")
+    vBar:SetSize(260, 24)
+    vBar:SetPoint("TOPLEFT", mainFrame, "BOTTOMLEFT", 0, -2)
+    vBar:SetPoint("TOPRIGHT", mainFrame, "BOTTOMRIGHT", 0, -2)
+    ApplyBackdrop(vBar, {0.04, 0.10, 0.04, 0.95}, {0.2, 0.6, 0.2, 0.8})
+
+    local vBarLbl = MakeFont(vBar, 9, "LEFT")
+    vBarLbl:SetPoint("LEFT", vBar, "LEFT", 8, 0)
+    vBarLbl:SetTextColor(0.40, 1.00, 0.40, 1)
+    vBarLbl:SetText("Verify Mode On")
+
+    local vBarBtn = MakeButton(vBar, 84, 18, "View Report")
+    vBarBtn:SetPoint("RIGHT", vBar, "RIGHT", -4, 0)
+    vBarBtn:SetScript("OnClick", function()
+        if MS.UI and MS.UI.ToggleVerifyExport then
+            MS.UI.ToggleVerifyExport()
+        end
+    end)
+
+    vBar:SetShown(MS.Core and MS.Core.VerifyMode or false)
+    mainFrame.verifyBar = vBar
+
     -- Timer tick
     Core.RegisterTick("hud_timer", 0.5, function()
         if not mainFrame or not mainFrame:IsShown() then return end
@@ -1388,6 +1411,14 @@ function UI.ShowVerifyExport(text)
     verifyExportFrame:Show()
 end
 
+function UI.ToggleVerifyExport()
+    if verifyExportFrame and verifyExportFrame:IsShown() then
+        verifyExportFrame:Hide()
+    elseif MS.Core and MS.Core.SlashHandler then
+        MS.Core.SlashHandler("verify report")
+    end
+end
+
 --------------------------------------------------------------------------------
 -- Debug Window
 --------------------------------------------------------------------------------
@@ -1764,12 +1795,72 @@ function UI.ShowDebugWindow()
         btnY = btnY - 48
     end
 
+    -- ── Verify Tools ─────────────────────────────────────────────────────────
+    AddSectionLabel("Verify Tools", {0.00, 1.00, 0.60})
+
+    -- Verify mode toggle row (dynamic label shows current state)
+    local vRow = CreateFrame("Frame", nil, f, "BackdropTemplate")
+    vRow:SetSize(428, 42)
+    vRow:SetPoint("TOPLEFT", f, "TOPLEFT", 16, btnY)
+    ApplyBackdrop(vRow, {0.07,0.07,0.12,0.6}, C.BORDER)
+
+    local vLbl = MakeFont(vRow, 11, "LEFT")
+    vLbl:SetPoint("TOPLEFT", vRow, "TOPLEFT", 8, -5)
+    vLbl:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
+    vLbl:SetText("Verify Mode")
+
+    local vDesc = MakeFont(vRow, 9, "LEFT")
+    vDesc:SetPoint("BOTTOMLEFT", vRow, "BOTTOMLEFT", 8, 5)
+    vDesc:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+    vDesc:SetText("Toggle spell ID capture for /ms verify report")
+
+    local vState = MakeFont(vRow, 10, "CENTER")
+    vState:SetPoint("RIGHT", vRow, "RIGHT", -82, 0)
+    vState:SetText(MS.Core.VerifyMode and "|cff00FF00ON|r" or "|cffFF4444OFF|r")
+
+    local vBtn = MakeButton(vRow, 70, 28, "Toggle")
+    vBtn:SetPoint("RIGHT", vRow, "RIGHT", -6, 0)
+    vBtn:SetScript("OnClick", function()
+        RunCmd("verify")
+        vState:SetText(MS.Core.VerifyMode and "|cff00FF00ON|r" or "|cffFF4444OFF|r")
+    end)
+    btnY = btnY - 48
+
+    AddDebugBtn("Verify Report", "Export spell ID verification report to copyable window", "verify report")
+
+    -- Auto-enable on login toggle row
+    local aRow = CreateFrame("Frame", nil, f, "BackdropTemplate")
+    aRow:SetSize(428, 42)
+    aRow:SetPoint("TOPLEFT", f, "TOPLEFT", 16, btnY)
+    ApplyBackdrop(aRow, {0.07,0.07,0.12,0.6}, C.BORDER)
+
+    local aLbl = MakeFont(aRow, 11, "LEFT")
+    aLbl:SetPoint("TOPLEFT", aRow, "TOPLEFT", 8, -5)
+    aLbl:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
+    aLbl:SetText("Auto-enable Verify on Login")
+
+    local aDesc = MakeFont(aRow, 9, "LEFT")
+    aDesc:SetPoint("BOTTOMLEFT", aRow, "BOTTOMLEFT", 8, 5)
+    aDesc:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+    aDesc:SetText("Verify mode turns on automatically after every reload or login")
+
+    local aState = MakeFont(aRow, 10, "CENTER")
+    aState:SetPoint("RIGHT", aRow, "RIGHT", -82, 0)
+    local autoOn = MS.Core.GetSetting and MS.Core.GetSetting("verifyAutoEnable")
+    aState:SetText(autoOn and "|cff00FF00ON|r" or "|cffFF4444OFF|r")
+
+    local aBtn = MakeButton(aRow, 70, 28, "Toggle")
+    aBtn:SetPoint("RIGHT", aRow, "RIGHT", -6, 0)
+    aBtn:SetScript("OnClick", function()
+        local cur = MS.Core.GetSetting and MS.Core.GetSetting("verifyAutoEnable")
+        if MS.Core.SetSetting then MS.Core.SetSetting("verifyAutoEnable", not cur) end
+        aState:SetText((not cur) and "|cff00FF00ON|r" or "|cffFF4444OFF|r")
+    end)
+    btnY = btnY - 48
+
     -- ── General debug ────────────────────────────────────────────────────────
-    AddDebugBtn("Self — Delve History", "Show your delve encounter history and boss count",     "debug self")
-    AddDebugBtn("Zone / Instance",      "Show current instance type, diffID, and encType",      "debug zone")
-    AddDebugBtn("Version",              "Show addon version from TOC and metadata APIs",        "debug version")
-    AddDebugBtn("Rotation Tracker",     "Open the Rotation Tracker window — cast counts, status, and flag explanations for each spell", "debug rotational")
-    AddDebugBtn("Debug Log",            "Print the last 50 checksum/routing log entries",       "debuglog")
+    AddDebugBtn("Version",          "Show addon version from TOC and metadata APIs",        "debug version")
+    AddDebugBtn("Rotation Tracker", "Open the Rotation Tracker window — cast counts, status, and flag explanations for each spell", "debug rotational")
 
     -- ── Class Debugging ──────────────────────────────────────────────────────
     AddSectionLabel("Class Debugging", {0.00, 0.82, 1.00})
@@ -2506,6 +2597,14 @@ function UI.OnCombatEnd(result)
     end
     ApplyHudVisibility("combat_end")
     UI.RefreshHistory()
+end
+
+function UI.UpdateVerifyBar()
+    if not mainFrame then return end
+    local on = MS.Core and MS.Core.VerifyMode or false
+    if mainFrame.verifyBar then
+        mainFrame.verifyBar:SetShown(on)
+    end
 end
 
 function UI.ToggleMainFrame()
