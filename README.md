@@ -1,5 +1,5 @@
 ## Midnight Sensei
-[![Version](https://img.shields.io/github/v/release/MidnightTim/MidnightSensei?label=version&logo=github&sort=semver)](https://github.com/MidnightTim/MidnightSensei/releases/latest)
+[![Version](https://img.shields.io/github/v/release/MidnightTim/MidnightSensei?include_prereleases&label=version&logo=github&sort=semver&cacheSeconds=300)](https://github.com/MidnightTim/MidnightSensei/releases/latest)
 [![WoW Version](https://img.shields.io/badge/WoW-Midnight%2012.0.5-purple)](https://github.com/MidnightTim/MidnightSensei)
 [![Classes](https://img.shields.io/badge/classes-13-success)](https://github.com/MidnightTim/MidnightSensei)
 [![Specs](https://img.shields.io/badge/specs-39-success)](https://github.com/MidnightTim/MidnightSensei)
