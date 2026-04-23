@@ -59,7 +59,7 @@ Core.RegisterSpec(9, {
             { id = 442726,  label = "Malevolence",            expectedUses = "on CD",          talentGated = true },  -- nodeID 94842; shared class talent — talentGated to avoid tracking grayed cross-spec spell
             { id = 104316,  label = "Call Dreadstalkers",     expectedUses = "on CD"           },  -- nodeID 101894 — not PASSIVE
             { id = 1276672, label = "Summon Doomguard",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 101917 — not PASSIVE
-            { id = 1276467, label = "Grimoire: Fel Ravager",  expectedUses = "situational",    talentGated = true, isInterrupt = true, altIds = {132409} },  -- nodeID 110197; summon fires 1276467, Fel Ravager's interrupt fires 132409 (Spell Lock)
+            { id = 1276467, label = "Grimoire: Fel Ravager",  expectedUses = "situational",    talentGated = true, isUtility = true },  -- nodeID 110197; purges 1 beneficial magic effect; no longer an interrupt as of patch 12.0
             -- Removed (confirmed PASSIVE via talent snapshot):
             -- Diabolic Ritual 428514 — PASSIVE
             -- Summon Vilefiend 1251778 — PASSIVE (nodeID 109252)

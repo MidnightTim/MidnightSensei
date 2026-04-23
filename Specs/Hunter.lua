@@ -45,10 +45,11 @@ Core.RegisterSpec(3, {
         name = "Marksmanship", role = "DPS",
         resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
         majorCooldowns = {
-            { id = 288613, label = "Trueshot",   expectedUses = "on CD"     },  -- nodeID 103947 non-PASSIVE ACTIVE
-            { id = 257044, label = "Rapid Fire", expectedUses = "on CD"     },  -- nodeID 103961 non-PASSIVE ACTIVE
-            { id = 260243, label = "Volley",     expectedUses = "AoE on CD" },  -- nodeID 103956 non-PASSIVE ACTIVE
-            { id = 147362, label = "Counter Shot", expectedUses = "situational", isInterrupt = true },  -- nodeID 102402 non-PASSIVE ACTIVE
+            { id = 288613, label = "Trueshot",        expectedUses = "on CD"             },  -- nodeID 103947 non-PASSIVE ACTIVE
+            { id = 257044, label = "Rapid Fire",      expectedUses = "on CD"             },  -- nodeID 103961 non-PASSIVE ACTIVE
+            { id = 260243, label = "Volley",          expectedUses = "AoE on CD"         },  -- nodeID 103956 non-PASSIVE ACTIVE
+            { id = 147362, label = "Counter Shot",    expectedUses = "situational",      isInterrupt = true },  -- nodeID 102402 non-PASSIVE ACTIVE
+            { id = 212431, label = "Explosive Shot",  expectedUses = "on CD (talent)",   talentGated = true },  -- nodeID 110575 non-PASSIVE; Shrapnel Shot (473520) and Precision Detonation (471369) are PASSIVE modifiers
             -- Precise Shots (342776) removed — not in talent tree or spell list
         },
         rotationalSpells = {
@@ -63,7 +64,7 @@ Core.RegisterSpec(3, {
             "Trueshot for burst — align with trinkets and lust",
         },
         scoreWeights = { cooldownUsage = 30, activity = 35, resourceMgmt = 25, procUsage = 10 },
-        sourceNote = "Midnight 12.0 verified against full MM Hunter talent tree snapshot v1.4.3 103 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full MM Hunter talent tree snapshot v1.5.0 101 nodes (April 2026)",
     },
 
     -- Survival (Midnight 12.0 PASSIVE audit — April 2026)

@@ -183,6 +183,7 @@ end
 -- by never sending to PARTY when inside an instance; GUILD covers guild members
 -- and the HELLO/SYNC flow handles the rest.
 local function SafeSend(prefix, payload, channel, target)
+    if MS.Core and MS.Core.SilentMode then return end
     local ok, err = pcall(C_ChatInfo.SendAddonMessage, prefix, payload, channel, target)
     if not ok and Core.GetSetting("debugMode") then
         print("|cff888888MS LB:|r send failed (" .. channel .. "): " .. tostring(err))

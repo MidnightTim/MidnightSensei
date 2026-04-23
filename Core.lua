@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.0"
+    Core.VERSION = ver or "1.5.1"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,22 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.1",
+        tagline = "Spec Updates, LFR Fix, Debug Silent Mode",
+        date    = "April 2026",
+        changes = {
+            -- Warlock
+            "Demonology: Grimoire: Fel Ravager reclassified — no longer an interrupt; now tracked as utility (patch 12.0 redesign: purges 1 magic effect, turns into Devour Magic on cooldown)",
+            -- Hunter
+            "Marksmanship: Explosive Shot (212431) added as tracked cooldown (talentGated)",
+            -- Evoker
+            "Preservation: Temporal Barrier (1291636) added as tracked cooldown (talentGated) — absorb + Echo on up to 5 allies",
+            -- Infrastructure
+            "Fixed: BroadcastVersion no longer attempts RAID channel send inside LFR/instance groups — eliminated repeated 'You are not in a raid group' system message",
+            "/ms debug silent — toggle to suppress all outbound addon messages; use to rule out Midnight Sensei as cause of chat errors",
+        },
+    },
     {
         version = "1.5.0",
         tagline = "Weekly Reset, Verify HUD, Debug Cleanup",
@@ -1259,11 +1275,13 @@ local function IsNewer(theirs, mine)
 end
 
 local function BroadcastVersion()
+    if Core.SilentMode then return end
     if hasBroadcast then return end
     local msg = "VERSION|" .. Core.VERSION
     if IsInGuild()  then C_ChatInfo.SendAddonMessage(VER_PREFIX, msg, "GUILD") end
-    if IsInRaid()   then C_ChatInfo.SendAddonMessage(VER_PREFIX, msg, "RAID")
-    elseif IsInGroup() then C_ChatInfo.SendAddonMessage(VER_PREFIX, msg, "PARTY") end
+    local inInstance = IsInGroup(LE_PARTY_CATEGORY_INSTANCE)
+    if IsInRaid() and not inInstance   then C_ChatInfo.SendAddonMessage(VER_PREFIX, msg, "RAID")
+    elseif IsInGroup() and not inInstance then C_ChatInfo.SendAddonMessage(VER_PREFIX, msg, "PARTY") end
     hasBroadcast = true
 end
 
@@ -2049,6 +2067,14 @@ local function MSSlashHandler(msg)
                 end
             end
             if found == 0 then print("  (no active buffs found)") end
+        end
+
+    elseif msg == "debug silent" then
+        Core.SilentMode = not Core.SilentMode
+        if Core.SilentMode then
+            print("|cff00D1FFMidnight Sensei:|r |cffFF4444Silent mode ON|r — all outbound addon messages suppressed.")
+        else
+            print("|cff00D1FFMidnight Sensei:|r |cff00FF00Silent mode OFF|r — normal operation resumed.")
         end
 
     elseif msg == "debug weekly" then

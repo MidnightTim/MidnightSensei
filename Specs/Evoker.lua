@@ -41,14 +41,18 @@ Core.RegisterSpec(13, {
     -- Time Dilation (357170) added — non-PASSIVE ACTIVE nodeID 93336
     -- Temporal Anomaly (373861) added to rotational — non-PASSIVE ACTIVE nodeID 93257
     -- Echo (364343) added to rotational — non-PASSIVE ACTIVE nodeID 93339; core mechanic
+    -- Temporal Barrier (1291636) added — non-PASSIVE ACTIVE nodeID 93258; absorb + Echo on up to 5 targets (patch 12.0)
+    -- Resonating Sphere removed from game (patch 12.0) — was not tracked
+    -- Energy Cycles removed from game (patch 12.0) — was not tracked
     [2] = {
         name = "Preservation", role = "HEALER",
         resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,
         majorCooldowns = {
-            { id = 363534, label = "Rewind",          expectedUses = "emergency",     healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93337
-            { id = 355936, label = "Dream Breath",    expectedUses = "on CD AoE"                              },  -- non-PASSIVE ACTIVE nodeID 93240
-            { id = 370553, label = "Tip the Scales",  expectedUses = "burst ramp"                             },  -- non-PASSIVE ACTIVE nodeID 93350 (was 374348 — wrong)
-            { id = 357170, label = "Time Dilation",   expectedUses = "emergency HoT", healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93336
+            { id = 363534,  label = "Rewind",            expectedUses = "emergency",     healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93337
+            { id = 355936,  label = "Dream Breath",      expectedUses = "on CD AoE"                              },  -- non-PASSIVE ACTIVE nodeID 93240
+            { id = 370553,  label = "Tip the Scales",    expectedUses = "burst ramp"                             },  -- non-PASSIVE ACTIVE nodeID 93350 (was 374348 — wrong)
+            { id = 357170,  label = "Time Dilation",     expectedUses = "emergency HoT", healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93336
+            { id = 1291636, label = "Temporal Barrier",  expectedUses = "on CD (talent)", talentGated = true      },  -- non-PASSIVE ACTIVE nodeID 93258; absorb + Echo 30% on up to 5 allies
             -- Emerald Communion (370960) removed — not in Preservation talent tree or spell list
         },
         rotationalSpells = {
@@ -69,7 +73,7 @@ Core.RegisterSpec(13, {
             "Time Dilation to extend a teammate's HoT in critical moments",
         },
         scoreWeights = { cooldownUsage = 30, efficiency = 30, activity = 25, responsiveness = 15 },
-        sourceNote = "Midnight 12.0 verified against full Preservation talent tree snapshot v1.4.3 123 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Preservation talent tree snapshot v1.5.0 123 nodes (April 2026)",
     },
 
     -- Augmentation (Midnight 12.0 PASSIVE audit — April 2026)
@@ -105,6 +109,6 @@ Core.RegisterSpec(13, {
             "Maintain Ebon Might uptime at 70%+ for maximum support value",
         },
         scoreWeights = { cooldownUsage = 35, mitigationUptime = 30, activity = 25, resourceMgmt = 10 },
-        sourceNote = "Midnight 12.0 verified against full Augmentation talent tree snapshot v1.4.3 114 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Augmentation talent tree snapshot v1.5.0 114 nodes (April 2026)",
     },
 })
