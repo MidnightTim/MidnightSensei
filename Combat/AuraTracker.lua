@@ -98,9 +98,13 @@ Core.On(Core.EVENTS.COMBAT_START, function()
         }
     end
 
-    -- Detect buffs already active at combat start (e.g. Arcane Intellect cast pre-pull).
-    -- Sets isActive/lastApplied so uptime accumulates correctly; appCount stays 0 so
-    -- Scoring.lua's appCount>0 gate excludes these from the scored uptime calculation.
+    -- Detect buffs already active at combat start (e.g. Shield Block cast pre-pull,
+    -- Arcane Intellect applied by a groupmate).
+    -- Non-infoOnly buffs are the player's own spells — credit as 1 application so
+    -- Scoring.lua's appCount>0 gate includes them and refreshes through the fight
+    -- (which never fire a new APPLY event) don't orphan the uptime.
+    -- infoOnly group buffs (Arcane Intellect) stay at appCount=0 — the player
+    -- may not have cast it themselves, so Scoring excludes them from the score.
     local now = GetTime()
     for _, buff in ipairs(spec.uptimeBuffs) do
         local aura = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
@@ -108,6 +112,9 @@ Core.On(Core.EVENTS.COMBAT_START, function()
         if aura and auraData[buff.id] then
             auraData[buff.id].isActive    = true
             auraData[buff.id].lastApplied = now
+            if not buff.infoOnly then
+                auraData[buff.id].appCount = 1
+            end
         end
     end
 end)

@@ -104,7 +104,8 @@ Core.RegisterSpec(1, {
     -- Demoralizing Shout (1160) added to majorCooldowns — nodeID 90305 non-PASSIVE ACTIVE; debuff CD
     -- Disrupting Shout (386071) added as isInterrupt — nodeID 107579 non-PASSIVE ACTIVE
     -- Revenge (6572) added to rotational — nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
-    -- Rend (772) added to rotational — non-PASSIVE ACTIVE; shared class node; DoT maintenance
+    -- Rend (772) suppressIfTalent=6343 — Thunder Clap (nodeID 90343) auto-applies Rend on every
+    --   cast when talented; suppressed when TC is taken; tracked only if TC is not taken
     -- Shield Slam (23922) baseline confirmed in spell list; not in talent tree node — fine
     -- Flags: Battlefield Commander/Deep Wounds/Intimidating Shout — Causes/Grants = effect
     --   descriptions only, no spell-replacement pattern. No suppressIfTalent needed.
@@ -112,7 +113,7 @@ Core.RegisterSpec(1, {
         name = "Protection", role = "TANK",
         resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
         majorCooldowns = {
-            { id = 871,    label = "Shield Wall",        expectedUses = "big hits"        },  -- nodeID 90302 non-PASSIVE ACTIVE
+            { id = 871,    label = "Shield Wall",        expectedUses = "big hits",        healerConditional = true },  -- nodeID 90302 non-PASSIVE ACTIVE; reactive — 90% credit if unused on a kill
             { id = 107574, label = "Avatar",             expectedUses = "on CD", talentGated = true },  -- nodeID 90433 non-PASSIVE ACTIVE; class talent
             { id = 190456, label = "Ignore Pain",        expectedUses = "physical hits"   },  -- nodeID 90295 non-PASSIVE ACTIVE
             { id = 1160,   label = "Demoralizing Shout", expectedUses = "on CD"           },  -- nodeID 90305 non-PASSIVE ACTIVE
@@ -124,18 +125,17 @@ Core.RegisterSpec(1, {
             { id = 2565, label = "Shield Block", targetUptime = 50 },  -- baseline confirmed spell list
         },
         rotationalSpells = {
-            { id = 6343,  label = "Thunder Clap", minFightSeconds = 15 },  -- nodeID 90343 non-PASSIVE ACTIVE
+            { id = 6343,  label = "Thunder Clap", minFightSeconds = 15 },  -- nodeID 90343 non-PASSIVE ACTIVE talent; auto-applies Rend on all targets when talented
             { id = 23922, label = "Shield Slam",  minFightSeconds = 15 },  -- baseline confirmed spell list
             { id = 6572,  label = "Revenge",      minFightSeconds = 15 },  -- nodeID 90298 non-PASSIVE ACTIVE; core Rage spender
-            { id = 772,   label = "Rend",         minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE; shared class node; DoT maintenance
+            { id = 772,   label = "Rend",         minFightSeconds = 15, talentGated = true, suppressIfTalent = 6343 },  -- suppressed when Thunder Clap is taken (auto-applied); tracked only without TC
         },
         tankMetrics = { targetMitigationUptime = 50 },
         priorityNotes = {
             "Maintain Shield Block for physical mitigation (tracked via uptimeBuffs)",
             "Shield Slam on cooldown — primary Rage generator and damage",
-            "Thunder Clap on cooldown — AoE damage and slowing",
+            "Thunder Clap on cooldown — AoE damage, slowing, and auto-applies Rend when talented",
             "Revenge to spend Rage — free when proc fires",
-            "Maintain Rend for the DoT when talented",
             "Ignore Pain to absorb incoming physical hits",
             "Demoralizing Shout on cooldown — damage reduction for the group",
             "Shield Wall for heavy magic or unavoidable damage",

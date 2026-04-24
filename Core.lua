@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.2"
+    Core.VERSION = ver or "1.5.3"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,19 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.3",
+        tagline = "Protection Warrior Fixes",
+        date    = "April 2026",
+        changes = {
+            -- Warrior
+            "Protection: Shield Block pre-pull now correctly credited — pre-cast before combat start no longer shows 'never activated'",
+            "Protection: Rend no longer penalised when Thunder Clap is talented — TC auto-applies Rend; tracked only when TC is not taken",
+            "Protection: Shield Wall flagged as reactive cooldown — unused on a successful fight no longer penalised (same logic as healer reactive CDs)",
+            -- Feedback
+            "Feedback: healerConditional cooldowns (reactive defensives/healer CDs) now suppressed from 'Never pressed' and 'Used less than expected' text on successful fights",
+        },
+    },
     {
         version = "1.5.2",
         tagline = "Tank Feedback, DK & Paladin Fixes",

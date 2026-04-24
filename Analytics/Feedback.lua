@@ -80,10 +80,14 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                         table.insert(utilityNeverUsed, label)
                     end
                 elseif data.useCount == 0 and duration >= minSecs then
-                    table.insert(neverUsed, label)
+                    if not (cd.healerConditional and state.fightSuccess) then
+                        table.insert(neverUsed, label)
+                    end
                 elseif data.useCount < expectedMult and duration >= minSecs then
-                    table.insert(underused,
-                        label .. " (" .. data.useCount .. "/" .. expectedMult .. ")")
+                    if not (cd.healerConditional and state.fightSuccess) then
+                        table.insert(underused,
+                            label .. " (" .. data.useCount .. "/" .. expectedMult .. ")")
+                    end
                 end
             end
         end
