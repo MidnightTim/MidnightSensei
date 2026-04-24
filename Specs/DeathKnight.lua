@@ -93,7 +93,7 @@ Core.RegisterSpec(6, {
     -- Mind Freeze (47528) added as isInterrupt — nodeID 76084 non-PASSIVE ACTIVE
     -- Outbreak (77575) added to majorCooldowns — nodeID 76189 non-PASSIVE ACTIVE; critical DoT applicator
     -- Soul Reaper (343294) added to majorCooldowns — nodeID 76179 non-PASSIVE ACTIVE; execute CD
-    -- Festering Strike: corrected 85092 → 316239 — Unholy spec-variant confirmed in spell list
+    -- Festering Strike: corrected 85092 → 316239 → 85948 — 85948 is what fires in UNIT_SPELLCAST_SUCCEEDED; 316239 kept as altId (talent-modified variant)
     -- Putrefy (1247378) added to rotational — nodeID 108129 non-PASSIVE ACTIVE; confirmed spell list
     [3] = {
         name = "Unholy", role = "DPS",
@@ -109,7 +109,7 @@ Core.RegisterSpec(6, {
         },
         uptimeBuffs = {},
         rotationalSpells = {
-            { id = 316239,  label = "Festering Strike", minFightSeconds = 15 },  -- Unholy spec-variant (was 85092 — BM/old ID); confirmed Unholy spell list
+            { id = 85948,   label = "Festering Strike", minFightSeconds = 15, altIds = {316239} },  -- 85948 confirmed via verify; 316239 was previously tracked but never fires (talent-modified variant kept as altId)
             { id = 55090,   label = "Scourge Strike",   minFightSeconds = 15 },  -- nodeID 76190 non-PASSIVE ACTIVE; wound popper
             { id = 47541,   label = "Death Coil",       minFightSeconds = 20 },  -- confirmed spell list; Runic Power dump
             { id = 1247378, label = "Putrefy",          minFightSeconds = 20, talentGated = true },  -- nodeID 108129 non-PASSIVE ACTIVE

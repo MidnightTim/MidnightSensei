@@ -85,7 +85,7 @@ Core.RegisterSpec(2, {
     -- Retribution (Midnight 12.0 PASSIVE audit + rotation guide — April 2026)
     -- Crusade (231895) removed — not in Ret talent tree or spell list;
     --   1253598 Crusade is PASSIVE nodeID 109369 (modifies Avenging Wrath, not castable separately)
-    -- Avenging Wrath (31884) confirmed nodeID 81544 non-PASSIVE ACTIVE
+    -- Avenging Wrath (31884) confirmed nodeID 81544 non-PASSIVE ACTIVE; suppressIfTalent=458359 (Radiant Glory) — WoA auto-triggers it when talented
     -- Wake of Ashes (255937) confirmed nodeID 81525 non-PASSIVE ACTIVE
     -- Execution Sentence (343527) confirmed nodeID 109373 non-PASSIVE INACTIVE — talentGated
     -- Divine Toll (375576) added to majorCooldowns — nodeID 109368 non-PASSIVE ACTIVE
@@ -93,7 +93,7 @@ Core.RegisterSpec(2, {
     -- Templar's Verdict (85256) corrected → Final Verdict (383328) — 85256 shows as "Final Verdict"
     --   in Ret spell list (spec-variant rename in Midnight 12.0); nodeID 81532 non-PASSIVE ACTIVE
     -- Blade of Justice (184575) added to rotational — nodeID 81526 non-PASSIVE ACTIVE; rotation priority #8/10
-    -- Divine Storm (53385) added to rotational — nodeID 81527 non-PASSIVE ACTIVE; AoE HP spender
+    -- Divine Storm (53385) moved to majorCooldowns isUtility — AoE only; penalising single-target fights was wrong
     -- Judgment (20271) confirmed spell list ✅
     -- Art of War (406064) PASSIVE nodeID 81523 — procs reset Blade of Justice; tracked as procBuff (VERIFY)
     -- Hammer of Light — not in talent tree or spell list; not tracked until confirmed
@@ -101,18 +101,19 @@ Core.RegisterSpec(2, {
         name = "Retribution", role = "DPS",
         resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
         majorCooldowns = {
-            { id = 31884,  label = "Avenging Wrath",     expectedUses = "on CD",              talentGated = true },  -- nodeID 81544; class talent; rotation priority #1
+            { id = 31884,  label = "Avenging Wrath",     expectedUses = "on CD",              talentGated = true, suppressIfTalent = 458359 },  -- nodeID 81544; suppressed when Radiant Glory (458359) is talented — WoA auto-triggers it, not player-cast
             { id = 255937, label = "Wake of Ashes",      expectedUses = "at 0 HP / burst windows"  },  -- nodeID 81525 non-PASSIVE ACTIVE; rotation priority #6; generates 3 HP
             { id = 375576, label = "Divine Toll",         expectedUses = "on CD",              talentGated = true },  -- nodeID 109368; class talent; rotation priority #7
             { id = 343527, label = "Execution Sentence", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 109373 non-PASSIVE INACTIVE
             { id = 96231,  label = "Rebuke",             expectedUses = "situational",     isInterrupt = true },  -- nodeID 110093 non-PASSIVE ACTIVE
+            { id = 53385,  label = "Divine Storm",       expectedUses = "AoE only",        isUtility = true   },  -- nodeID 81527; AoE HP spender — moved from rotational; never penalise in ST
             -- Crusade (231895) removed — not in talent tree; 1253598 is a PASSIVE modifier
         },
         rotationalSpells = {
             { id = 383328, label = "Final Verdict",  minFightSeconds = 15 },  -- nodeID 81532 non-PASSIVE ACTIVE; primary 5 HP spender (was 85256 Templar's Verdict — Midnight 12.0 rename)
             { id = 20271,  label = "Judgment",       minFightSeconds = 15 },  -- confirmed spell list; rotation priority #12
             { id = 184575, label = "Blade of Justice",minFightSeconds = 15 },  -- nodeID 81526 non-PASSIVE ACTIVE; rotation priority #8/10
-            { id = 53385,  label = "Divine Storm",   minFightSeconds = 20 },  -- nodeID 81527 non-PASSIVE ACTIVE; AoE HP spender
+            -- Divine Storm moved to majorCooldowns as isUtility — AoE only, not a ST rotational spell
         },
         procBuffs = {
             { id = 406064, label = "Art of War", maxStackTime = 10 },  -- PASSIVE nodeID 81523; procs reset Blade of Justice — VERIFY C_UnitAuras

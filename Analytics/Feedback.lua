@@ -385,7 +385,19 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                     or  "press major cooldowns more consistently")
             end
             if isTank and mitScore < 80 then
-                table.insert(hints, "increase mitigation uptime by pressing Demon Spikes more frequently")
+                local MIT_ABILITY = {
+                    ["Blood"]        = "Death Strike",
+                    ["Vengeance"]    = "Demon Spikes",
+                    ["Guardian"]     = "Frenzied Regeneration",
+                    ["Brewmaster"]   = "Ironskin Brew",
+                    -- Protection uses className to distinguish Warrior vs Paladin
+                }
+                local mitAbility = MIT_ABILITY[spec.name]
+                if not mitAbility and spec.name == "Protection" then
+                    mitAbility = (spec.className == "Warrior") and "Shield Block" or "Shield of the Righteous"
+                end
+                mitAbility = mitAbility or "defensive abilities"
+                table.insert(hints, "increase mitigation uptime by pressing " .. mitAbility .. " more frequently")
             end
             Add("Good foundation — focus next on: " .. table.concat(hints, "; ") .. ".")
         else

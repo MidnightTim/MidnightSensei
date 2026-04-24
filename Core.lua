@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.1"
+    Core.VERSION = ver or "1.5.2"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,20 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.2",
+        tagline = "Tank Feedback, DK & Paladin Fixes",
+        date    = "April 2026",
+        changes = {
+            -- Death Knight
+            "Unholy: Festering Strike corrected to id=85948 — 316239 was the talent tree ID but never fires; kept as altId",
+            -- Paladin
+            "Retribution: Divine Storm moved to utility tracking — AoE only, no longer penalised in single-target fights",
+            "Retribution: Avenging Wrath suppressed when Radiant Glory (458359) is talented — Wake of Ashes auto-triggers it",
+            -- Feedback
+            "Tank mitigation feedback now names the correct ability per spec: Death Strike, Demon Spikes, Shield Block, Shield of the Righteous, Frenzied Regeneration, Ironskin Brew",
+        },
+    },
     {
         version = "1.5.1",
         tagline = "Spec Updates, LFR Fix, Debug Silent Mode",
