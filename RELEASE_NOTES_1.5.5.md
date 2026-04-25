@@ -4,6 +4,8 @@
 
 v1.5.5 replaces all aura-scanning uptime tracking with a cast-event-based approach. Three separate attempts in v1.5.4 to work around Midnight 12.0's API restrictions on `aura.spellId` all failed — the restriction is a blanket block on the field when addon code is tainted. The cast-based approach uses `ABILITY_USED` events (fired from `UNIT_SPELLCAST_SUCCEEDED`) and requires no aura access.
 
+> **Note on v1.5.4:** v1.5.4 was pulled immediately after release. It shipped with a fix that appeared correct but continued to fail due to deeper API restrictions discovered in testing. All changes intended for v1.5.4 were rolled forward into v1.5.5 alongside the proper fix. There was no public v1.5.4 — if you see a gap in version history, that's why.
+
 ---
 
 ## Root Cause
