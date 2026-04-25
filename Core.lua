@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.3"
+    Core.VERSION = ver or "1.5.5"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,32 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.5",
+        tagline = "Cast-Based Uptime Tracking",
+        date    = "April 2026",
+        changes = {
+            "AuraTracker: complete rewrite — replaced aura scanning with cast-event-based uptime windows; aura.spellId comparison is blocked by Midnight 12.0 taint restrictions and could not be fixed within the aura API",
+            "Protection Warrior: Shield Block cast (2565) now drives uptime window; buff tracked for 6s per cast with max-extend on refresh",
+            "Protection Paladin: Shield of the Righteous cast (53600) drives uptime window; buff tracked for 4.5s per cast",
+            "Guardian Druid: Ironfur cast (192081) drives uptime window; 7s per cast",
+            "Vengeance Demon Hunter: Demon Spikes cast (203720) drives uptime window; 6s per cast",
+            "Augmentation Evoker: Ebon Might cast (395152) drives uptime window; 10s per cast",
+            "Fury Warrior: Enrage tracked via both Bloodthirst (23881) and Rampage (184367); 8s per cast",
+            "Verify: AURA CHECK updated to confirm uptimeBuffs via VerifySeenSpells[castSpellId]; procBuff aura scan removed (same taint restriction) — use /ms debug auras to check proc IDs",
+        },
+    },
+    {
+        version = "1.5.4",
+        tagline = "Mitigation Uptime Tracking Fix",
+        date    = "April 2026",
+        changes = {
+            "Protection Warrior: Shield Block uptimeBuff corrected to aura id=132404 (was 2565, the cast spell ID — buff aura is a separate ID in Midnight 12.0); fixes 'never activated' on every fight regardless of usage",
+            "AuraTracker: replaced GetPlayerAuraBySpellID with GetAuraDataByIndex index scan — GetPlayerAuraBySpellID is unreliable for some buff IDs in Midnight 12.0 (returns nil even when the buff is active); scan matches /ms debug auras behaviour",
+            "AuraTracker: added 0.5s polling ticker alongside UNIT_AURA events — fixes Shield Block and Shield of the Righteous showing false low uptime when cast via rapid REFRESH cycles that UNIT_AURA does not reliably deliver",
+            "Verify: AURA CHECK and live VerifySeenAuras recording updated to use GetAuraDataByIndex scan for consistency with AuraTracker",
+        },
+    },
     {
         version = "1.5.3",
         tagline = "Protection Warrior Fixes",
@@ -1442,23 +1468,9 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         if MS.CombatLog and MS.CombatLog.ProcessUnitAura then
             MS.CombatLog.ProcessUnitAura(unit)
         end
-        -- Verify mode: check all spec aura IDs when player auras change
-        if Core.VerifyMode and unit == "player" and C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
-            local spec = Core.ActiveSpec
-            if spec then
-                Core.VerifySeenAuras = Core.VerifySeenAuras or {}
-                for _, a in ipairs(spec.procBuffs   or {}) do
-                    if C_UnitAuras.GetPlayerAuraBySpellID(a.id) then
-                        Core.VerifySeenAuras[a.id] = true
-                    end
-                end
-                for _, a in ipairs(spec.uptimeBuffs or {}) do
-                    if C_UnitAuras.GetPlayerAuraBySpellID(a.id) then
-                        Core.VerifySeenAuras[a.id] = true
-                    end
-                end
-            end
-        end
+        -- Verify mode: aura.spellId comparison removed (v1.5.5) — blocked by Midnight 12.0
+        -- taint restrictions.  uptimeBuff verification uses VerifySeenSpells[castSpellId];
+        -- procBuff IDs should be confirmed with /ms debug auras.
 
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         local unit, _, spellID = ...
@@ -1911,24 +1923,32 @@ local function MSSlashHandler(msg)
 
             L("")
             L("AURA CHECK (procBuffs + uptimeBuffs)")
+            -- uptimeBuffs: verified via cast events (aura.spellId comparison blocked in Midnight 12.0)
+            -- procBuffs:   aura scan removed for same reason; use /ms debug auras to confirm IDs
             local allAuras = {}
-            for _, a in ipairs(spec.procBuffs   or {}) do allAuras[a.id] = { label=a.label, bucket="procBuffs"   } end
-            for _, a in ipairs(spec.uptimeBuffs or {}) do allAuras[a.id] = { label=a.label, bucket="uptimeBuffs" } end
+            for _, a in ipairs(spec.procBuffs   or {}) do allAuras[a.id] = { label=a.label, bucket="procBuffs",   entry=a } end
+            for _, a in ipairs(spec.uptimeBuffs or {}) do allAuras[a.id] = { label=a.label, bucket="uptimeBuffs", entry=a } end
 
             if not next(allAuras) then
                 L("  (no auras defined for this spec)")
             else
                 for id, info in pairs(allAuras) do
-                    local active, seenVia = false, (Core.VerifySeenAuras or {})[id]
-                    if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
-                        local ok, r = pcall(C_UnitAuras.GetPlayerAuraBySpellID, id)
-                        if ok and r then active = true end
-                    end
-                    if active then
-                        L(string.format("  PASS  %-30s id=%-8d ACTIVE NOW       [%s]", info.label, id, info.bucket))
-                    elseif seenVia then
-                        L(string.format("  SEEN  %-30s id=%-8d seen not active   [%s]", info.label, id, info.bucket))
+                    local entry = info.entry
+                    if info.bucket == "uptimeBuffs" then
+                        local castIds = entry.castSpellIds or (entry.castSpellId and {entry.castSpellId}) or {}
+                        local seen = false
+                        for _, cid in ipairs(castIds) do
+                            if (Core.VerifySeenSpells or {})[cid] then seen = true; break end
+                        end
+                        if seen then
+                            L(string.format("  SEEN  %-30s id=%-8d cast seen         [%s]", info.label, id, info.bucket))
+                        elseif #castIds > 0 then
+                            L(string.format("  FAIL  %-30s id=%-8d NOT DETECTED      [%s]", info.label, id, info.bucket))
+                        else
+                            L(string.format("  INFO  %-30s id=%-8d no castSpellId    [%s]", info.label, id, info.bucket))
+                        end
                     else
+                        -- procBuffs: aura.spellId comparison blocked in Midnight 12.0
                         L(string.format("  FAIL  %-30s id=%-8d NOT DETECTED      [%s]", info.label, id, info.bucket))
                     end
                 end

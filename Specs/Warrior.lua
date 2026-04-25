@@ -75,7 +75,7 @@ Core.RegisterSpec(1, {
             -- Onslaught (315720) removed — not in Fury talent tree or spell list
         },
         uptimeBuffs = {
-            { id = 184362, label = "Enrage", targetUptime = 60 },  -- VERIFY aura ID — spell list shows 184361; 184362 may be enhanced version
+            { id = 184362, label = "Enrage", targetUptime = 60, castSpellIds = {23881, 184367}, buffDuration = 8 },  -- Bloodthirst and Rampage both apply/extend Enrage
         },
         rotationalSpells = {
             { id = 23881,  label = "Bloodthirst",     minFightSeconds = 15 },  -- nodeID 90392 non-PASSIVE ACTIVE; primary Enrage trigger
@@ -122,7 +122,7 @@ Core.RegisterSpec(1, {
             -- Last Stand (12975) removed — confirmed PASSIVE in talent tree
         },
         uptimeBuffs = {
-            { id = 2565, label = "Shield Block", targetUptime = 50 },  -- baseline confirmed spell list
+            { id = 132404, label = "Shield Block", targetUptime = 50, castSpellId = 2565, buffDuration = 6 },  -- cast 2565 applies buff 132404 for 6s
         },
         rotationalSpells = {
             { id = 6343,  label = "Thunder Clap", minFightSeconds = 15 },  -- nodeID 90343 non-PASSIVE ACTIVE talent; auto-applies Rend on all targets when talented

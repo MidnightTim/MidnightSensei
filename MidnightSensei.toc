@@ -2,7 +2,7 @@
 ## Title: Midnight Sensei
 ## Notes: Combat performance coaching for all 13 classes — grade your fights A+ to F.
 ## Author: Midnight - Thrall (US)
-## Version: 1.5.3
+## Version: 1.5.5
 ## IconTexture: Interface\AddOns\MidnightSensei\logo
 ## SavedVariables: MidnightSenseiDB
 ## SavedVariablesPerCharacter: MidnightSenseiCharDB

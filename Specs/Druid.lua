@@ -99,7 +99,7 @@ Core.RegisterSpec(11, {
             { id = 204066, label = "Lunar Beam",            expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 92587
         },
         uptimeBuffs = {
-            { id = 192081, label = "Ironfur", targetUptime = 70 },  -- non-PASSIVE ACTIVE nodeID 82227
+            { id = 192081, label = "Ironfur", targetUptime = 70, castSpellId = 192081, buffDuration = 7 },  -- each cast applies a 7s stack
         },
         rotationalSpells = {
             { id = 8921,    label = "Moonfire",  minFightSeconds = 15 },                      -- baseline; rotation priority #1

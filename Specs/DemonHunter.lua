@@ -136,7 +136,7 @@ Core.RegisterSpec(12, {
             { id = 207684, label = "Sigil of Misery",  expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
         },
         uptimeBuffs = {
-            { id = 203720, label = "Demon Spikes", targetUptime = 50 },  -- buff uptime; cast usage tracked separately in majorCooldowns
+            { id = 203720, label = "Demon Spikes", targetUptime = 50, castSpellId = 203720, buffDuration = 6 },  -- each cast applies/extends for 6s
         },
         rotationalSpells = {
             { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },                                          -- live-verified x5; primary Fury generator

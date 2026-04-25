@@ -93,7 +93,7 @@ Core.RegisterSpec(13, {
             { id = 351338, label = "Quell",             expectedUses = "situational",      isInterrupt = true },  -- non-PASSIVE ACTIVE nodeID 93199
         },
         uptimeBuffs = {
-            { id = 395152, label = "Ebon Might", targetUptime = 70 },
+            { id = 395152, label = "Ebon Might", targetUptime = 70, castSpellId = 395152, buffDuration = 10 },  -- 10s base duration; recast every ~30s
         },
         rotationalSpells = {
             { id = 396286, label = "Upheaval",  minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 93203

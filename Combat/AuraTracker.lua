@@ -1,20 +1,27 @@
 --------------------------------------------------------------------------------
 -- Midnight Sensei: Combat/AuraTracker.lua
--- Tracks player self-buff uptime using UNIT_AURA (via ProcessUnitAura).
+-- Tracks player self-buff uptime using cast events (ABILITY_USED) rather than
+-- aura scanning.  In Midnight 12.0, aura.spellId is a "secret number value"
+-- that cannot be used in equality comparisons when addon code is tainted —
+-- all aura-scanning approaches were blocked by that restriction.
 --
--- Implements the aura uptime half of ProcessUnitAura.  For each spec.uptimeBuffs
--- entry, scans whether the buff is currently active on the player after every
--- UNIT_AURA event and accumulates total active time in open/close windows.
+-- Cast-based approach: every uptimeBuff entry that declares castSpellId (or
+-- castSpellIds) opens a time window when the player casts that spell, extends
+-- it by buffDuration seconds on each refresh cast (max-extend, no close/reopen),
+-- and a 0.25s expiry-checker ticker closes the window when time runs out.
 --
--- UNIT_AURA replaces the restricted CLEU API for buff/debuff tracking in
--- Midnight 12.0 — see Core.CHANGELOG.
+-- uptimeBuff fields used here:
+--   id           — unique identifier for this buff's tracking slot
+--   castSpellId  — single cast spell ID that applies/refreshes this buff
+--   castSpellIds — list of cast spell IDs that apply/refresh this buff
+--   buffDuration — how long each cast keeps the buff active (seconds)
 --
 -- Exposes on MS.CombatLog:
 --   GetAllUptimes(duration) →
---     [spellID] = { actualPct, targetUptime, appCount }
+--     [buffId] = { actualPct, targetUptime, appCount }
 --
 -- Internal:
---   CL._auraUptimeHandler(unit)  — assigned here; dispatched by CombatLog.lua
+--   CL._auraUptimeHandler(unit)  — no-op; kept so CombatLog.lua dispatch is safe
 --------------------------------------------------------------------------------
 
 MidnightSensei        = MidnightSensei        or {}
@@ -25,24 +32,28 @@ local Core = MS.Core
 local CL   = MS.CombatLog
 
 -- ── Private state ────────────────────────────────────────────────────────────
--- [spellID] = { isActive, lastApplied, totalActive, appCount, targetUptime }
-local auraData    = {}
-local fightActive = false
+-- [buffId] = { isActive, lastApplied, currentExpiry, totalActive, appCount, targetUptime }
+local auraData     = {}
+local castMap      = {}  -- [castSpellId] = buffId
+local durMap       = {}  -- [castSpellId] = buffDuration
+local fightActive  = false
+local expiryTicker = nil
 
 -- ── GetAllUptimes ─────────────────────────────────────────────────────────────
 -- Called by Engine.lua's BuildState at fight end, after COMBAT_END has already
--- closed any open windows.  Safe to call mid-fight too — closes windows
--- temporarily against the current timestamp without mutating state.
+-- closed any open windows.  Safe to call mid-fight too — caps against currentExpiry
+-- so expired-but-not-yet-ticked windows don't overcount.
 function CL.GetAllUptimes(duration)
     local result = {}
     local now    = GetTime()
-    for spellID, data in pairs(auraData) do
+    for buffId, data in pairs(auraData) do
         local total = data.totalActive
-        -- If still active (e.g. called mid-fight), include the current open window
         if data.isActive and data.lastApplied > 0 then
-            total = total + (now - data.lastApplied)
+            local effectiveNow = (data.currentExpiry > 0 and data.currentExpiry < now)
+                                 and data.currentExpiry or now
+            total = total + (effectiveNow - data.lastApplied)
         end
-        result[spellID] = {
+        result[buffId] = {
             actualPct    = (total / math.max(1, duration)) * 100,
             targetUptime = data.targetUptime,
             appCount     = data.appCount,
@@ -51,83 +62,90 @@ function CL.GetAllUptimes(duration)
     return result
 end
 
--- ── UNIT_AURA handler ─────────────────────────────────────────────────────────
--- Registered as CL._auraUptimeHandler — dispatched by CombatLog.ProcessUnitAura.
--- Scans spec.uptimeBuffs on every player aura change, opening/closing windows.
-CL._auraUptimeHandler = function(unit)
-    if not fightActive or unit ~= "player" then return end
-    local spec = Core.ActiveSpec
-    if not spec or not spec.uptimeBuffs then return end
+-- ── ABILITY_USED listener ─────────────────────────────────────────────────────
+-- Registered at module load (not COMBAT_START) so registration survives wipes.
+-- When a cast spell matches castMap, opens or extends the corresponding buff window.
+Core.On(Core.EVENTS.ABILITY_USED, function(spellID, timestamp)
+    if not fightActive then return end
+    local buffId = castMap[spellID]
+    if not buffId then return end
+    local data = auraData[buffId]
+    if not data then return end
 
-    local now = GetTime()
-    for _, buff in ipairs(spec.uptimeBuffs) do
-        local data = auraData[buff.id]
-        if data then
-            local aura = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
-                         and C_UnitAuras.GetPlayerAuraBySpellID(buff.id)
-            local isActive = (aura ~= nil)
+    local now = timestamp or GetTime()
+    local dur = durMap[spellID] or 6
 
-            if isActive and not data.isActive then
-                -- Window opened: buff applied
-                data.isActive    = true
-                data.lastApplied = now
-                data.appCount    = data.appCount + 1
-            elseif not isActive and data.isActive then
-                -- Window closed: buff removed
-                data.isActive   = false
-                data.totalActive = data.totalActive + (now - data.lastApplied)
-            end
-        end
+    if not data.isActive then
+        data.isActive    = true
+        data.lastApplied = now
+        data.appCount    = data.appCount + 1
     end
-end
+    -- Extend expiry on refresh — no close/reopen during continuous uptime
+    data.currentExpiry = math.max(data.currentExpiry, now + dur)
+end)
 
--- ── Combat start — reset and pre-populate ────────────────────────────────────
+-- ── _auraUptimeHandler ────────────────────────────────────────────────────────
+-- No-op: CombatLog.lua's ProcessUnitAura calls this slot; keep it assigned so
+-- the nil-guard in ProcessUnitAura does not need changing.
+CL._auraUptimeHandler = function(_unit) end
+
+-- ── Combat start — build maps, start expiry ticker ───────────────────────────
 Core.On(Core.EVENTS.COMBAT_START, function()
     fightActive = true
     auraData    = {}
+    castMap     = {}
+    durMap      = {}
 
     local spec = Core.ActiveSpec
     if not spec or not spec.uptimeBuffs then return end
+
     for _, buff in ipairs(spec.uptimeBuffs) do
         auraData[buff.id] = {
-            isActive     = false,
-            lastApplied  = 0,
-            totalActive  = 0,
-            appCount     = 0,
-            targetUptime = buff.targetUptime or 80,
+            isActive      = false,
+            lastApplied   = 0,
+            currentExpiry = 0,
+            totalActive   = 0,
+            appCount      = 0,
+            targetUptime  = buff.targetUptime or 80,
         }
-    end
-
-    -- Detect buffs already active at combat start (e.g. Shield Block cast pre-pull,
-    -- Arcane Intellect applied by a groupmate).
-    -- Non-infoOnly buffs are the player's own spells — credit as 1 application so
-    -- Scoring.lua's appCount>0 gate includes them and refreshes through the fight
-    -- (which never fire a new APPLY event) don't orphan the uptime.
-    -- infoOnly group buffs (Arcane Intellect) stay at appCount=0 — the player
-    -- may not have cast it themselves, so Scoring excludes them from the score.
-    local now = GetTime()
-    for _, buff in ipairs(spec.uptimeBuffs) do
-        local aura = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
-                     and C_UnitAuras.GetPlayerAuraBySpellID(buff.id)
-        if aura and auraData[buff.id] then
-            auraData[buff.id].isActive    = true
-            auraData[buff.id].lastApplied = now
-            if not buff.infoOnly then
-                auraData[buff.id].appCount = 1
-            end
+        local castIds = buff.castSpellIds or (buff.castSpellId and {buff.castSpellId}) or {}
+        for _, cid in ipairs(castIds) do
+            castMap[cid] = buff.id
+            durMap[cid]  = buff.buffDuration or 6
         end
     end
+
+    -- 0.25s ticker closes windows that have reached their expiry time
+    if expiryTicker then expiryTicker:Cancel() end
+    expiryTicker = C_Timer.NewTicker(0.25, function()
+        if not fightActive then return end
+        local now = GetTime()
+        for _, data in pairs(auraData) do
+            if data.isActive and data.currentExpiry > 0 and now >= data.currentExpiry then
+                data.totalActive = data.totalActive + (data.currentExpiry - data.lastApplied)
+                data.isActive    = false
+                data.lastApplied = 0
+            end
+        end
+    end)
 end)
 
 -- ── Combat end — close any open windows ──────────────────────────────────────
 -- Runs before Engine.lua's COMBAT_END handler (earlier TOC position = earlier
 -- registration).  All windows are closed so GetAllUptimes returns stable values.
 Core.On(Core.EVENTS.COMBAT_END, function()
+    if expiryTicker then
+        expiryTicker:Cancel()
+        expiryTicker = nil
+    end
     fightActive = false
     local now   = GetTime()
     for _, data in pairs(auraData) do
         if data.isActive and data.lastApplied > 0 then
-            data.totalActive = data.totalActive + (now - data.lastApplied)
+            -- If buff expired before combat ended (ticker missed it), credit only to expiry
+            local closeAt = (data.currentExpiry > 0 and data.currentExpiry < now)
+                            and data.currentExpiry or now
+            data.totalActive = data.totalActive + (closeAt - data.lastApplied)
             data.isActive    = false
         end
     end

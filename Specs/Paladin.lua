@@ -61,7 +61,7 @@ Core.RegisterSpec(2, {
             { id = 96231,  label = "Rebuke",                 expectedUses = "situational",  isInterrupt = true },  -- nodeID 81604 non-PASSIVE ACTIVE
         },
         uptimeBuffs = {
-            { id = 132403, label = "Shield of the Righteous", targetUptime = 50 },  -- VERIFY aura ID — spell list shows 53600/415091 as cast IDs
+            { id = 132403, label = "Shield of the Righteous", targetUptime = 50, castSpellId = 53600, buffDuration = 4.5 },  -- cast 53600 applies buff 132403 for 4.5s
         },
         rotationalSpells = {
             { id = 53600, label = "Shield of the Righteous", minFightSeconds = 15 },  -- confirmed spell list; HP spender + mitigation
