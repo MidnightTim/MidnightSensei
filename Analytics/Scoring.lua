@@ -39,7 +39,7 @@ local function ScoreCooldownUsage(state, duration)
 
     for _, cd in ipairs(spec.majorCooldowns) do
         local data = cdTracking[cd.id]
-        if data then
+        if data and not cd.isUtility and not cd.isInterrupt then
             local w = 1.0
             totalWeight = totalWeight + w
 

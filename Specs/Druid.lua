@@ -19,7 +19,8 @@ Core.RegisterSpec(11, {
             { id = 194223, label = "Celestial Alignment",          expectedUses = "on CD",          talentGated = true, suppressIfTalent = 102560 },  -- CA build; suppress when Incarnation taken (CA is a prereq node — IsTalentActive returns true on both builds)
             -- 383410 (Orbital Strike) removed — PASSIVE modifier to Incarnation, never fires UNIT_SPELLCAST_SUCCEEDED
             { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)", talentGated = true },  -- Incarnation build; confirmed fires UNIT_SPELLCAST_SUCCEEDED (verify 2x)
-            { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true },  -- priority #3-5 in both builds
+            { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true, isUtility = true },  -- priority #3-5 in both builds; optional — not widely used on cooldown
+            { id = 78675,  label = "Solar Beam",                  expectedUses = "situational",     talentGated = true, isInterrupt = true },  -- silence/interrupt; informational only — no penalty
         },
         uptimeBuffs = {},
         rotationalSpells = {
@@ -28,7 +29,7 @@ Core.RegisterSpec(11, {
             { id = 202770, label = "Fury of Elune", minFightSeconds = 20, talentGated = true },  -- priority #3 — use during Eclipse
             { id = 191034, label = "Starfall",  minFightSeconds = 20 },                                                   -- priority #8 — AoE AP spender
             { id = 78674,  label = "Starsurge", minFightSeconds = 20, suppressIfTalent = 1271206 },                   -- priority #9 — main ST spender; suppress when Star Cascade (1271206) auto-fires it passively
-            { id = 5176,   label = "Wrath",     minFightSeconds = 15, orGroup = "filler", suppressIfTalent = 429523 }, -- Solar Eclipse filler; suppress when Lunar Calling (429523) — Elune's Chosen Lunar Eclipse only
+            { id = 5176,   label = "Wrath",     minFightSeconds = 15, orGroup = "filler", suppressIfTalent = 429523, altIds = {190984} }, -- Solar Eclipse filler; 190984 = Eclipse:Wrath combat cast ID (spellbook=5176 differs from UNIT_SPELLCAST_SUCCEEDED in Midnight 12.0); suppress when Lunar Calling (429523)
             { id = 194153, label = "Starfire",  minFightSeconds = 15, orGroup = "filler" },                           -- Lunar Eclipse filler / AoE; live-verified cast ID 194153
         },
         priorityNotes = {
