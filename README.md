@@ -204,6 +204,7 @@ Typical path:
 - `/ms debug spells` - Export the known spell snapshot
 - `/ms debug auras` - Dump all active player buff IDs for aura identification
 - `/ms debug bossboard ingest` - Seed Boss Board from existing encounter history
+- `/ms debug fixname` - Fix all stored character names after a rename (grade history, review fights, Boss Board)
 - `/ms friend Name` - Query a player directly
 - `/ms friend Name-Realm` - Query a cross-realm player directly
 - `/ms bossboard` - Open Boss Board

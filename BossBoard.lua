@@ -362,6 +362,236 @@ function BB.RepairIdentity()
         "|cff00D1FFMidnight Sensei Boss Board:|r Identity repair complete — patched: %d entr%s",
         patched, patched == 1 and "y" or "ies"))
 end
+
+--------------------------------------------------------------------------------
+-- Fix character name after a rename — confirmation dialog, then stamps the
+-- new name across all stored history:
+--   • encounters (grade history, review fights, leaderboard self-entry)
+--   • bossBests (Boss Board rows)
+--   • bossBoardShared snapshot (account-wide, re-keyed under new name)
+-- Usage: /ms debug fixname
+--------------------------------------------------------------------------------
+
+local fixNameDialog = nil
+
+local function NameExistsInData(name)
+    local cdb = MidnightSenseiCharDB
+    if not cdb then return false end
+    if cdb.encounters then
+        for _, enc in ipairs(cdb.encounters) do
+            if enc.charName == name then return true end
+        end
+    end
+    if cdb.bests and cdb.bests.bossBests then
+        for _, entry in pairs(cdb.bests.bossBests) do
+            if entry.charName == name then return true end
+        end
+    end
+    if MidnightSenseiDB and MidnightSenseiDB.bossBoardShared then
+        for _, snap in pairs(MidnightSenseiDB.bossBoardShared) do
+            if snap.charName == name then return true end
+        end
+    end
+    return false
+end
+
+local function ApplyCharNameFix(typedOld, newName, realmName)
+    local cdb       = MidnightSenseiCharDB
+    local encCount  = 0
+    local bestCount = 0
+
+    if cdb.encounters then
+        for _, enc in ipairs(cdb.encounters) do
+            if enc.charName == typedOld then
+                enc.charName = newName
+                encCount = encCount + 1
+            end
+        end
+    end
+
+    if cdb.bests and cdb.bests.bossBests then
+        for _, entry in pairs(cdb.bests.bossBests) do
+            if entry.charName == typedOld then
+                entry.charName = newName
+                bestCount = bestCount + 1
+            end
+        end
+    end
+
+    if MidnightSenseiDB and MidnightSenseiDB.bossBoardShared then
+        local shared = MidnightSenseiDB.bossBoardShared
+        for key, snap in pairs(shared) do
+            if snap.realmName == realmName and snap.charName == typedOld then
+                shared[key] = nil
+            end
+        end
+    end
+
+    UpdateSharedSnapshot()
+    BB.RefreshUI()
+
+    print(string.format(
+        "|cff00D1FFMidnight Sensei:|r Character rename fix complete (%s \226\134\146 %s)",
+        typedOld, newName))
+    print(string.format(
+        "  Grade history / review fights: |cffFFFFFF%d|r encounter%s updated",
+        encCount, encCount == 1 and "" or "s"))
+    print(string.format(
+        "  Boss Board: |cffFFFFFF%d|r entr%s updated; shared snapshot re-keyed",
+        bestCount, bestCount == 1 and "y" or "ies"))
+end
+
+function BB.FixCharName()
+    local newName   = UnitName("player") or "?"
+    local realmName = GetRealmName() or "?"
+
+    if newName == "?" then
+        print("|cffFFAA00Midnight Sensei:|r Could not read player name — try again after fully loading in.")
+        return
+    end
+
+    local cdb = MidnightSenseiCharDB
+    if not cdb then
+        print("|cffFF4444Midnight Sensei:|r No CharDB found.")
+        return
+    end
+
+    -- Scan stored data for the stale name to pre-fill the dialog
+    local detectedOld = nil
+    if cdb.encounters then
+        for _, enc in ipairs(cdb.encounters) do
+            if enc.charName and enc.charName ~= newName then
+                detectedOld = enc.charName
+                break
+            end
+        end
+    end
+    if not detectedOld and cdb.bests and cdb.bests.bossBests then
+        for _, entry in pairs(cdb.bests.bossBests) do
+            if entry.charName and entry.charName ~= newName then
+                detectedOld = entry.charName
+                break
+            end
+        end
+    end
+
+    -- Build the dialog once
+    if not fixNameDialog then
+        local d = CreateFrame("Frame", "MidnightSenseiFixName", UIParent, "BackdropTemplate")
+        d:SetSize(380, 210)
+        d:SetPoint("CENTER")
+        d:SetFrameStrata("DIALOG")
+        d:SetMovable(true)
+        d:SetClampedToScreen(true)
+        d:EnableMouse(true)
+        d:SetScript("OnMouseDown", function(self, btn) if btn == "LeftButton" then self:StartMoving() end end)
+        d:SetScript("OnMouseUp",   function(self) self:StopMovingOrSizing() end)
+        BD(d, {0.05, 0.05, 0.09, 0.97}, COLOR.BORDER_GOLD)
+
+        local titleFs = TF(d, 12, "CENTER")
+        titleFs:SetPoint("TOPLEFT",  d, "TOPLEFT",  0, -14)
+        titleFs:SetPoint("TOPRIGHT", d, "TOPRIGHT", -22, -14)
+        titleFs:SetTextColor(COLOR.TITLE[1], COLOR.TITLE[2], COLOR.TITLE[3], 1)
+        titleFs:SetText("Fix Character Name")
+
+        local xBtn = CreateFrame("Button", nil, d)
+        xBtn:SetSize(20, 20)
+        xBtn:SetPoint("TOPRIGHT", d, "TOPRIGHT", -6, -6)
+        local xFs = TF(xBtn, 12, "CENTER") ; xFs:SetPoint("CENTER")
+        xFs:SetTextColor(1, 0.3, 0.3, 1) ; xFs:SetText("X")
+        xBtn:SetScript("OnClick", function() d:Hide() end)
+
+        local sep = d:CreateTexture(nil, "ARTWORK")
+        sep:SetColorTexture(0.3, 0.3, 0.4, 0.4) ; sep:SetHeight(1)
+        sep:SetPoint("TOPLEFT",  d, "TOPLEFT",  10, -30)
+        sep:SetPoint("TOPRIGHT", d, "TOPRIGHT", -10, -30)
+
+        local oldLabel = TF(d, 10, "LEFT")
+        oldLabel:SetPoint("TOPLEFT", d, "TOPLEFT", 16, -42)
+        oldLabel:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+        oldLabel:SetText("Old character name (found in your history):")
+
+        -- Single-line editable name field
+        local eb = CreateFrame("EditBox", nil, d, "BackdropTemplate")
+        eb:SetSize(348, 26)
+        eb:SetPoint("TOPLEFT", d, "TOPLEFT", 16, -56)
+        eb:SetFont("Fonts/FRIZQT__.TTF", 12, "")
+        eb:SetAutoFocus(false)
+        eb:SetTextInsets(8, 8, 0, 0)
+        eb:EnableMouse(true)
+        BD(eb, {0.08, 0.08, 0.14, 0.95}, {0.4, 0.4, 0.5, 0.8})
+        eb:SetScript("OnEscapePressed", function() d:Hide() end)
+
+        local newLabel = TF(d, 10, "LEFT")
+        newLabel:SetPoint("TOPLEFT", d, "TOPLEFT", 16, -96)
+        newLabel:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
+        newLabel:SetText("Will be replaced with (your current character name):")
+
+        local newText = TF(d, 12, "LEFT")
+        newText:SetPoint("TOPLEFT", d, "TOPLEFT", 16, -110)
+        newText:SetTextColor(COLOR.ACCENT[1], COLOR.ACCENT[2], COLOR.ACCENT[3], 1)
+
+        -- Error feedback — hidden until validation fails
+        local errText = TF(d, 10, "CENTER")
+        errText:SetPoint("TOPLEFT",  d, "TOPLEFT",  16, -136)
+        errText:SetPoint("TOPRIGHT", d, "TOPRIGHT", -16, -136)
+        errText:SetWordWrap(true)
+        errText:SetTextColor(1, 0.35, 0.35, 1)
+        errText:Hide()
+
+        local cancelBtn = CreateFrame("Button", nil, d, "BackdropTemplate")
+        cancelBtn:SetSize(110, 28)
+        cancelBtn:SetPoint("BOTTOMLEFT", d, "BOTTOMLEFT", 16, 12)
+        BD(cancelBtn, COLOR.TAB_IDLE, COLOR.BORDER)
+        local cFs = TF(cancelBtn, 11, "CENTER") ; cFs:SetPoint("CENTER") ; cFs:SetText("Cancel")
+        cancelBtn:SetScript("OnClick", function() d:Hide() end)
+        cancelBtn:SetScript("OnEnter", function() BD(cancelBtn, COLOR.TAB_ACTIVE, COLOR.BORDER) end)
+        cancelBtn:SetScript("OnLeave", function() BD(cancelBtn, COLOR.TAB_IDLE,   COLOR.BORDER) end)
+
+        local confirmBtn = CreateFrame("Button", nil, d, "BackdropTemplate")
+        confirmBtn:SetSize(140, 28)
+        confirmBtn:SetPoint("BOTTOMRIGHT", d, "BOTTOMRIGHT", -16, 12)
+        BD(confirmBtn, {0.05, 0.18, 0.05, 0.95}, {0.2, 0.6, 0.2, 0.8})
+        local cfFs = TF(confirmBtn, 11, "CENTER") ; cfFs:SetPoint("CENTER")
+        cfFs:SetTextColor(0.3, 1, 0.3, 1) ; cfFs:SetText("Confirm Fix")
+        confirmBtn:SetScript("OnEnter", function() BD(confirmBtn, {0.08, 0.28, 0.08, 0.95}, {0.2, 0.7, 0.2, 0.9}) end)
+        confirmBtn:SetScript("OnLeave", function() BD(confirmBtn, {0.05, 0.18, 0.05, 0.95}, {0.2, 0.6, 0.2, 0.8}) end)
+        confirmBtn:SetScript("OnClick", function()
+            local typed = eb:GetText():match("^%s*(.-)%s*$")
+            errText:Hide()
+            if typed == "" then
+                errText:SetText("Please enter the old character name.")
+                errText:Show()
+                return
+            end
+            if typed == d._newName then
+                errText:SetText("That name matches your current character — nothing to fix.")
+                errText:Show()
+                return
+            end
+            if not NameExistsInData(typed) then
+                errText:SetText("No history found under \""..typed.."\". Check spelling, capitalization, and any special characters.")
+                errText:Show()
+                return
+            end
+            d:Hide()
+            ApplyCharNameFix(typed, d._newName, d._realmName)
+        end)
+
+        d.oldEdit  = eb
+        d.newText  = newText
+        d.errText  = errText
+        fixNameDialog = d
+    end
+
+    fixNameDialog.oldEdit:SetText(detectedOld or "")
+    fixNameDialog.newText:SetText(newName)
+    fixNameDialog.errText:Hide()
+    fixNameDialog._newName   = newName
+    fixNameDialog._realmName = realmName
+    fixNameDialog:Show()
+end
+
 local FW, FH = 620, 540
 
 local function CreateRow(parent, idx)

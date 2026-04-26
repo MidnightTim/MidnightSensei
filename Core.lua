@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.5"
+    Core.VERSION = ver or "1.5.6"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -289,6 +289,28 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.6",
+        tagline = "Balance Druid Tracking Fixes, Verify Report Crash, Debug Tools Overhaul",
+        date    = "April 2026",
+        changes = {
+            -- Balance Druid
+            "Balance: Wrath alt ID fix — Eclipse:Wrath fires as 190984 in Midnight 12.0, not spellbook ID 5176; altIds={190984} added so all Wrath casts are correctly detected",
+            "Balance: Solar Beam (78675) added as talentGated interrupt — tracked but never penalised; informational note fires when not used",
+            "Balance: Force of Nature (205636) marked isUtility — tracked but no longer scored against; moves to informational note at fight end",
+            -- Scoring
+            "Scoring: isUtility and isInterrupt majorCooldown entries now excluded from ScoreCooldownUsage weight — Feedback.lua already said 'never penalised' but Scoring.lua had no matching guard; behaviour now consistent",
+            -- Verify Report
+            "Verify Report crash fix: IsTalentActive called from Core.lua where it is a local in CastTracker.lua (nil in this scope) — changed to IsPlayerSpell which covers the suppressIfTalent check correctly",
+            -- Debug Tools
+            "Debug Tools: Fix Character Name — confirmation dialog pre-filled with detected old name; validates typed name exists in stored data before applying; repairs charName across encounters, bossBests, and shared snapshot",
+            "Debug Tools: Clear Boss Board added — clears bossBests and removes character entries from shared snapshot; requires typing Confirm",
+            "Debug Tools: Clear Fight History now requires typing Confirm; also clears legacy MidnightSenseiDB.encounters entries to prevent MigrateEncounters re-populate on reload",
+            "UI: MakeDestructiveDialog and AddDestructiveBtn helpers added for multi-step destructive confirmation pattern",
+            -- Slash commands
+            "/ms debug fixname added — alias: /ms debug bossboard fixname",
+        },
+    },
     {
         version = "1.5.5",
         tagline = "Cast-Based Uptime Tracking",
@@ -1896,7 +1918,7 @@ local function MSSlashHandler(msg)
                     end
                 end
                 if not skipReason and info.suppressIfTalent then
-                    if IsPlayerSpell(info.suppressIfTalent) or IsTalentActive(info.suppressIfTalent) then
+                    if IsPlayerSpell(info.suppressIfTalent) then
                         local suppressName = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(info.suppressIfTalent) or tostring(info.suppressIfTalent)
                         skipReason = "suppressed by " .. (suppressName or tostring(info.suppressIfTalent))
                     end
@@ -2619,6 +2641,13 @@ local function MSSlashHandler(msg)
     elseif msg == "debug bossboard repair" then
         if MS.BossBoard and MS.BossBoard.RepairIdentity then
             MS.BossBoard.RepairIdentity()
+        else
+            print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
+        end
+
+    elseif msg == "debug fixname" or msg == "debug bossboard fixname" then
+        if MS.BossBoard and MS.BossBoard.FixCharName then
+            MS.BossBoard.FixCharName()
         else
             print("|cff00D1FFMidnight Sensei:|r Boss Board not loaded.")
         end

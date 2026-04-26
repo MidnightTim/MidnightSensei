@@ -1795,6 +1795,111 @@ function UI.ShowDebugWindow()
         btnY = btnY - 48
     end
 
+    -- Red-tinted row for destructive actions
+    local function AddDestructiveBtn(label, desc, onClick)
+        local row = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        row:SetSize(428, 42)
+        row:SetPoint("TOPLEFT", f, "TOPLEFT", 16, btnY)
+        ApplyBackdrop(row, {0.12,0.04,0.04,0.7}, {0.6,0.1,0.1,0.6})
+
+        local lbl = MakeFont(row, 11, "LEFT")
+        lbl:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -5)
+        lbl:SetTextColor(1, 0.35, 0.35, 1)
+        lbl:SetText(label)
+
+        local dsc = MakeFont(row, 9, "LEFT")
+        dsc:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 5)
+        dsc:SetTextColor(0.7, 0.4, 0.4, 1)
+        dsc:SetText(desc)
+
+        local btn = CreateFrame("Button", nil, row, "BackdropTemplate")
+        btn:SetSize(70, 28)
+        btn:SetPoint("RIGHT", row, "RIGHT", -6, 0)
+        ApplyBackdrop(btn, {0.20,0.04,0.04,0.9}, {0.6,0.1,0.1,0.8})
+        local fs = MakeFont(btn, 10, "CENTER")
+        fs:SetPoint("CENTER")
+        fs:SetText("|cffFF4444Run|r")
+        btn:SetScript("OnClick", onClick)
+
+        btnY = btnY - 48
+    end
+
+    -- Shared confirmation dialog for destructive actions — requires typing "Confirm"
+    -- before the delete button activates. Created fresh per invocation.
+    local function MakeDestructiveDialog(title, body, actionLabel, onConfirm)
+        local d = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+        d:SetSize(360, 190)
+        d:SetPoint("CENTER")
+        d:SetFrameStrata("DIALOG")
+        ApplyBackdrop(d, {0.08,0.03,0.03,0.98}, {0.7,0.1,0.1,0.9})
+
+        local titleFs = MakeFont(d, 12, "CENTER")
+        titleFs:SetPoint("TOPLEFT",  d, "TOPLEFT",  0, -14)
+        titleFs:SetPoint("TOPRIGHT", d, "TOPRIGHT", 0, -14)
+        titleFs:SetTextColor(1, 0.35, 0.35, 1)
+        titleFs:SetText(title)
+
+        local sep = d:CreateTexture(nil, "ARTWORK")
+        sep:SetColorTexture(0.6, 0.1, 0.1, 0.4) ; sep:SetHeight(1)
+        sep:SetPoint("TOPLEFT",  d, "TOPLEFT",  10, -30)
+        sep:SetPoint("TOPRIGHT", d, "TOPRIGHT", -10, -30)
+
+        local msg = MakeFont(d, 10, "CENTER")
+        msg:SetPoint("TOPLEFT",  d, "TOPLEFT",  12, -38)
+        msg:SetPoint("TOPRIGHT", d, "TOPRIGHT", -12, -38)
+        msg:SetWordWrap(true)
+        msg:SetTextColor(0.85, 0.55, 0.55, 1)
+        msg:SetText(body)
+
+        local prompt = MakeFont(d, 10, "CENTER")
+        prompt:SetPoint("TOPLEFT",  d, "TOPLEFT",  12, -85)
+        prompt:SetPoint("TOPRIGHT", d, "TOPRIGHT", -12, -85)
+        prompt:SetTextColor(0.7, 0.5, 0.5, 1)
+        prompt:SetText("Type  |cffFFFFFFConfirm|r  to enable delete:")
+
+        local eb = CreateFrame("EditBox", nil, d, "BackdropTemplate")
+        eb:SetSize(200, 24)
+        eb:SetPoint("TOP", d, "TOP", 0, -108)
+        eb:SetFont("Fonts/FRIZQT__.TTF", 12, "")
+        eb:SetAutoFocus(false)
+        eb:SetTextInsets(8, 8, 0, 0)
+        eb:SetJustifyH("CENTER")
+        eb:EnableMouse(true)
+        ApplyBackdrop(eb, {0.12,0.04,0.04,0.95}, {0.5,0.1,0.1,0.8})
+        eb:SetScript("OnEscapePressed", function() eb:SetText("") ; d:Hide() end)
+
+        local cancelBtn = MakeButton(d, 100, 26, "Cancel")
+        cancelBtn:SetPoint("BOTTOMLEFT", d, "BOTTOMLEFT", 12, 10)
+        cancelBtn:SetScript("OnClick", function() eb:SetText("") ; d:Hide() end)
+
+        local delBtn = CreateFrame("Button", nil, d, "BackdropTemplate")
+        delBtn:SetSize(150, 26)
+        delBtn:SetPoint("BOTTOMRIGHT", d, "BOTTOMRIGHT", -12, 10)
+        local delFs = MakeFont(delBtn, 10, "CENTER")
+        delFs:SetPoint("CENTER")
+        delFs:SetText(actionLabel)
+
+        local function Refresh()
+            if eb:GetText() == "Confirm" then
+                ApplyBackdrop(delBtn, {0.30,0.04,0.04,0.95}, {0.7,0.1,0.1,0.9})
+                delFs:SetTextColor(1, 0.4, 0.4, 1)
+            else
+                ApplyBackdrop(delBtn, {0.18,0.04,0.04,0.5}, {0.35,0.08,0.08,0.4})
+                delFs:SetTextColor(0.4, 0.15, 0.15, 1)
+            end
+        end
+
+        delBtn:SetScript("OnClick", function()
+            if eb:GetText() == "Confirm" then
+                eb:SetText("") ; d:Hide()
+                onConfirm()
+            end
+        end)
+        eb:SetScript("OnTextChanged", Refresh)
+        Refresh()
+        d:Show()
+    end
+
     -- ── Verify Tools ─────────────────────────────────────────────────────────
     AddSectionLabel("Verify Tools", {0.00, 1.00, 0.60})
 
@@ -1871,71 +1976,79 @@ function UI.ShowDebugWindow()
     -- ── Recovery Tools ───────────────────────────────────────────────────────
     AddSectionLabel("Recovery Tools", {1.0, 0.5, 0.0})
 
-    AddDebugBtn("Boss Board Ingest",  "Seed Boss Board from encounter history",                      "debug bossboard ingest")
-    AddDebugBtn("Backfill M+ Keys",   "Patch Mythic dungeon history with season best key levels",    "debug backfill keys")
+    AddDebugBtn("Boss Board Ingest",   "Seed Boss Board from encounter history",                      "debug bossboard ingest")
+    AddDebugBtn("Fix Character Name",  "If you renamed your character, run this",                     "debug fixname")
+    AddDebugBtn("Backfill M+ Keys",    "Patch Mythic dungeon history with season best key levels",    "debug backfill keys")
     AddDebugBtn("Clean Payload",      "Re-broadcast all your best scores with correct format",        "clean payload")
 
-    -- Clear History — buried here intentionally, requires confirmation
-    local clearRow = CreateFrame("Frame", nil, f, "BackdropTemplate")
-    clearRow:SetSize(428, 42)
-    clearRow:SetPoint("TOPLEFT", f, "TOPLEFT", 16, btnY)
-    ApplyBackdrop(clearRow, {0.12,0.04,0.04,0.7}, {0.6,0.1,0.1,0.6})
-
-    local clearLbl = MakeFont(clearRow, 11, "LEFT")
-    clearLbl:SetPoint("TOPLEFT", clearRow, "TOPLEFT", 8, -5)
-    clearLbl:SetTextColor(1, 0.35, 0.35, 1)
-    clearLbl:SetText("Clear Fight History")
-
-    local clearDesc = MakeFont(clearRow, 9, "LEFT")
-    clearDesc:SetPoint("BOTTOMLEFT", clearRow, "BOTTOMLEFT", 8, 5)
-    clearDesc:SetTextColor(0.7, 0.4, 0.4, 1)
-    clearDesc:SetText("Permanently deletes all recorded encounters — this cannot be undone")
-
-    local clearBtn = CreateFrame("Button", nil, clearRow, "BackdropTemplate")
-    clearBtn:SetSize(70, 28)
-    clearBtn:SetPoint("RIGHT", clearRow, "RIGHT", -6, 0)
-    ApplyBackdrop(clearBtn, {0.20,0.04,0.04,0.9}, {0.6,0.1,0.1,0.8})
-    local clearFs = MakeFont(clearBtn, 10, "CENTER")
-    clearFs:SetPoint("CENTER")
-    clearFs:SetText("|cffFF4444Run|r")
-    clearBtn:SetScript("OnClick", function()
-        -- Confirmation dialog
-        local dialog = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
-        dialog:SetSize(340, 130)
-        dialog:SetPoint("CENTER")
-        dialog:SetFrameStrata("DIALOG")
-        dialog:SetMovable(false)
-        ApplyBackdrop(dialog, {0.08,0.04,0.04,0.98}, {0.8,0.1,0.1,0.9})
-
-        local msg = MakeFont(dialog, 11, "CENTER")
-        msg:SetPoint("TOPLEFT",  dialog, "TOPLEFT",  10, -18)
-        msg:SetPoint("TOPRIGHT", dialog, "TOPRIGHT", -10, -18)
-        msg:SetWordWrap(true)
-        msg:SetText("|cffFF4444This will permanently delete all fight history.|r\nThis action cannot be undone.")
-
-        local confirmBtn = MakeButton(dialog, 120, 26, "Yes, Delete All")
-        confirmBtn:SetPoint("BOTTOMLEFT", dialog, "BOTTOMLEFT", 16, 12)
-        confirmBtn:SetScript("OnClick", function()
-            if MidnightSenseiCharDB then
-                MidnightSenseiCharDB.encounters = {}
-                if MS.Analytics then MS.Analytics.LastResult = nil end
-                print("|cffFF4444Midnight Sensei:|r Fight history cleared.")
-            end
-            dialog:Hide()
-            f:Hide()
-            if historyFrame and historyFrame:IsShown() then
-                RefreshHistoryContent()
-            end
+    AddDestructiveBtn("Clear Boss Board",
+        "Permanently wipes all personal boss best records — this cannot be undone",
+        function()
+            MakeDestructiveDialog(
+                "Clear Boss Board",
+                "This will permanently delete all Boss Board records for this character.\nThis action cannot be undone.",
+                "Delete Boss Board",
+                function()
+                    local cdb = MidnightSenseiCharDB
+                    local adb = MidnightSenseiDB
+                    if cdb and cdb.bests then
+                        cdb.bests.bossBests = {}
+                    end
+                    if adb and adb.bossBoardShared then
+                        local myName  = UnitName("player") or ""
+                        local myRealm = GetRealmName() or ""
+                        for key, snap in pairs(adb.bossBoardShared) do
+                            if snap.charName == myName and snap.realmName == myRealm then
+                                adb.bossBoardShared[key] = nil
+                            end
+                        end
+                    end
+                    if MS.BossBoard and MS.BossBoard.RefreshUI then
+                        MS.BossBoard.RefreshUI()
+                    end
+                    print("|cffFF4444Midnight Sensei:|r Boss Board cleared.")
+                end
+            )
         end)
 
-        local cancelBtn = MakeButton(dialog, 100, 26, "Cancel")
-        cancelBtn:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -16, 12)
-        cancelBtn:SetScript("OnClick", function() dialog:Hide() end)
-
-        dialog:Show()
-    end)
-
-    btnY = btnY - 48
+    AddDestructiveBtn("Clear Fight History",
+        "Permanently deletes all recorded encounters — this cannot be undone",
+        function()
+            MakeDestructiveDialog(
+                "Clear Fight History",
+                "This will permanently delete all recorded fight encounters for this character.\nThis action cannot be undone.",
+                "Delete Fight History",
+                function()
+                    if MidnightSenseiCharDB then
+                        MidnightSenseiCharDB.encounters = {}
+                        if MS.Analytics then MS.Analytics.LastResult = nil end
+                    end
+                    -- Also remove this character's entries from the legacy account-wide
+                    -- store. MigrateEncounters runs at SESSION_READY and will re-populate
+                    -- CharDB from this source if it's not cleared alongside CharDB.
+                    if MidnightSenseiDB and MidnightSenseiDB.encounters then
+                        local myName  = UnitName("player") or ""
+                        local myRealm = GetRealmName() or ""
+                        local kept = {}
+                        for _, enc in ipairs(MidnightSenseiDB.encounters) do
+                            if not ((enc.charName or "") == myName and (enc.realmName or "") == myRealm) then
+                                table.insert(kept, enc)
+                            end
+                        end
+                        MidnightSenseiDB.encounters = kept
+                    end
+                    f:Hide()
+                    if historyFrame and historyFrame:IsShown() then
+                        RefreshHistoryContent()
+                    end
+                    if MS.UI then
+                        if MS.UI.HideMainFrame then MS.UI.HideMainFrame() end
+                        if MS.UI.ShowMainFrame then MS.UI.ShowMainFrame() end
+                    end
+                    print("|cffFF4444Midnight Sensei:|r Fight history cleared.")
+                end
+            )
+        end)
 
     -- Resize frame to fit content
     f:SetHeight(math.abs(btnY) + 16)
