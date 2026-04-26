@@ -141,6 +141,8 @@ Blizzard restricted enemy unit aura reads in Midnight 12.0.
 
 That means Midnight Sensei cannot reliably score enemy target debuffs the same way older versions of the game allowed. Effects such as target-side debuffs may still appear as guidance in notes or priority feedback, but they are **not scored directly** unless the game provides a safe way to track them.
 
+A separate restriction also affects player self-buff aura scanning. Midnight 12.0 blocks spell ID comparisons on aura table data when addon code is active, which caused error spam and made aura-based uptime tracking silently non-functional. As of v1.5.5, self-buff uptime tracking no longer uses aura scanning — it uses cast events instead, which are not affected by this restriction. Player self-buff uptime continues to be scored normally.
+
 What still works normally:
 
 - Player self-buffs
@@ -150,7 +152,7 @@ What still works normally:
 - Proc handling
 - Boss encounter detection
 
-Because of that restriction, some specs receive neutral handling in places where enemy debuff tracking would otherwise be required.
+Because of these restrictions, some specs receive neutral handling in places where aura-based tracking would otherwise be required.
 
 ## How grading works
 
@@ -246,6 +248,7 @@ It is not trying to replace Warcraft Logs or other deep analysis tools. It is tr
 
 ## Recent highlights
 
+- Self-buff uptime tracking rewritten to use cast events — aura scanning for player buffs was blocked by Midnight 12.0 taint restrictions and has been fully replaced (v1.5.5)
 - Kill and wipe tracking — fight history tags boss kills [K] and wipes [W]; averages and bests use kills only
 - Alt spell ID support — abilities that fire different spell IDs under certain hero talent paths are tracked correctly
 - Talent-gated spell suppression — replacement talents automatically suppress the ability they replace so unused CDs are not penalized incorrectly
