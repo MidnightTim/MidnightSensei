@@ -11,7 +11,8 @@ Core.RegisterSpec(10, {
     -- Ironskin Brew (215479) removed from uptimeBuffs — not in Midnight 12.0 talent tree or spell list
     -- Breath of Fire (115181) added to rotational — nodeID 101069 non-PASSIVE ACTIVE
     -- Tiger Palm (100780) added to rotational — baseline confirmed spell list; primary filler/energy builder
-    -- Blackout Kick (100784) added to rotational — baseline confirmed spell list; core filler
+    -- Blackout Kick (100784) added to rotational — baseline confirmed spell list; core filler; combat cast ID 205523 (altId)
+    -- Expel Harm (322101) added to rotational — baseline confirmed; 5s CD energy spender, consumes Healing Spheres (Gift of the Ox)
     [1] = {
         name = "Brewmaster", role = "TANK",
         resourceType = 1, resourceLabel = "ENERGY", overcapAt = 100,
@@ -21,6 +22,7 @@ Core.RegisterSpec(10, {
             { id = 325153,  label = "Exploding Keg",     expectedUses = "on CD"         },  -- nodeID 101197 non-PASSIVE ACTIVE
             { id = 1241059, label = "Celestial Infusion",expectedUses = "on CD"         },  -- nodeID 101067 non-PASSIVE ACTIVE
             { id = 116705,  label = "Spear Hand Strike", expectedUses = "situational",  isInterrupt = true },  -- nodeID 101152 non-PASSIVE ACTIVE
+            { id = 116847,  label = "Rushing Jade Wind",  expectedUses = "situational",  talentGated = true, isUtility = true, altIds = {148187} },
             -- Celestial Brew (322507) removed — not in talent tree or spell list
         },
         uptimeBuffs = {},
@@ -29,7 +31,8 @@ Core.RegisterSpec(10, {
             { id = 119582, label = "Purifying Brew", minFightSeconds = 20 },  -- nodeID 101064 non-PASSIVE ACTIVE; clears Heavy/Severe stagger
             { id = 115181, label = "Breath of Fire", minFightSeconds = 15 },  -- nodeID 101069 non-PASSIVE ACTIVE; AoE damage and debuff
             { id = 100780, label = "Tiger Palm",     minFightSeconds = 15 },  -- baseline confirmed spell list; primary filler
-            { id = 100784, label = "Blackout Kick",  minFightSeconds = 15 },  -- baseline confirmed spell list; core filler
+            { id = 100784, label = "Blackout Kick",  minFightSeconds = 15, altIds = {205523} },  -- baseline confirmed spell list; core filler
+            { id = 322101, label = "Expel Harm",     minFightSeconds = 15 },  -- baseline; 5s CD, consumes Healing Spheres (Gift of the Ox)
         },
         tankMetrics = { targetMitigationUptime = 60 },
         priorityNotes = {
@@ -37,6 +40,7 @@ Core.RegisterSpec(10, {
             "Keg Smash on cooldown — primary Brew charge generator and damage",
             "Breath of Fire on cooldown — AoE damage and debuff",
             "Tiger Palm and Blackout Kick as fillers between cooldowns",
+            "Expel Harm on cooldown — consumes Healing Spheres (Gift of the Ox) for self-healing",
             "Invoke Niuzao for heavy sustained damage phases",
             "Exploding Keg and Celestial Infusion on cooldown",
             "Fortifying Brew for true emergencies",
@@ -112,7 +116,7 @@ Core.RegisterSpec(10, {
             { id = 107428, label = "Rising Sun Kick",       minFightSeconds = 15 },  -- nodeID 101186 non-PASSIVE ACTIVE
             { id = 152175, label = "Whirling Dragon Punch", minFightSeconds = 15, talentGated = true },  -- nodeID 101207 non-PASSIVE ACTIVE
             { id = 100780, label = "Tiger Palm",            minFightSeconds = 15 },  -- baseline confirmed WW spell list
-            { id = 100784, label = "Blackout Kick",         minFightSeconds = 15 },  -- baseline confirmed WW spell list
+            { id = 100784, label = "Blackout Kick",         minFightSeconds = 15, altIds = {205523} },  -- baseline confirmed WW spell list
         },
         priorityNotes = {
             "Fists of Fury on cooldown — highest damage ability",

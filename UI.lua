@@ -1395,9 +1395,16 @@ function UI.ShowVerifyExport(text)
         -- Close button
         local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         closeBtn:SetSize(80,22)
-        closeBtn:SetPoint("BOTTOM", f,"BOTTOM", 0, 8)
+        closeBtn:SetPoint("BOTTOM", f,"BOTTOM", 44, 8)
         closeBtn:SetText("Close")
         closeBtn:SetScript("OnClick", function() f:Hide() end)
+
+        -- Compare button
+        local cmpBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        cmpBtn:SetSize(80,22)
+        cmpBtn:SetPoint("BOTTOM", f,"BOTTOM", -44, 8)
+        cmpBtn:SetText("Compare")
+        cmpBtn:SetScript("OnClick", function() UI.ShowVerifyCompare() end)
 
         f.editBox = eb
         verifyExportFrame = f
@@ -1417,6 +1424,215 @@ function UI.ToggleVerifyExport()
     elseif MS.Core and MS.Core.SlashHandler then
         MS.Core.SlashHandler("verify report")
     end
+end
+
+--------------------------------------------------------------------------------
+-- Verify Compare Window
+-- Side-by-side view of two verify snapshots. Each panel has < > cycle buttons
+-- to select from the snapshot list (current session + CharDB.verifyHistory).
+--------------------------------------------------------------------------------
+local verifyCompareFrame = nil
+
+local function GetVerifySnapshotList()
+    local list = {}
+    table.insert(list, {
+        label      = "\226\128\162 Current Session",
+        seenSpells = (MS.Core and MS.Core.VerifySeenSpells) or {},
+    })
+    local cdb = MidnightSenseiCharDB
+    local history = (cdb and cdb.verifyHistory) or {}
+    for i = #history, 1, -1 do
+        local e = history[i]
+        local d = date("%m/%d %H:%M", e.timestamp or 0)
+        table.insert(list, {
+            label      = "Fight #" .. i .. "  " .. (e.specKey or "?") .. "  " .. d .. (e.zone ~= "" and ("  " .. e.zone) or ""),
+            seenSpells = e.seenSpells or {},
+        })
+    end
+    return list
+end
+
+local function BuildPanelText(seenSpells)
+    if not MS.Core or not MS.Core.BuildVerifyReportLines then return "Report builder not available." end
+    local lines = MS.Core.BuildVerifyReportLines(seenSpells)
+    return table.concat(lines, "\n")
+end
+
+function UI.ShowVerifyCompare()
+    if not verifyCompareFrame then
+        local f = CreateFrame("Frame", "MidnightSenseiVerifyCompare", UIParent, "BackdropTemplate")
+        f:SetSize(1100, 460)
+        f:SetPoint("CENTER")
+        f:SetFrameStrata("HIGH")
+        f:SetMovable(true)
+        f:SetClampedToScreen(true)
+        f:EnableMouse(true)
+        if f.SetBackdrop then
+            f:SetBackdrop({
+                bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
+                edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                tile=true, tileSize=16, edgeSize=12,
+                insets={left=2,right=2,top=2,bottom=2}
+            })
+            f:SetBackdropColor(0.06,0.06,0.10,0.97)
+            f:SetBackdropBorderColor(1.00,0.65,0.00,0.90)
+        end
+
+        -- Title bar
+        local tBar = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        tBar:SetPoint("TOPLEFT",  f,"TOPLEFT",  0, 0)
+        tBar:SetPoint("TOPRIGHT", f,"TOPRIGHT", 0, 0)
+        tBar:SetHeight(26)
+        if tBar.SetBackdrop then
+            tBar:SetBackdrop({bgFile="Interface/Tooltips/UI-Tooltip-Background",
+                              edgeFile="Interface/Tooltips/UI-Tooltip-Border",
+                              tile=true,tileSize=16,edgeSize=12,
+                              insets={left=2,right=2,top=2,bottom=2}})
+            tBar:SetBackdropColor(0.10,0.10,0.18,1)
+            tBar:SetBackdropBorderColor(1.00,0.65,0.00,0.90)
+        end
+        tBar:EnableMouse(true)
+        tBar:RegisterForDrag("LeftButton")
+        tBar:SetScript("OnDragStart", function() f:StartMoving() end)
+        tBar:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
+
+        local title = tBar:CreateFontString(nil,"OVERLAY")
+        title:SetFont("Fonts/FRIZQT__.TTF", 12, "")
+        title:SetPoint("CENTER", tBar, "CENTER")
+        title:SetTextColor(1.00,0.65,0.00,1)
+        title:SetText("Midnight Sensei — Verify Compare")
+
+        local xBtn = CreateFrame("Button", nil, tBar)
+        xBtn:SetSize(18,18)
+        xBtn:SetPoint("RIGHT", tBar, "RIGHT", -4, 0)
+        local xFs = xBtn:CreateFontString(nil,"OVERLAY")
+        xFs:SetFont("Fonts/FRIZQT__.TTF",11,"")
+        xFs:SetPoint("CENTER")
+        xFs:SetText("X")
+        xFs:SetTextColor(1,0.4,0.4,1)
+        xBtn:SetScript("OnClick", function() f:Hide() end)
+
+        -- Panel builder: side = "LEFT" or "RIGHT", xOffset for anchor
+        local panels = {}
+        local function MakePanel(side, xAnchor)
+            local p = {}
+            local PANEL_W = 530
+
+            -- Selector row
+            local sRow = CreateFrame("Frame", nil, f, "BackdropTemplate")
+            if side == "LEFT" then
+                sRow:SetPoint("TOPLEFT",  f, "TOPLEFT",  8, -30)
+            else
+                sRow:SetPoint("TOPLEFT",  f, "TOP",      4, -30)
+            end
+            sRow:SetSize(PANEL_W, 22)
+
+            local prevBtn = CreateFrame("Button", nil, sRow, "UIPanelButtonTemplate")
+            prevBtn:SetSize(24,20)
+            prevBtn:SetPoint("LEFT", sRow, "LEFT", 0, 0)
+            prevBtn:SetText("<")
+
+            local nextBtn = CreateFrame("Button", nil, sRow, "UIPanelButtonTemplate")
+            nextBtn:SetSize(24,20)
+            nextBtn:SetPoint("RIGHT", sRow, "RIGHT", 0, 0)
+            nextBtn:SetText(">")
+
+            local label = sRow:CreateFontString(nil,"OVERLAY")
+            label:SetFont("Fonts/FRIZQT__.TTF", 9, "")
+            label:SetPoint("LEFT",  prevBtn, "RIGHT", 4, 0)
+            label:SetPoint("RIGHT", nextBtn, "LEFT",  -4, 0)
+            label:SetJustifyH("CENTER")
+            label:SetTextColor(0.85,0.85,0.75,1)
+
+            -- Scrollable editbox
+            local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+            if side == "LEFT" then
+                sf:SetPoint("TOPLEFT",     f, "TOPLEFT",   8, -56)
+                sf:SetPoint("BOTTOMRIGHT", f, "BOTTOM",   -18, 36)
+            else
+                sf:SetPoint("TOPLEFT",  f, "TOP",        4,  -56)
+                sf:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -28, 36)
+            end
+
+            local eb = CreateFrame("EditBox", nil, sf)
+            eb:SetMultiLine(true)
+            eb:SetFontObject(ChatFontNormal)
+            eb:SetWidth(PANEL_W - 24)
+            eb:SetAutoFocus(false)
+            eb:SetTextInsets(4,4,4,4)
+            eb:EnableMouse(true)
+            eb:SetScript("OnEscapePressed", function() f:Hide() end)
+            sf:SetScrollChild(eb)
+
+            p.label   = label
+            p.editBox = eb
+            p.prevBtn = prevBtn
+            p.nextBtn = nextBtn
+            p.index   = (side == "LEFT") and 2 or 1  -- default: left=most recent saved, right=current session
+
+            local function Refresh()
+                local snapList = GetVerifySnapshotList()
+                if #snapList == 0 then return end
+                p.index = math.max(1, math.min(p.index, #snapList))
+                local snap = snapList[p.index]
+                p.label:SetText(snap.label)
+                local plain = BuildPanelText(snap.seenSpells)
+                plain = plain:gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r",""):gsub("|n","\n")
+                p.editBox:SetText(plain)
+            end
+            p.Refresh = Refresh
+
+            prevBtn:SetScript("OnClick", function()
+                p.index = p.index - 1
+                local snapList = GetVerifySnapshotList()
+                if p.index < 1 then p.index = #snapList end
+                p.Refresh()
+            end)
+            nextBtn:SetScript("OnClick", function()
+                p.index = p.index + 1
+                local snapList = GetVerifySnapshotList()
+                if p.index > #snapList then p.index = 1 end
+                p.Refresh()
+            end)
+
+            return p
+        end
+
+        panels[1] = MakePanel("LEFT",  0)
+        panels[2] = MakePanel("RIGHT", 0)
+        panels[2].index = 1  -- right panel defaults to current session
+
+        -- Divider line
+        local div = f:CreateTexture(nil,"ARTWORK")
+        div:SetWidth(1)
+        div:SetPoint("TOP",    f, "TOP",    0, -30)
+        div:SetPoint("BOTTOM", f, "BOTTOM", 0,  36)
+        div:SetColorTexture(1,0.65,0,0.4)
+
+        -- Close button
+        local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        closeBtn:SetSize(80,22)
+        closeBtn:SetPoint("BOTTOM", f,"BOTTOM", 0, 8)
+        closeBtn:SetText("Close")
+        closeBtn:SetScript("OnClick", function() f:Hide() end)
+
+        f.panels = panels
+        verifyCompareFrame = f
+    end
+
+    -- Close the single-report window if open
+    if verifyExportFrame and verifyExportFrame:IsShown() then
+        verifyExportFrame:Hide()
+    end
+
+    -- Refresh both panels with latest snapshot list each time window opens
+    local snapList = GetVerifySnapshotList()
+    for _, p in ipairs(verifyCompareFrame.panels) do
+        if p.index > #snapList then p.index = #snapList end
+        if p.index < 1 then p.index = 1 end
+        p.Refresh()
+    end
+    verifyCompareFrame:Show()
 end
 
 --------------------------------------------------------------------------------

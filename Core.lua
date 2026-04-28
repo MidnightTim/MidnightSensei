@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.6"
+    Core.VERSION = ver or "1.5.7"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -148,6 +148,7 @@ function Core.InitSavedVariables()
         weeklyRaidBest     = 0,
         weeklyDelveBest    = 0,
     }
+    cdb.verifyHistory  = cdb.verifyHistory  or {}
     -- Spell and talent snapshots — populated on SPELLS_CHANGED / PLAYER_TALENT_UPDATE
     -- nil until first snapshot is taken; no DB bloat until actually triggered
     -- cdb.spellSnapshot  = { timestamp, spec, spells[] }
@@ -289,6 +290,23 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.7",
+        tagline = "Brewmaster Monk Tracking, Verify History & Compare, Weekly Reset Fix",
+        date    = "April 2026",
+        changes = {
+            -- Brewmaster Monk
+            "Brewmaster: Blackout Kick alt ID fix — combat cast fires as 205523 not spellbook ID 100784; altIds={205523} added (also applied to Windwalker)",
+            "Brewmaster: Expel Harm (322101) added to rotational spells — 5s CD energy spender that consumes Gift of the Ox Healing Spheres",
+            "Brewmaster: Rushing Jade Wind (116847) added as isUtility talentGated — tracked but never scored; combat cast alt ID 148187 added",
+            -- Verify system
+            "Verify: VerifySeenSpells and VerifySeenAuras now reset on every new COMBAT_START — previously accumulated across multiple fights and talent swaps",
+            "Verify: fight snapshots auto-saved to CharDB.verifyHistory (cap 20) on COMBAT_END when verify mode is active",
+            "Verify: Compare window added — side-by-side panel view of any two saved snapshots; < > buttons to cycle; opened from Verify Report window",
+            -- Weekly reset
+            "Weekly Reset: RESET_OFFSET corrected from Tuesday 00:00 UTC to Tuesday 14:00 UTC — was firing announcement a day early for US players",
+        },
+    },
     {
         version = "1.5.6",
         tagline = "Balance Druid Tracking Fixes, Verify Report Crash, Debug Tools Overhaul",
@@ -1375,7 +1393,7 @@ Core.ENCOUNTER_ADJUSTMENTS = {
 -- Weekly Reset Detection
 --------------------------------------------------------------------------------
 local WEEK_SECONDS    = 604800
-local RESET_OFFSET    = 5 * 86400  -- Unix epoch is Thursday; subtract 5 days to align week start to Tuesday 00:00 UTC
+local RESET_OFFSET    = 5 * 86400 + 14 * 3600  -- Tue 14:00 UTC reset; matches GetWeekKey() in Leaderboard.lua
 
 local function GetWeekBucket()
     local t = C_DateAndTime and C_DateAndTime.GetServerTime and C_DateAndTime.GetServerTime() or time()
@@ -1460,6 +1478,10 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
             difficultyID   = diffID    or 0,
             difficultyName = diffName  or "",
         }
+        if Core.VerifyMode then
+            Core.VerifySeenSpells = {}
+            Core.VerifySeenAuras  = {}
+        end
         Core.Emit(Core.EVENTS.COMBAT_START)
 
     elseif event == "PLAYER_REGEN_ENABLED" then
@@ -1740,6 +1762,183 @@ end)
 Core.ScheduleSnapshots = ScheduleSnapshots
 
 --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Verify Report Builder
+-- Reusable: called by the slash handler (live data) and by the compare window
+-- (historical snapshots). seenSpells is a {[spellID]=count} table.
+--------------------------------------------------------------------------------
+function Core.BuildVerifyReportLines(seenSpells)
+    local spec = Core.ActiveSpec
+    if not spec then return { "No spec loaded." } end
+    seenSpells = seenSpells or {}
+
+    local lines = {}
+    local function L(s) table.insert(lines, s) end
+
+    L("Midnight Sensei — Verify Report")
+    L("Spec: " .. (spec.className or "?") .. " / " .. (spec.name or "?"))
+    L("Version: " .. Core.VERSION)
+    L(string.rep("-", 50))
+    L("SPELL ID CHECK (majorCooldowns + rotationalSpells)")
+
+    local allTracked = {}
+    local altIdOwner = {}
+    local function TrackEntry(e, bucket)
+        allTracked[e.id] = {
+            label             = e.label,
+            bucket            = bucket,
+            talentGated       = e.talentGated,
+            suppressIfTalent  = e.suppressIfTalent,
+            combatGated       = e.combatGated,
+            isInterrupt       = e.isInterrupt,
+            isUtility         = e.isUtility,
+            displayOnly       = e.displayOnly,
+            healerConditional = e.healerConditional,
+            altIds            = e.altIds,
+        }
+        if e.altIds then
+            for _, altId in ipairs(e.altIds) do altIdOwner[altId] = e.id end
+        end
+    end
+    for _, cd in ipairs(spec.majorCooldowns   or {}) do TrackEntry(cd, "CD")  end
+    for _, rs in ipairs(spec.rotationalSpells or {}) do TrackEntry(rs, "ROT") end
+
+    local function BuildFlags(info)
+        local f = {}
+        if info.talentGated       then table.insert(f, "talentGated")  end
+        if info.combatGated       then table.insert(f, "combatGated")  end
+        if info.suppressIfTalent  then table.insert(f, "suppress:"..info.suppressIfTalent) end
+        if info.isInterrupt       then table.insert(f, "interrupt")    end
+        if info.isUtility         then table.insert(f, "utility")      end
+        if info.displayOnly       then table.insert(f, "displayOnly")  end
+        if info.healerConditional then table.insert(f, "healerCond")   end
+        if info.altIds then
+            local ids = {}
+            for _, aid in ipairs(info.altIds) do table.insert(ids, tostring(aid)) end
+            table.insert(f, "alt:"..table.concat(ids, ","))
+        end
+        return #f > 0 and ("  ["..table.concat(f, "] [").."]") or ""
+    end
+
+    for id, info in pairs(allTracked) do
+        local fired = seenSpells[id]
+        if not fired and info.altIds then
+            for _, altId in ipairs(info.altIds) do
+                if seenSpells[altId] then fired = seenSpells[altId]; break end
+            end
+        end
+        local skipReason
+        if info.talentGated and not info.combatGated then
+            if not IsPlayerSpell(id) then skipReason = "not talented" end
+        end
+        if not skipReason and info.suppressIfTalent then
+            if IsPlayerSpell(info.suppressIfTalent) then
+                local sName = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(info.suppressIfTalent) or tostring(info.suppressIfTalent)
+                skipReason = "suppressed by " .. (sName or tostring(info.suppressIfTalent))
+            end
+        end
+        local flags = BuildFlags(info)
+        if fired then
+            local altNote = ""
+            if not seenSpells[id] and info.altIds then
+                for _, altId in ipairs(info.altIds) do
+                    if seenSpells[altId] then altNote = " (via alt id=" .. altId .. ")"; break end
+                end
+            end
+            L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]%s%s",
+              info.label, id, fired, info.bucket, altNote, flags))
+        elseif skipReason then
+            L(string.format("  SKIP  %-30s id=%-8d %s  [%s]%s",
+              info.label, id, skipReason, info.bucket, flags))
+        else
+            L(string.format("  FAIL  %-30s id=%-8d NOT SEEN    [%s]%s",
+              info.label, id, info.bucket, flags))
+        end
+    end
+
+    L("")
+    L("AURA CHECK (procBuffs + uptimeBuffs)")
+    local allAuras = {}
+    for _, a in ipairs(spec.procBuffs   or {}) do allAuras[a.id] = { label=a.label, bucket="procBuffs",   entry=a } end
+    for _, a in ipairs(spec.uptimeBuffs or {}) do allAuras[a.id] = { label=a.label, bucket="uptimeBuffs", entry=a } end
+    if not next(allAuras) then
+        L("  (no auras defined for this spec)")
+    else
+        for id, info in pairs(allAuras) do
+            local entry = info.entry
+            if info.bucket == "uptimeBuffs" then
+                local castIds = entry.castSpellIds or (entry.castSpellId and {entry.castSpellId}) or {}
+                local wasSeen = false
+                for _, cid in ipairs(castIds) do
+                    if seenSpells[cid] then wasSeen = true; break end
+                end
+                if wasSeen then
+                    L(string.format("  SEEN  %-30s id=%-8d cast seen         [%s]", info.label, id, info.bucket))
+                elseif #castIds > 0 then
+                    L(string.format("  FAIL  %-30s id=%-8d NOT DETECTED      [%s]", info.label, id, info.bucket))
+                else
+                    L(string.format("  INFO  %-30s id=%-8d no castSpellId    [%s]", info.label, id, info.bucket))
+                end
+            else
+                L(string.format("  FAIL  %-30s id=%-8d NOT DETECTED      [%s]", info.label, id, info.bucket))
+            end
+        end
+    end
+
+    L("")
+    local unknownCasts = {}
+    for id, count in pairs(seenSpells) do
+        if not allTracked[id] and not altIdOwner[id] then table.insert(unknownCasts, {id=id, count=count}) end
+    end
+    if #unknownCasts > 0 then
+        table.sort(unknownCasts, function(a, b) return a.count > b.count end)
+        L("OTHER SPELLS CAST THIS SESSION (top 10 by count)")
+        for i = 1, math.min(10, #unknownCasts) do
+            local e = unknownCasts[i]
+            local spellName = "unknown"
+            if C_Spell and C_Spell.GetSpellName then
+                local ok, n = pcall(C_Spell.GetSpellName, e.id)
+                if ok and n then spellName = n end
+            end
+            L(string.format("    id=%-8d  %-30s  x%d", e.id, spellName, e.count))
+        end
+    end
+
+    return lines
+end
+
+--------------------------------------------------------------------------------
+-- Verify Snapshot Save
+-- Called at COMBAT_END when verify mode is active. Saves seenSpells to
+-- CharDB.verifyHistory (rolling cap of 20 per character).
+--------------------------------------------------------------------------------
+function Core.SaveVerifySnapshot()
+    if not Core.VerifyMode then return end
+    if not Core.ActiveSpec then return end
+    if not Core.VerifySeenSpells or not next(Core.VerifySeenSpells) then return end
+    local cdb = MidnightSenseiCharDB
+    if not cdb then return end
+    cdb.verifyHistory = cdb.verifyHistory or {}
+
+    local snap = {}
+    for k, v in pairs(Core.VerifySeenSpells) do snap[k] = v end
+
+    local spec = Core.ActiveSpec
+    local ctx  = Core.CombatInstanceContext or {}
+    table.insert(cdb.verifyHistory, {
+        timestamp  = time(),
+        specKey    = (spec.className or "?") .. " / " .. (spec.name or "?"),
+        zone       = ctx.instanceName or "",
+        seenSpells = snap,
+    })
+    while #cdb.verifyHistory > 20 do table.remove(cdb.verifyHistory, 1) end
+end
+
+Core.On(Core.EVENTS.COMBAT_END, function()
+    Core.SaveVerifySnapshot()
+end)
+
+--------------------------------------------------------------------------------
 -- Slash Commands
 --------------------------------------------------------------------------------
 SLASH_MIDNIGHTSENSEI1 = "/ms"
@@ -1835,8 +2034,8 @@ local function MSSlashHandler(msg)
         end
     elseif msg == "verify" then
         Core.VerifyMode = not Core.VerifyMode
-        Core.VerifySeenSpells  = Core.VerifySeenSpells  or {}
-        Core.VerifySeenAuras   = Core.VerifySeenAuras   or {}
+        Core.VerifySeenSpells = Core.VerifySeenSpells or {}
+        Core.VerifySeenAuras  = Core.VerifySeenAuras  or {}
         if Core.VerifyMode then
             Core.VerifySeenSpells = {}
             Core.VerifySeenAuras  = {}
@@ -1848,156 +2047,12 @@ local function MSSlashHandler(msg)
         if MS.UI and MS.UI.UpdateVerifyBar then MS.UI.UpdateVerifyBar() end
 
     elseif msg == "verify report" then
-        local spec = Core.ActiveSpec
-        if not spec then
+        if not Core.ActiveSpec then
             print("|cff00D1FFMidnight Sensei:|r No spec loaded.")
         else
-            local lines = {}
-            local function L(s) table.insert(lines, s) end
-
-            L("Midnight Sensei — Verify Report")
-            L("Spec: " .. (spec.className or "?") .. " / " .. (spec.name or "?"))
-            L("Version: " .. Core.VERSION)
-            L(string.rep("-", 50))
-
-            L("SPELL ID CHECK (majorCooldowns + rotationalSpells)")
-            local allTracked = {}
-            local altIdOwner = {}  -- altId → primary id, so altIds are excluded from OTHER SPELLS
-            local function TrackEntry(e, bucket)
-                allTracked[e.id] = {
-                    label            = e.label,
-                    bucket           = bucket,
-                    talentGated      = e.talentGated,
-                    suppressIfTalent = e.suppressIfTalent,
-                    combatGated      = e.combatGated,
-                    isInterrupt      = e.isInterrupt,
-                    isUtility        = e.isUtility,
-                    displayOnly      = e.displayOnly,
-                    healerConditional= e.healerConditional,
-                    altIds           = e.altIds,
-                }
-                if e.altIds then
-                    for _, altId in ipairs(e.altIds) do altIdOwner[altId] = e.id end
-                end
-            end
-            for _, cd in ipairs(spec.majorCooldowns   or {}) do TrackEntry(cd, "CD")  end
-            for _, rs in ipairs(spec.rotationalSpells or {}) do TrackEntry(rs, "ROT") end
-
-            -- Build compact flag annotation string for a tracked entry
-            local function BuildFlags(info)
-                local f = {}
-                if info.talentGated       then table.insert(f, "talentGated")  end
-                if info.combatGated       then table.insert(f, "combatGated")  end
-                if info.suppressIfTalent  then table.insert(f, "suppress:"..info.suppressIfTalent) end
-                if info.isInterrupt       then table.insert(f, "interrupt")    end
-                if info.isUtility         then table.insert(f, "utility")      end
-                if info.displayOnly       then table.insert(f, "displayOnly")  end
-                if info.healerConditional then table.insert(f, "healerCond")   end
-                if info.altIds then
-                    local ids = {}
-                    for _, aid in ipairs(info.altIds) do table.insert(ids, tostring(aid)) end
-                    table.insert(f, "alt:"..table.concat(ids, ","))
-                end
-                return #f > 0 and ("  ["..table.concat(f, "] [").."]") or ""
-            end
-
-            local seen = Core.VerifySeenSpells or {}
-            for id, info in pairs(allTracked) do
-                -- Count fire from primary ID or any registered altId
-                local fired = seen[id]
-                if not fired and info.altIds then
-                    for _, altId in ipairs(info.altIds) do
-                        if seen[altId] then fired = seen[altId]; break end
-                    end
-                end
-                -- Check whether this spell is gated out of the current build
-                local skipReason
-                if info.talentGated and not info.combatGated then
-                    if not IsPlayerSpell(id) then
-                        skipReason = "not talented"
-                    end
-                end
-                if not skipReason and info.suppressIfTalent then
-                    if IsPlayerSpell(info.suppressIfTalent) then
-                        local suppressName = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(info.suppressIfTalent) or tostring(info.suppressIfTalent)
-                        skipReason = "suppressed by " .. (suppressName or tostring(info.suppressIfTalent))
-                    end
-                end
-                local flags = BuildFlags(info)
-                if fired then
-                    local firedViaAlt = not seen[id] and info.altIds
-                    local altNote = ""
-                    if firedViaAlt then
-                        for _, altId in ipairs(info.altIds) do
-                            if seen[altId] then altNote = " (via alt id=" .. altId .. ")"; break end
-                        end
-                    end
-                    L(string.format("  PASS  %-30s id=%-8d fired=%dx  [%s]%s%s",
-                      info.label, id, fired, info.bucket, altNote, flags))
-                elseif skipReason then
-                    L(string.format("  SKIP  %-30s id=%-8d %s  [%s]%s",
-                      info.label, id, skipReason, info.bucket, flags))
-                else
-                    L(string.format("  FAIL  %-30s id=%-8d NOT SEEN    [%s]%s",
-                      info.label, id, info.bucket, flags))
-                end
-            end
-
-            L("")
-            L("AURA CHECK (procBuffs + uptimeBuffs)")
-            -- uptimeBuffs: verified via cast events (aura.spellId comparison blocked in Midnight 12.0)
-            -- procBuffs:   aura scan removed for same reason; use /ms debug auras to confirm IDs
-            local allAuras = {}
-            for _, a in ipairs(spec.procBuffs   or {}) do allAuras[a.id] = { label=a.label, bucket="procBuffs",   entry=a } end
-            for _, a in ipairs(spec.uptimeBuffs or {}) do allAuras[a.id] = { label=a.label, bucket="uptimeBuffs", entry=a } end
-
-            if not next(allAuras) then
-                L("  (no auras defined for this spec)")
-            else
-                for id, info in pairs(allAuras) do
-                    local entry = info.entry
-                    if info.bucket == "uptimeBuffs" then
-                        local castIds = entry.castSpellIds or (entry.castSpellId and {entry.castSpellId}) or {}
-                        local seen = false
-                        for _, cid in ipairs(castIds) do
-                            if (Core.VerifySeenSpells or {})[cid] then seen = true; break end
-                        end
-                        if seen then
-                            L(string.format("  SEEN  %-30s id=%-8d cast seen         [%s]", info.label, id, info.bucket))
-                        elseif #castIds > 0 then
-                            L(string.format("  FAIL  %-30s id=%-8d NOT DETECTED      [%s]", info.label, id, info.bucket))
-                        else
-                            L(string.format("  INFO  %-30s id=%-8d no castSpellId    [%s]", info.label, id, info.bucket))
-                        end
-                    else
-                        -- procBuffs: aura.spellId comparison blocked in Midnight 12.0
-                        L(string.format("  FAIL  %-30s id=%-8d NOT DETECTED      [%s]", info.label, id, info.bucket))
-                    end
-                end
-            end
-
-            L("")
-            local unknownCasts = {}
-            for id, count in pairs(Core.VerifySeenSpells or {}) do
-                if not allTracked[id] and not altIdOwner[id] then table.insert(unknownCasts, {id=id, count=count}) end
-            end
-            if #unknownCasts > 0 then
-                table.sort(unknownCasts, function(a,b) return a.count > b.count end)
-                L("OTHER SPELLS CAST THIS SESSION (top 10 by count)")
-                for i = 1, math.min(10, #unknownCasts) do
-                    local e = unknownCasts[i]
-                    local spellName = "unknown"
-                    if C_Spell and C_Spell.GetSpellName then
-                        local ok, n = pcall(C_Spell.GetSpellName, e.id)
-                        if ok and n then spellName = n end
-                    end
-                    L(string.format("    id=%-8d  %-30s  x%d", e.id, spellName, e.count))
-                end
-            end
-
-            L("")
-            L("-- paste into a GitHub comment: https://github.com/MidnightTim/MidnightSensei/issues")
-
+            local lines = Core.BuildVerifyReportLines(Core.VerifySeenSpells or {})
+            table.insert(lines, "")
+            table.insert(lines, "-- paste into a GitHub comment: https://github.com/MidnightTim/MidnightSensei/issues")
             local fullText = table.concat(lines, "\n")
             if MS.UI and MS.UI.ShowVerifyExport then
                 MS.UI.ShowVerifyExport(fullText)
