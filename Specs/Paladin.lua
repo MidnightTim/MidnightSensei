@@ -48,7 +48,13 @@ Core.RegisterSpec(2, {
     -- Shield of the Righteous uptimeBuff: 132403 (old aura ID) → VERIFY; spell list shows 53600/415091
     -- Crusader Strike label corrected: 35395 shows as "Blessed Hammer" in Prot spell list (spec-variant)
     -- Consecration (26573) added to rotational — confirmed spell list baseline
-    -- Holy Shock (20473) added to rotational — confirmed Prot spell list baseline
+    -- Holy Shock (20473) removed from rotational — NOT SEEN in combat; not part of Prot active rotation
+    -- Blessed Hammer altIds={204019} — combat cast fires 204019, spellbook ID 35395
+    -- Judgment (275779) added to rotational — session log x33; confirmed Prot HP generator
+    -- Hammer of Wrath (1241413) added to rotational — session log x19; talentGated, available in execute/AW window
+    -- Word of Glory (85673) added to rotational — session log x2; talentGated HP spender heal
+    -- Templar Hero Spec: Hammer of Light (427453) isUtility — proc window 20s after Divine Toll via Light's Guidance (nodeID 95180); player-pressed when available; x6 per fight
+    -- Templar Hero Spec: Divine Hammer (198137) isUtility — passive proc summoned by Divine Toll via Divine Hammer talent (nodeID 109747); not player-pressed; x20 per fight
     [2] = {
         name = "Protection", role = "TANK",
         resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
@@ -64,17 +70,24 @@ Core.RegisterSpec(2, {
             { id = 132403, label = "Shield of the Righteous", targetUptime = 50, castSpellId = 53600, buffDuration = 4.5 },  -- cast 53600 applies buff 132403 for 4.5s
         },
         rotationalSpells = {
-            { id = 53600, label = "Shield of the Righteous", minFightSeconds = 15 },  -- confirmed spell list; HP spender + mitigation
-            { id = 35395, label = "Blessed Hammer",          minFightSeconds = 15 },  -- nodeID 81469 non-PASSIVE ACTIVE; shows as "Blessed Hammer" in Prot (spec-variant of Crusader Strike)
-            { id = 26573, label = "Consecration",            minFightSeconds = 15 },  -- confirmed spell list baseline; AoE damage and ground effect
-            { id = 20473, label = "Holy Shock",              minFightSeconds = 20 },  -- confirmed Prot spell list baseline
+            { id = 53600,   label = "Shield of the Righteous", minFightSeconds = 15 },  -- confirmed spell list; HP spender + mitigation
+            { id = 35395,   label = "Blessed Hammer",          minFightSeconds = 15,  altIds = {204019} },  -- combat cast fires 204019; spellbook ID 35395
+            { id = 26573,   label = "Consecration",            minFightSeconds = 15 },  -- confirmed spell list baseline; AoE damage and ground effect
+            { id = 275779,  label = "Judgment",                minFightSeconds = 15 },  -- HP generator; x33 per fight in session log
+            { id = 1241413, label = "Hammer of Wrath",         minFightSeconds = 30,  talentGated = true },  -- execute/AW window; x19 per fight in session log
+            { id = 85673,   label = "Word of Glory",           minFightSeconds = 30,  talentGated = true },  -- HP spender heal; x2 per fight in session log
+            { id = 427453,  label = "Hammer of Light",          isUtility = true,      talentGated = true },  -- Templar: 20s window after Divine Toll (Light's Guidance); player-pressed when available
+            { id = 198137,  label = "Divine Hammer",            isUtility = true,      talentGated = true },  -- Templar: passive proc summoned by Divine Toll (Divine Hammer talent); not player-pressed
         },
         tankMetrics = { targetMitigationUptime = 50 },
         priorityNotes = {
             "Shield of the Righteous to spend Holy Power — core mitigation (tracked via uptimeBuffs)",
             "Avenger's Shield on cooldown — primary damage and threat",
-            "Blessed Hammer on cooldown — Holy Power generator",
+            "Blessed Hammer on cooldown — Holy Power generator (combat cast ID 204019)",
+            "Judgment on cooldown — Holy Power generator",
             "Consecration on cooldown — AoE threat and damage",
+            "Hammer of Wrath during execute phase or Avenging Wrath window",
+            "Word of Glory for emergency self-healing (talent)",
             "Avenging Wrath and Divine Toll on cooldown for burst",
             "Ardent Defender and Guardian of Ancient Kings for heavy damage windows",
         },

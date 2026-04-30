@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.7"
+    Core.VERSION = ver or "1.5.8"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -290,6 +290,21 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.8",
+        tagline = "Protection Paladin Rotation & Templar Hero Spec Tracking",
+        date    = "April 2026",
+        changes = {
+            -- Protection Paladin
+            "Prot Paladin: Holy Shock (20473) removed from rotational — NOT SEEN in combat; not part of active Protection rotation",
+            "Prot Paladin: Blessed Hammer alt ID fix — combat cast fires as 204019 not spellbook ID 35395; altIds={204019} added so all casts are correctly detected",
+            "Prot Paladin: Judgment (275779) added to rotational — Holy Power generator; x33 per fight in session log",
+            "Prot Paladin: Hammer of Wrath (1241413) added to rotational talentGated — execute phase or Avenging Wrath window; x19 per fight",
+            "Prot Paladin: Word of Glory (85673) added to rotational talentGated — Holy Power spender heal; x2 per fight",
+            "Prot Paladin: Hammer of Light (427453) added as isUtility talentGated — Templar Hero Spec; 20s window after Divine Toll via Light's Guidance talent (node 95180)",
+            "Prot Paladin: Divine Hammer (198137) added as isUtility talentGated — Templar Hero Spec; passive proc from Divine Toll via Divine Hammer talent (node 109747)",
+        },
+    },
     {
         version = "1.5.7",
         tagline = "Brewmaster Monk Tracking, Verify History & Compare, Weekly Reset Fix",
