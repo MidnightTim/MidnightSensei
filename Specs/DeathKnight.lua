@@ -12,6 +12,9 @@ Core.RegisterSpec(6, {
     -- Blood Shield (77535) removed from uptimeBuffs — proc absorb, not a persistent aura
     -- Consumption (1263824) added as talentGated CD — nodeID 102244 non-PASSIVE INACTIVE this build
     -- rotationalSpells added: Marrowrend, Heart Strike, Blood Boil, Death Strike — all missing entirely
+    -- Icebound Fortitude (48792) added to majorCooldowns healerConditional — reactive personal defensive
+    -- Anti-Magic Shell (48707) added to majorCooldowns healerConditional — reactive magic absorb
+    -- Death and Decay (43265) added to rotational talentGated — AoE situational
     [1] = {
         name = "Blood", role = "TANK",
         resourceType = 6, resourceLabel = "RUNIC POWER", overcapAt = 100,
@@ -19,15 +22,18 @@ Core.RegisterSpec(6, {
             { id = 49028,   label = "Dancing Rune Weapon", expectedUses = "on CD"           },  -- nodeID 76138 non-PASSIVE ACTIVE
             { id = 55233,   label = "Vampiric Blood",      expectedUses = "big damage"      },  -- nodeID 76173 non-PASSIVE ACTIVE
             { id = 439843,  label = "Reaper's Mark",       expectedUses = "on CD", talentGated = true },  -- nodeID 95062; class talent
-            { id = 1263824, label = "Consumption",         expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102244; damage + mitigation
-            { id = 47528,   label = "Mind Freeze",         expectedUses = "situational",    isInterrupt = true },  -- nodeID 76084 non-PASSIVE ACTIVE
+            { id = 1263824, label = "Consumption",         expectedUses = "on CD (talent)", talentGated = true     },  -- nodeID 102244; damage + mitigation
+            { id = 48792,   label = "Icebound Fortitude",  expectedUses = "big damage",     healerConditional = true },  -- reactive personal defensive
+            { id = 48707,   label = "Anti-Magic Shell",    expectedUses = "magic damage",   healerConditional = true },  -- reactive magic absorb
+            { id = 47528,   label = "Mind Freeze",         expectedUses = "situational",    isInterrupt = true       },  -- nodeID 76084 non-PASSIVE ACTIVE
         },
         uptimeBuffs = {},
         rotationalSpells = {
             { id = 195182, label = "Marrowrend",  minFightSeconds = 15 },  -- nodeID 76168 non-PASSIVE ACTIVE; Bone Shield builder
             { id = 206930, label = "Heart Strike", minFightSeconds = 15 },  -- nodeID 76169 non-PASSIVE ACTIVE; primary RP generator
             { id = 50842,  label = "Blood Boil",  minFightSeconds = 15 },  -- nodeID 76170 non-PASSIVE ACTIVE; DoT and AoE threat
-            { id = 49998,  label = "Death Strike", minFightSeconds = 15 },  -- nodeID 76071 non-PASSIVE ACTIVE; primary self-heal
+            { id = 49998,  label = "Death Strike",    minFightSeconds = 15 },                      -- nodeID 76071 non-PASSIVE ACTIVE; primary self-heal
+            { id = 43265,  label = "Death and Decay", minFightSeconds = 20, talentGated = true },  -- AoE situational
         },
         tankMetrics = { targetMitigationUptime = 50 },
         priorityNotes = {
@@ -39,6 +45,9 @@ Core.RegisterSpec(6, {
             "Vampiric Blood for sustained dangerous phases",
             "Reaper's Mark on cooldown",
             "Consumption on cooldown when talented — damage and instant Blood Plague burst",
+            "Icebound Fortitude for big physical damage windows",
+            "Anti-Magic Shell for magic-heavy damage windows",
+            "Death and Decay for AoE threat and damage when talented",
         },
         scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
         sourceNote = "Midnight 12.0 verified against full Blood talent tree snapshot v1.4.3 108 nodes (April 2026)",
@@ -52,6 +61,9 @@ Core.RegisterSpec(6, {
     -- Frostscythe (207230) added to rotational — nodeID 76113 non-PASSIVE ACTIVE; AoE alternative to Obliterate
     -- Killing Machine procBuff: 59052 (old aura ID) — VERIFY; talent tree shows 51128 at nodeID 76117 PASSIVE
     -- Rime procBuff: 51124 (old aura ID) — VERIFY; spell list shows 59057 Rime
+    -- Remorseless Winter (196771) added to rotational — combat cast ID 196771 (spellbook 196770); session log x39; baseline not talent-gated
+    -- Frostbane (1228433) added to rotational talentGated — altIds={1228436}; both IDs seen in session log (x2 each)
+    -- Glacial Advance (194913) added to rotational talentGated — AoE; session log x2
     [2] = {
         name = "Frost", role = "DPS",
         resourceType = 6, resourceLabel = "RUNIC POWER", overcapAt = 100,
@@ -67,7 +79,10 @@ Core.RegisterSpec(6, {
             { id = 49020,  label = "Obliterate",   minFightSeconds = 15 },  -- nodeID 76116 non-PASSIVE ACTIVE; primary damage
             { id = 49143,  label = "Frost Strike",  minFightSeconds = 20 },  -- nodeID 76115 non-PASSIVE ACTIVE; Runic Power dump
             { id = 49184,  label = "Howling Blast", minFightSeconds = 15 },  -- nodeID 76114 non-PASSIVE ACTIVE; AoE + Rime proc consumer
-            { id = 207230, label = "Frostscythe",  minFightSeconds = 20, talentGated = true },  -- nodeID 76113 non-PASSIVE ACTIVE; AoE alt
+            { id = 207230, label = "Frostscythe",       minFightSeconds = 20, talentGated = true },  -- nodeID 76113 non-PASSIVE ACTIVE; AoE alt
+            { id = 196771, label = "Remorseless Winter", minFightSeconds = 20 },                       -- combat cast ID; spellbook 196770; baseline; session log x39
+            { id = 1228433, label = "Frostbane",         minFightSeconds = 20, talentGated = true, altIds = {1228436} },  -- both IDs seen in session log x2
+            { id = 194913, label = "Glacial Advance",    minFightSeconds = 20, talentGated = true },  -- AoE; session log x2
         },
         procBuffs = {
             { id = 59052, label = "Killing Machine",      maxStackTime = 10 },  -- VERIFY aura ID — talent tree shows 51128 at nodeID 76117
@@ -95,6 +110,11 @@ Core.RegisterSpec(6, {
     -- Soul Reaper (343294) added to majorCooldowns — nodeID 76179 non-PASSIVE ACTIVE; execute CD
     -- Festering Strike: corrected 85092 → 316239 → 85948 — 85948 is what fires in UNIT_SPELLCAST_SUCCEEDED; 316239 kept as altId (talent-modified variant)
     -- Putrefy (1247378) added to rotational — nodeID 108129 non-PASSIVE ACTIVE; confirmed spell list
+    -- Festering Scythe (458128) added to rotational talentGated — Rider of the Apocalypse hero spec; rotational not a CD
+    -- Death Strike (49998) added to rotational talentGated — survival/self-heal Runic Power spender; session log x3
+    -- Death and Decay (43265) added to rotational talentGated — AoE situational; session log x2
+    -- Epidemic (207317) added to rotational — baseline AoE Runic Power spender; not talent-gated
+    -- Necrotic Coil (1242174) added to rotational talentGated — Forbidden Knowledge talent (nodeID 110354); replaces Death Coil during 30s AotD window
     [3] = {
         name = "Unholy", role = "DPS",
         resourceType = 6, resourceLabel = "RUNIC POWER", overcapAt = 100,
@@ -113,13 +133,20 @@ Core.RegisterSpec(6, {
             { id = 55090,   label = "Scourge Strike",   minFightSeconds = 15 },  -- nodeID 76190 non-PASSIVE ACTIVE; wound popper
             { id = 47541,   label = "Death Coil",       minFightSeconds = 20 },  -- confirmed spell list; Runic Power dump
             { id = 1247378, label = "Putrefy",          minFightSeconds = 20, talentGated = true },  -- nodeID 108129 non-PASSIVE ACTIVE
+            { id = 49998,   label = "Death Strike",     minFightSeconds = 30, talentGated = true },  -- survival/self-heal RP spender; session log x3
+            { id = 43265,   label = "Death and Decay",  minFightSeconds = 30, talentGated = true },  -- AoE situational; session log x2
+            { id = 458128,  label = "Festering Scythe", minFightSeconds = 20, talentGated = true },  -- Rider of the Apocalypse hero spec; rotational not a CD
+            { id = 207317,  label = "Epidemic",         minFightSeconds = 20 },                      -- baseline AoE Runic Power spender; not talent-gated
+            { id = 1242174, label = "Necrotic Coil",    minFightSeconds = 30, talentGated = true },  -- Forbidden Knowledge (nodeID 110354); replaces Death Coil during 30s AotD window
         },
         priorityNotes = {
             "Apply Festering Wounds with Festering Strike before Scourge Strike",
             "Pop Festering Wounds with Scourge Strike — aim for batches of 4-8",
             "Outbreak to reapply Virulent Plague when it drops",
             "Dark Transformation on cooldown — empowers ghoul for burst",
-            "Death Coil to dump Runic Power — avoid overcapping at 100",
+            "Death Coil (single-target) or Epidemic (AoE) to dump Runic Power — avoid overcapping at 100",
+            "Necrotic Coil replaces Death Coil during Army of the Dead window (Forbidden Knowledge talent)",
+            "Festering Scythe on cooldown when Rider of the Apocalypse is talented",
             "Soul Reaper at execute range when talented",
             "Army of the Dead on pull or major burst window",
         },
