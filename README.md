@@ -132,8 +132,17 @@ Current tools include:
 - Boss Board ingest and recovery tools
 - Version and zone debugging
 - Rotational spell validation support
+- **Verify History + Compare window** — fight snapshots saved automatically on combat end; side-by-side panel to compare any two pulls
 
 These tools are especially useful when validating a new spec pass, checking talent-gated abilities, or troubleshooting a grading issue after a patch.
+
+## Rotation data source
+
+Spec rotation priorities and spell tracking are validated against **[Archon.gg](https://www.archon.gg)** top parse data for Midnight 12.0 Mythic+. Archon data reflects how top-ranked players actually play each spec in live content, including the exact spell IDs that fire in combat — which frequently differ from spellbook IDs in Midnight 12.0.
+
+Secondary sources including Wowhead, Warcraft Logs, and SimulationCraft are used for spell node IDs, talent tree structure, and methodology reference.
+
+All tracked spell IDs are confirmed through session log verification before changes are applied. When a combat ID diverges from the spellbook ID, the correct ID is captured through live `UNIT_SPELLCAST_SUCCEEDED` output rather than assumed from tooltips.
 
 ## Midnight 12.0 restrictions
 
@@ -249,12 +258,14 @@ It is not trying to replace Warcraft Logs or other deep analysis tools. It is tr
 
 ## Recent highlights
 
-- Self-buff uptime tracking rewritten to use cast events — aura scanning for player buffs was blocked by Midnight 12.0 taint restrictions and has been fully replaced (v1.5.5)
-- Kill and wipe tracking — fight history tags boss kills [K] and wipes [W]; averages and bests use kills only
-- Alt spell ID support — abilities that fire different spell IDs under certain hero talent paths are tracked correctly
-- Talent-gated spell suppression — replacement talents automatically suppress the ability they replace so unused CDs are not penalized incorrectly
-- Full spec coverage pass across all 13 classes for Midnight 12.0
-- Built-in aura dump tool (`/ms debug auras`) for spell ID discovery during spec validation
+- **Archon.gg adopted as primary rotation source** — spec ability tracking and spell IDs validated against top-ranked Mythic+ parse data for Midnight 12.0; confirmed through live session logs (v1.5.9)
+- **Rogue full spec audit** — all three primary builder IDs (Backstab, Mutilate, Sinister Strike) were wrong in Midnight 12.0 and have been corrected; Envenom, Rupture, and Dispatch also fixed; missing abilities added across all three specs (v1.5.9)
+- **Death Knight full spec audit** — rotation gaps filled across all three specs via Archon.gg: Unholy, Frost, and Blood all received corrections and new ability tracking (v1.5.9)
+- **Verify history and compare window** — per-fight verify snapshots saved automatically on combat end; side-by-side compare panel for reviewing any two pulls at once (v1.5.7)
+- **Self-buff uptime tracking rewritten** — aura scanning for player buffs was blocked by Midnight 12.0 taint restrictions and has been fully replaced with cast-event-based tracking (v1.5.5)
+- **Kill and wipe distinction** — fight history tags boss kills [K] and wipes [W]; averages, bests, and leaderboards use kills only (v1.4.11)
+- **Alt spell ID support** — abilities that fire different combat IDs under hero talent paths are routed to the correct tracking entry via the `altIds` system (v1.4.13+)
+- **Talent-gated spell suppression** — replacement talents automatically suppress the ability they replace so unused CDs are never penalised incorrectly (v1.4.4+)
 
 ## Reporting issues
 
