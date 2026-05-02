@@ -6,8 +6,11 @@ Core.RegisterSpec(4, {
     -- Assassination (Midnight 12.0 PASSIVE audit — April 2026)
     -- Vendetta (79140) removed — not in Assassination talent tree or spell list
     -- Kick (1766) added as isInterrupt — confirmed Assassination spell list
-    -- Envenom corrected 32645 → 196819 — Assassination spec-variant confirmed spell list
-    -- Mutilate (1752) added to rotational — confirmed Assassination spell list; primary CP builder
+    -- Envenom: reverted 196819 → 32645 — session log confirms 32645 fires; altIds={276245} (second component ID)
+    -- Mutilate: corrected 1752 → 1329 — session log confirms 1329 fires; altIds={5374,27576} (main-hand + off-hand hit IDs)
+    -- Rupture: corrected 1943 → 199672 — Assassination spec-variant; session log confirms 199672 fires
+    -- Fan of Knives (51723) added to rotational — baseline AoE builder; session log confirmed
+    -- Ambush (8676) added as isUtility talentGated — situational stealth opener; not always accessible
     -- Crimson Tempest (1247227) added to rotational — nodeID 94557 non-PASSIVE ACTIVE; AoE finisher
     [1] = {
         name = "Assassination", role = "DPS",
@@ -21,9 +24,11 @@ Core.RegisterSpec(4, {
         uptimeBuffs = {},
         rotationalSpells = {
             { id = 703,    label = "Garrote",          minFightSeconds = 15 },  -- confirmed spell list; opener bleed
-            { id = 1943,   label = "Rupture",          minFightSeconds = 15 },  -- confirmed spell list; core bleed
-            { id = 1752,   label = "Mutilate",         minFightSeconds = 15 },  -- confirmed spell list; primary CP builder
-            { id = 196819, label = "Envenom",          minFightSeconds = 20 },  -- Assassination spec-variant (was 32645 — Outlaw ID)
+            { id = 199672, label = "Rupture",          minFightSeconds = 15 },  -- Assassination spec-variant; session log confirmed (was 1943)
+            { id = 1329,   label = "Mutilate",         minFightSeconds = 15, altIds = {5374, 27576} },  -- session log confirmed; 5374/27576 are MH+OH hit IDs (was 1752)
+            { id = 32645,  label = "Envenom",          minFightSeconds = 20, altIds = {276245} },  -- session log confirmed; 276245 is second component ID (was 196819)
+            { id = 51723,  label = "Fan of Knives",    minFightSeconds = 20 },                      -- baseline AoE builder; session log confirmed
+            { id = 8676,   label = "Ambush",           isUtility = true, talentGated = true },      -- situational stealth opener; not always accessible
             { id = 1247227,label = "Crimson Tempest",  minFightSeconds = 20, talentGated = true },  -- nodeID 94557 non-PASSIVE ACTIVE; AoE finisher
         },
         priorityNotes = {
@@ -45,8 +50,8 @@ Core.RegisterSpec(4, {
     -- Kick (1766) added as isInterrupt — confirmed Outlaw spell list
     -- Killing Spree (51690) added as talentGated CD — nodeID 94565 INACTIVE this build
     -- Between the Eyes corrected 199804 → 315341 — Outlaw spec-variant confirmed spell list
-    -- Dispatch corrected 2098 → 196819 — Outlaw spec-variant confirmed spell list
-    -- Sinister Strike (1752) added to rotational — Outlaw spec-variant; primary builder
+    -- Dispatch: reverted 196819 → 2098 — session log confirms 2098 fires (196819 correction was wrong)
+    -- Sinister Strike: corrected 1752 → 193315 — session log confirmed
     -- Pistol Shot (185763) added to rotational — confirmed Outlaw spell list; builder/proc spender
     [2] = {
         name = "Outlaw", role = "DPS",
@@ -61,10 +66,10 @@ Core.RegisterSpec(4, {
             { id = 1766,    label = "Kick",             expectedUses = "situational",    isInterrupt = true },
         },
         rotationalSpells = {
-            { id = 1752,   label = "Sinister Strike",  minFightSeconds = 15 },
+            { id = 193315, label = "Sinister Strike",  minFightSeconds = 15 },  -- session log confirmed (was 1752)
             { id = 185763, label = "Pistol Shot",      minFightSeconds = 15 },
             { id = 315341, label = "Between the Eyes", minFightSeconds = 20 },
-            { id = 196819, label = "Dispatch",         minFightSeconds = 20 },
+            { id = 2098,   label = "Dispatch",         minFightSeconds = 20 },  -- session log confirmed (was 196819)
         },
         priorityNotes = {
             "Keep Roll the Bones active — reroll for better buffs with Keep It Rolling",
@@ -84,27 +89,31 @@ Core.RegisterSpec(4, {
     -- Symbols of Death (212283) removed — not in Subtlety talent tree or spell list
     -- Kick (1766) added as isInterrupt — confirmed Subtlety spell list
     -- Nightblade (195452) removed from rotational — not in Subtlety talent tree or spell list
-    -- Backstab (1752): suppressIfTalent = 200758 (Gloomblade) — Gloomblade is a choice node
-    --   that replaces Backstab as the primary builder. Both are in the tree as INACTIVE in
-    --   this build; only one should be tracked depending on which is talented.
+    -- Backstab: corrected 1752 → 53 — session log confirmed; suppressIfTalent=200758 (Gloomblade) retained
+    --   Gloomblade is a choice node replacing Backstab; only one tracked depending on talent.
     -- Goremaw's Bite (426591) added as talentGated CD — nodeID 94581 INACTIVE this build
     -- Shuriken Storm (197835) added to rotational — confirmed Sub spell list; AoE builder
+    -- Secret Technique (280719) added to majorCooldowns talentGated — session log confirmed; guide showed 280720 (off by one)
+    -- Black Powder (319175) added to rotational — baseline Subtlety AoE finisher; top M+ ability (29% damage)
+    -- Unseen Blade (441144) + Coup de Grace (441776) — both passive Trickster procs; not tracked
     [3] = {
         name = "Subtlety", role = "DPS",
         resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
         majorCooldowns = {
             { id = 185313, label = "Shadow Dance",   expectedUses = "burst windows"           },  -- baseline confirmed Sub spell list
             { id = 121471, label = "Shadow Blades",  expectedUses = "on CD"                   },  -- nodeID 90726 non-PASSIVE ACTIVE
-            { id = 426591, label = "Goremaw's Bite", expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94581 INACTIVE this build
-            { id = 1766,   label = "Kick",           expectedUses = "situational",    isInterrupt = true },
+            { id = 426591, label = "Goremaw's Bite",    expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94581 INACTIVE this build
+            { id = 280719, label = "Secret Technique", expectedUses = "on CD (talent)", talentGated = true },  -- session log confirmed (guide showed 280720)
+            { id = 1766,   label = "Kick",             expectedUses = "situational",    isInterrupt = true },
         },
         uptimeBuffs = {},
         rotationalSpells = {
             { id = 185438, label = "Shadowstrike",   minFightSeconds = 20 },  -- confirmed Sub spell list; Stealth builder
-            { id = 1752,   label = "Backstab",       minFightSeconds = 15,
-              suppressIfTalent = 200758 },   -- Gloomblade (200758) replaces Backstab as primary builder
+            { id = 53,     label = "Backstab",       minFightSeconds = 15,
+              suppressIfTalent = 200758 },   -- session log confirmed (was 1752); Gloomblade replaces Backstab as primary builder
             { id = 200758, label = "Gloomblade",     minFightSeconds = 15, talentGated = true },  -- choice node replacing Backstab
             { id = 196819, label = "Eviscerate",     minFightSeconds = 20 },  -- confirmed Sub spell list; primary finisher
+            { id = 319175, label = "Black Powder",   minFightSeconds = 20 },  -- baseline AoE finisher; top M+ ability
             { id = 197835, label = "Shuriken Storm", minFightSeconds = 20 },  -- confirmed Sub spell list; AoE builder
         },
         priorityNotes = {

@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.8"
+    Core.VERSION = ver or "1.5.9"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -283,6 +283,7 @@ function Core.GetRacialCooldowns()
 end
 
 Core.CREDITS = {
+    { source = "Archon.gg",       url = "https://www.archon.gg",           desc = "Primary rotation and talent build reference — Midnight 12.0 M+ and raid" },
     { source = "Wowhead",         url = "https://www.wowhead.com",         desc = "Spell data and talent information"         },
     { source = "SimulationCraft", url = "https://www.simulationcraft.org", desc = "DPS baseline methodology and APL concepts" },
     { source = "WoWAnalyzer",     url = "https://wowanalyzer.com",         desc = "Performance analysis patterns and metrics" },
@@ -290,6 +291,40 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.5.9",
+        tagline = "Death Knight & Rogue Rotation Audit — Archon.gg Source Pivot",
+        date    = "April 2026",
+        changes = {
+            -- Death Knight: Unholy
+            "Unholy DK: Festering Scythe moved from majorCooldowns to rotational — confirmed rotational, not a CD",
+            "Unholy DK: Epidemic (207317) added to rotational — baseline AoE Runic Power spender",
+            "Unholy DK: Necrotic Coil (1242174) added to rotational talentGated — Forbidden Knowledge; replaces Death Coil during Army of the Dead window",
+            "Unholy DK: Death Strike (49998) + Death and Decay (43265) added to rotational talentGated",
+            -- Death Knight: Frost
+            "Frost DK: Remorseless Winter (196771) added to rotational — session log x39; baseline",
+            "Frost DK: Frostbane (1228433) added to rotational talentGated — altIds={1228436}",
+            "Frost DK: Glacial Advance (194913) added to rotational talentGated",
+            -- Death Knight: Blood
+            "Blood DK: Icebound Fortitude (48792) added to majorCooldowns healerConditional — reactive personal defensive",
+            "Blood DK: Anti-Magic Shell (48707) added to majorCooldowns healerConditional — reactive magic absorb",
+            "Blood DK: Death and Decay (43265) added to rotational talentGated",
+            -- Rogue: Assassination
+            "Assassination: Mutilate ID corrected 1752 → 1329 with altIds={5374,27576} for main-hand + off-hand hit IDs",
+            "Assassination: Envenom ID corrected 196819 → 32645 with altIds={276245}",
+            "Assassination: Rupture ID corrected 1943 → 199672 (Assassination spec-variant)",
+            "Assassination: Fan of Knives (51723) added to rotational; Ambush (8676) added as isUtility talentGated",
+            -- Rogue: Outlaw
+            "Outlaw: Sinister Strike ID corrected 1752 → 193315",
+            "Outlaw: Dispatch ID reverted 196819 → 2098",
+            -- Rogue: Subtlety
+            "Subtlety: Backstab ID corrected 1752 → 53",
+            "Subtlety: Secret Technique (280719) added to majorCooldowns talentGated",
+            "Subtlety: Black Powder (319175) added to rotational — baseline AoE finisher",
+            -- Credits
+            "Credits: Archon.gg added as primary rotation and talent build reference for Midnight 12.0",
+        },
+    },
     {
         version = "1.5.8",
         tagline = "Protection Paladin Rotation & Templar Hero Spec Tracking",
