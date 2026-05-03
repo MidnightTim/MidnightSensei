@@ -60,6 +60,7 @@ Core.RegisterSpec(11, {
             { id = 391528, label = "Convoke the Spirits", expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82114
             { id = 1243807, label = "Frantic Frenzy", expectedUses = "on CD (talent)", talentGated = true },                              -- non-PASSIVE ACTIVE nodeID 82111; replaces Feral Frenzy
             { id = 274837,  label = "Feral Frenzy",  expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 1243807 },  -- non-PASSIVE ACTIVE nodeID 82112; suppress when Frantic Frenzy taken (Frantic replaces Feral — IsTalentActive returns true on both)
+            { id = 61336,   label = "Survival Instincts", expectedUses = "situational", isUtility = true },  -- confirmed id=61336; reactive personal defensive — tracked but never penalised
             -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
         },
         uptimeBuffs = {},
@@ -69,6 +70,7 @@ Core.RegisterSpec(11, {
             { id = 22568,  label = "Ferocious Bite", minFightSeconds = 20 },                      -- baseline confirmed spell list
             { id = 5221,   label = "Shred",          minFightSeconds = 15 },                      -- baseline confirmed spell list; primary CP builder
             { id = 285381, label = "Primal Wrath",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82120; AoE finisher
+            { id = 106785, label = "Swipe",          minFightSeconds = 20, talentGated = true },  -- Cat Form Swipe; confirmed combat cast ID 106785 (class talent; Bear Form is 213764)
         },
         priorityNotes = {
             "Ferocious Bite on Apex Predator's Craving procs — highest priority",
@@ -94,10 +96,12 @@ Core.RegisterSpec(11, {
         name = "Guardian", role = "TANK",
         resourceType = 8, resourceLabel = "RAGE", overcapAt = 100,
         majorCooldowns = {
-            { id = 102558, label = "Incarnation: Guardian", expectedUses = "on CD"           },  -- non-PASSIVE ACTIVE nodeID 82136
-            { id = 22812,  label = "Barkskin",              expectedUses = "magic damage"    },  -- baseline confirmed spell list
-            { id = 22842,  label = "Frenzied Regeneration", expectedUses = "low health"      },  -- non-PASSIVE ACTIVE nodeID 82220
-            { id = 204066, label = "Lunar Beam",            expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 92587
+            { id = 102558, label = "Incarnation: Guardian", expectedUses = "on CD"                                              },  -- non-PASSIVE ACTIVE nodeID 82136; replaces Berserk when taken
+            { id = 50334,  label = "Berserk",               expectedUses = "on CD",          talentGated = true, suppressIfTalent = 102558 },  -- nodeID 82149; replaced by Incarnation — suppress when Incarnation taken
+            { id = 61336,  label = "Survival Instincts",    expectedUses = "defensive",      healerConditional = true          },  -- confirmed id=61336; reactive tank defensive — no penalty on successful fight
+            { id = 22812,  label = "Barkskin",              expectedUses = "magic damage"                                       },  -- baseline confirmed spell list
+            { id = 22842,  label = "Frenzied Regeneration", expectedUses = "low health"                                         },  -- non-PASSIVE ACTIVE nodeID 82220
+            { id = 204066, label = "Lunar Beam",            expectedUses = "on CD (talent)", talentGated = true                },  -- non-PASSIVE ACTIVE nodeID 92587
         },
         uptimeBuffs = {
             { id = 192081, label = "Ironfur", targetUptime = 70, castSpellId = 192081, buffDuration = 7 },  -- each cast applies a 7s stack

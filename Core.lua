@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.5.9"
+    Core.VERSION = ver or "1.6.0"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -291,6 +291,44 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.0",
+        tagline = "Full 13-Class Archon.gg Audit — All Specs Verified for Midnight 12.0",
+        date    = "May 2026",
+        changes = {
+            -- Warrior
+            "Arms Warrior: Die by the Sword (118038) added as isUtility — situational defensive, never penalised",
+            "Fury Warrior: Whirlwind (199667 + altId 190411) added to rotational — AoE filler/Raging Blow enabler",
+            "Fury Warrior: Execute (280735) added to rotational — execute phase filler",
+            -- Shaman
+            "Elemental Shaman: Spiritwalker's Grace (79206) added as isUtility talentGated — movement cast utility",
+            "Elemental Shaman: Wind Rush Totem (192077) added as isUtility talentGated — movement speed utility",
+            "Enhancement Shaman: Stormstrike (32175 + altId 17364) added to rotational — primary builder was missing",
+            -- Hunter
+            "Marksmanship Hunter: Steady Shot (56641) added to rotational — focus builder filler",
+            "Marksmanship Hunter: Multi-Shot (257620) added to rotational talentGated — AoE filler / Trick Shots enabler",
+            -- Monk
+            "Mistweaver Monk: Mana Tea (115294) added to majorCooldowns — mana recovery CD",
+            "Mistweaver Monk: Soothing Mist (115175) added to rotational — auto-channels from Enveloping Mist/Vivify; manual casts also tracked",
+            "Windwalker Monk: Touch of Death (322109) added to majorCooldowns — 3 min CD; usable below 15% HP",
+            -- Evoker
+            "Devastation Evoker: Zephyr (374227) added as isUtility talentGated — AoE damage reduction utility",
+            "Preservation Evoker: Zephyr (374227) added as isUtility talentGated",
+            "Preservation Evoker: Verdant Embrace (360995) added to rotational talentGated — 15s CD instant heal",
+            "Augmentation Evoker: Bestow Weyrnstone (408233) added as isUtility talentGated — transport utility",
+            -- Paladin
+            "Holy Paladin: Blessing of Freedom (1044) added as isUtility talentGated — movement freedom for ally",
+            "Protection Paladin: Blessing of Sacrifice (6940) added as healerConditional talentGated — treat like external tank CD",
+            "Protection Paladin: Lay on Hands (633) added as healerConditional — baseline emergency full heal",
+            "Retribution Paladin: Hammer of Light (427453) added as isUtility talentGated — 20s window after Wake of Ashes (Templar)",
+            -- Demon Hunter
+            "Havoc DH: Chaos Strike (222031 + altIds 162794, 199547, 201428) added to rotational — primary Fury spender was missing",
+            "Havoc DH: Disrupt (183752) reclassified as isInterrupt — removed from majorCooldowns",
+            "Vengeance DH: Soul Cleave (228477 + altId 228478) added to rotational — primary Pain spender was missing",
+            -- Source pivot
+            "All 13 classes (39 specs) reaudited against Archon.gg Midnight 12.0 data — passives confirmed, IDs verified",
+        },
+    },
     {
         version = "1.5.9",
         tagline = "Death Knight & Rogue Rotation Audit — Archon.gg Source Pivot",

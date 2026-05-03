@@ -26,6 +26,7 @@ Core.RegisterSpec(8, {
             { id = 321507, label = "Touch of the Magi",expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102468 INACTIVE (was 210824 — wrong ID)
             { id = 153626, label = "Arcane Orb",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 104113 INACTIVE this build
             { id = 1241462,label = "Arcane Pulse",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102439 INACTIVE this build
+            { id = 55342,  label = "Mirror Image",    expectedUses = "on CD (talent)", talentGated = true },  -- confirmed x1; 100% class talent adoption
             { id = 2139,   label = "Counterspell",     isInterrupt = true, minFightSeconds = 20 },
             { id = 30449,  label = "Spellsteal",       isUtility   = true, minFightSeconds = 20 },
         },
@@ -70,6 +71,7 @@ Core.RegisterSpec(8, {
             { id = 153561, label = "Meteor",         expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 101021 non-PASSIVE ACTIVE
             { id = 157980, label = "Supernova",      expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 101883 non-PASSIVE ACTIVE
             { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 109956 non-PASSIVE ACTIVE
+            { id = 55342,  label = "Mirror Image",   expectedUses = "on CD (talent)",  talentGated = true },  -- confirmed x1; 98.2% class talent adoption
             -- Phoenix Flames (257541) removed — not in Fire talent tree or spell list
             { id = 2139,   label = "Counterspell",   isInterrupt = true, minFightSeconds = 20 },
             { id = 30449,  label = "Spellsteal",     isUtility   = true, minFightSeconds = 20 },
@@ -132,6 +134,7 @@ Core.RegisterSpec(8, {
             { id = 44614,  label = "Flurry",        minFightSeconds = 15 },  -- nodeID 62178; also tracked in CDs above
             { id = 199786, label = "Glacial Spike", minFightSeconds = 20, talentGated = true },  -- live-verified id=199786 fired=2x; Icicle finisher
             { id = 157980, label = "Supernova",     minFightSeconds = 20, talentGated = true },  -- live-verified x3; class talent, use on CD
+            { id = 190356, label = "Blizzard",      minFightSeconds = 20, talentGated = true },  -- confirmed combat cast ID 190356 x3 (talent node 1248829 is not cast ID)
         },
         procBuffs = {
             { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },  -- live-verified aura ID (seen not active confirmed)

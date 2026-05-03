@@ -10,6 +10,8 @@ Core.RegisterSpec(3, {
     -- Cobra Shot (193455) added to rotational — nodeID 102354 non-PASSIVE ACTIVE; primary filler/Focus dump
     -- Black Arrow (466930) added to rotational — nodeID 109961 non-PASSIVE ACTIVE; new Midnight ability
     -- Wild Thrash (1264359) added to rotational — nodeID 102363 non-PASSIVE ACTIVE
+    -- Multi-Shot: not available in Beast Mastery spec in Midnight 12.0 — not tracked
+    -- Pack Leader / Dark Ranger hero talent active abilities — confirmed none to add
     [1] = {
         name = "Beast Mastery", role = "DPS",
         resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
@@ -41,6 +43,9 @@ Core.RegisterSpec(3, {
     -- Precise Shots (342776) removed from procBuffs — not in MM talent tree or spell list
     -- Counter Shot (147362) added as isInterrupt — nodeID 102402 non-PASSIVE ACTIVE
     -- Arcane Shot (185358) added to rotational — baseline confirmed spell list; primary Focus spender
+    -- Steady Shot (56641) added to rotational — confirmed spell ID; baseline filler
+    -- Multi-Shot (257620) added to rotational — confirmed spell ID; AoE filler / Bulletstorm trigger
+    -- Double Tap (473370) confirmed PASSIVE nodeID 109938 — not tracked
     [2] = {
         name = "Marksmanship", role = "DPS",
         resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
@@ -53,8 +58,10 @@ Core.RegisterSpec(3, {
             -- Precise Shots (342776) removed — not in talent tree or spell list
         },
         rotationalSpells = {
-            { id = 19434,  label = "Aimed Shot",  minFightSeconds = 20 },  -- nodeID 103982 non-PASSIVE ACTIVE
-            { id = 185358, label = "Arcane Shot", minFightSeconds = 15 },  -- baseline confirmed spell list; Focus spender
+            { id = 19434,  label = "Aimed Shot",   minFightSeconds = 20 },  -- nodeID 103982 non-PASSIVE ACTIVE
+            { id = 185358, label = "Arcane Shot",  minFightSeconds = 15 },  -- baseline confirmed spell list; Focus spender
+            { id = 56641,  label = "Steady Shot",  minFightSeconds = 15 },  -- confirmed spell ID; baseline filler
+            { id = 257620, label = "Multi-Shot",   minFightSeconds = 20, talentGated = true },  -- confirmed spell ID; AoE filler / Bulletstorm trigger
         },
         priorityNotes = {
             "Aimed Shot on cooldown — primary Focus spender and damage",
@@ -76,6 +83,8 @@ Core.RegisterSpec(3, {
     -- Takedown (1250646) added to rotational — nodeID 109323 non-PASSIVE ACTIVE; confirmed spell list
     -- Boomstick (1261193) added to rotational — nodeID 109324 non-PASSIVE ACTIVE; confirmed spell list
     -- Flamefang Pitch (1251592) kept out — nodeID 102252 non-PASSIVE INACTIVE in this build
+    -- Sweeping Spear (99.4% adoption) confirmed PASSIVE — not tracked
+    -- Mongoose Fury (100% adoption) confirmed PASSIVE — not tracked
     [3] = {
         name = "Survival", role = "DPS",
         resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,

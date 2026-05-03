@@ -49,21 +49,23 @@ Core.RegisterSpec(9, {
     -- Summon Vilefiend: correct Midnight 12.0 ID confirmed as 1251778 (nodeID 109252)
     --   was previously 264119 (wrong) then removed — now restored with correct ID
     -- Reign of Tyranny: INACTIVE in this build — added as talentGated CD (nodeID 110201)
-    -- Dark Harvest 1257052: not in talent tree — baseline/granted spell, no change
+    -- Dark Harvest 1257052: removed — Affliction only, not a Demonology ability (May 2026)
     -- Demonbolt 264178: not in talent tree — baseline spell, no change
     [2] = {
         name = "Demonology", role = "DPS",
         resourceType = 7, resourceLabel = "SOUL SHARDS", overcapAt = 5,
         majorCooldowns = {
-            { id = 265187,  label = "Summon Demonic Tyrant",  expectedUses = "on CD"           },  -- nodeID 101905 — not PASSIVE
-            { id = 442726,  label = "Malevolence",            expectedUses = "on CD",          talentGated = true },  -- nodeID 94842; shared class talent — talentGated to avoid tracking grayed cross-spec spell
-            { id = 104316,  label = "Call Dreadstalkers",     expectedUses = "on CD"           },  -- nodeID 101894 — not PASSIVE
-            { id = 1276672, label = "Summon Doomguard",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 101917 — not PASSIVE
-            { id = 1276467, label = "Grimoire: Fel Ravager",  expectedUses = "situational",    talentGated = true, isUtility = true },  -- nodeID 110197; purges 1 beneficial magic effect; no longer an interrupt as of patch 12.0
+            { id = 265187,  label = "Summon Demonic Tyrant",  expectedUses = "on CD"                                              },  -- nodeID 101905 — not PASSIVE
+            { id = 104316,  label = "Call Dreadstalkers",     expectedUses = "on CD"                                              },  -- nodeID 101894 — not PASSIVE
+            { id = 1276672, label = "Summon Doomguard",       expectedUses = "situational", talentGated = true, isUtility = true  },  -- nodeID 101917; situational — community consensus not always pressed every pull
+            { id = 1276467, label = "Grimoire: Fel Ravager",  expectedUses = "situational", talentGated = true, isUtility = true  },  -- nodeID 110197; choice node with Imp Lord; purges 1 beneficial magic effect
+            { id = 1276452, label = "Grimoire: Imp Lord",     expectedUses = "situational", talentGated = true, isUtility = true  },  -- nodeID 110197; choice node with Fel Ravager; spell ID 1276452
             -- Removed (confirmed PASSIVE via talent snapshot):
-            -- Diabolic Ritual 428514 — PASSIVE
+            -- Diabolic Ritual 428514 — PASSIVE (nodeID 94855)
             -- Summon Vilefiend 1251778 — PASSIVE (nodeID 109252)
             -- Reign of Tyranny 1276748 — PASSIVE (nodeID 110201)
+            -- Removed (Affliction only):
+            -- Malevolence 442726 — Affliction only; not a Demonology ability
         },
         rotationalSpells = {
             { id = 196277,  label = "Implosion",       minFightSeconds = 15 },                          -- nodeID 101893
@@ -71,7 +73,7 @@ Core.RegisterSpec(9, {
             { id = 264178,  label = "Demonbolt",       minFightSeconds = 20 },                          -- baseline; Demonic Core spender
             -- Doom (460551) removed — appears as damage tick in logs but not directly cast via UNIT_SPELLCAST_SUCCEEDED
             -- Applied automatically; cannot be tracked via cast detection. Re-add if confirmed castable via /ms verify.
-            { id = 1257052, label = "Dark Harvest",    minFightSeconds = 30, talentGated = true },      -- confirmed spell list
+            -- Dark Harvest 1257052 removed — Affliction only; not a Demonology ability
         },
         procBuffs = {
             { id = 267102, label = "Demonic Core", maxStackTime = 20 },  -- confirmed spell list
@@ -82,7 +84,7 @@ Core.RegisterSpec(9, {
             "Call Dreadstalkers on cooldown — core damage and imp generation",
             "Hand of Gul'dan to summon imps and enable Implosion windows — primary shard spender",
             "Spend Demonic Core procs on Demonbolt — don't sit on stacks",
-            "Summon Doomguard on cooldown — major burst CD when talented",
+            "Summon Doomguard is situational when talented — use on important pulls",
             "Avoid Soul Shard overcap — spend with Hand of Gul'dan",
         },
         scoreWeights = { cooldownUsage = 35, procUsage = 25, activity = 25, resourceMgmt = 15 },
