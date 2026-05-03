@@ -111,11 +111,44 @@ Analytics.DebugLog = DebugLog
 --------------------------------------------------------------------------------
 -- Expose last completed result, falling back to the most recent DB entry on login
 --------------------------------------------------------------------------------
+local function IsEligibleEncounter(enc)
+    if not enc or not enc.finalScore then return false end
+    local t = enc.encType
+    return enc.isBoss or t == "dungeon" or t == "raid" or t == "delve"
+end
+
 function Analytics.GetLastEncounter()
-    if Analytics.LastResult then return Analytics.LastResult end
+    -- Skip non-eligible encTypes (normal/trash pulls) — they don't update
+    -- leaderboard content-type fields and shouldn't be broadcast via REQ.
+    if Analytics.LastResult and IsEligibleEncounter(Analytics.LastResult) then
+        return Analytics.LastResult
+    end
     local db = MidnightSenseiCharDB
     if db and db.encounters and #db.encounters > 0 then
-        return db.encounters[#db.encounters]
+        for i = #db.encounters, 1, -1 do
+            if IsEligibleEncounter(db.encounters[i]) then
+                return db.encounters[i]
+            end
+        end
+    end
+    return nil
+end
+
+-- Returns the most recent encounter of a specific encType, used by REQ/REQD
+-- handlers to broadcast per-content-type so all leaderboard tabs populate.
+function Analytics.GetLastEncounterByType(encType)
+    if Analytics.LastResult and Analytics.LastResult.finalScore
+       and Analytics.LastResult.encType == encType then
+        return Analytics.LastResult
+    end
+    local db = MidnightSenseiCharDB
+    if db and db.encounters and #db.encounters > 0 then
+        for i = #db.encounters, 1, -1 do
+            local enc = db.encounters[i]
+            if enc and enc.finalScore and enc.encType == encType then
+                return enc
+            end
+        end
     end
     return nil
 end

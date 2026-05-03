@@ -119,6 +119,8 @@ Core.RegisterSpec(1, {
     -- Rend (772) suppressIfTalent=6343 — Thunder Clap (nodeID 90343) auto-applies Rend on every
     --   cast when talented; suppressed when TC is taken; tracked only if TC is not taken
     -- Shield Slam (23922) baseline confirmed in spell list; not in talent tree node — fine
+    -- Storm Bolt (107570) added as isUtility talentGated — nodeID 90337; 27s CD stun; 94% adoption;
+    --   tracked as CC mechanism, never penalised
     -- Flags: Battlefield Commander/Deep Wounds/Intimidating Shout — Causes/Grants = effect
     --   descriptions only, no spell-replacement pattern. No suppressIfTalent needed.
     [3] = {
@@ -131,6 +133,7 @@ Core.RegisterSpec(1, {
             { id = 1160,   label = "Demoralizing Shout", expectedUses = "on CD"           },  -- nodeID 90305 non-PASSIVE ACTIVE
             { id = 436358, label = "Demolish",           expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
             { id = 386071, label = "Disrupting Shout",   expectedUses = "situational",    isInterrupt = true },  -- nodeID 107579 non-PASSIVE ACTIVE
+            { id = 107570, label = "Storm Bolt",         expectedUses = "situational",    isUtility = true, talentGated = true },  -- nodeID 90337; 27s CD stun; tracked as CC, never penalised
             -- Last Stand (12975) removed — confirmed PASSIVE in talent tree
         },
         uptimeBuffs = {
@@ -154,6 +157,6 @@ Core.RegisterSpec(1, {
             "Demolish inside burst windows when talented",
         },
         scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-        sourceNote = "Midnight 12.0 verified against full Protection talent tree snapshot v1.4.3 102 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Protection talent tree snapshot v1.4.3 102 nodes (April 2026); May 2026 second-pass",
     },
 })

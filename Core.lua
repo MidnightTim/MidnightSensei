@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.0"
+    Core.VERSION = ver or "1.6.1"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -291,6 +291,28 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.1",
+        tagline = "Leaderboard Sync Fixes, Evoker Tooltip Pass, Update Banner",
+        date    = "May 2026",
+        changes = {
+            -- Critical leaderboard fixes
+            "Fixed: Leaderboard Delves tab showed all-time best run instead of most recent — self-entry now matches peer display semantics",
+            "Fixed: REQ responses only broadcast one content type — delve/dungeon/raid each now broadcast separately so all tabs populate on join",
+            "Fixed: GetLastEncounter() could return a trash pull (encType=normal) and block all score broadcasts — eligible filter now skips non-boss/dungeon/raid/delve entries",
+            "Fixed: Joining a group never triggered a data request for existing members — GROUP_ROSTER_UPDATE now sends REQ after 1.5s when new members are missing",
+            "Fixed: 'Polkatron (Online) — Updated' spam in chat on every leaderboard tab switch — whisper confirmation now only prints for explicit /ms friend queries",
+            -- Evoker
+            "Evoker (all specs): Rescue (370665) added as isUtility talentGated — movement + cleanse CD",
+            "Evoker (all specs): Cauterizing Flame (374251) added as isUtility — dispel utility, baseline",
+            "Evoker (all specs): Expunge (365585) added as isUtility with altId=360823 (Naturalize) — talent replacement captured",
+            "Preservation Evoker: Stasis (370537) added as major healer CD — stores last 3 casts, releases simultaneously",
+            -- Update notification
+            "Update notification redesigned — amber bar above HUD replaces chat print; dismissable per session; click opens details popup",
+            -- Debug
+            "/ms debug encounters added — prints last 10 encounter history entries with encType, isBoss, grade, score, and instance name",
+        },
+    },
     {
         version = "1.6.0",
         tagline = "Full 13-Class Archon.gg Audit — All Specs Verified for Midnight 12.0",
@@ -1639,8 +1661,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
             -- Notify once per session if someone has a newer version
             if IsNewer(theirVer, Core.VERSION) and not notifiedThisSession then
                 notifiedThisSession = true
-                print("|cff00D1FFMidnight Sensei:|r A new version is available. Check Github for latest update.")
-                Call(MS.UI, "ShowUpdateToast", sname, theirVer)
+                Call(MS.UI, "ShowUpdateBanner")
             end
         elseif payload == "VPING" then
             -- Legacy: ignore pings from older clients that used active pinging
@@ -2112,6 +2133,124 @@ local function MSSlashHandler(msg)
             local color = (ver == Core.VERSION) and "|cff00FF00" or "|cffFF8800"
             local flag  = (ver == Core.VERSION) and "" or "  |cffFF8800(outdated)|r"
             print("  " .. color .. "v" .. ver .. "|r — " .. table.concat(names, ", ") .. flag)
+        end
+    elseif msg == "debug updatebanner" then
+        Call(MS.UI, "ShowUpdateBanner")
+    elseif msg == "debug broadcast" then
+        -- Show the raw last entry first, so we can see if it's a non-eligible encType
+        local rawLast = nil
+        do
+            local db = MidnightSenseiCharDB
+            if MS.Analytics and MS.Analytics.LastResult then
+                rawLast = MS.Analytics.LastResult
+            elseif db and db.encounters and #db.encounters > 0 then
+                rawLast = db.encounters[#db.encounters]
+            end
+        end
+        local enc = MS.Analytics and MS.Analytics.GetLastEncounter and MS.Analytics.GetLastEncounter()
+        -- If raw last differs from eligible last, surface the ineligible entry
+        if rawLast and rawLast ~= enc then
+            local t = tostring(rawLast.encType)
+            print("|cff00D1FFMidnight Sensei Debug:|r Raw last entry is |cffFF8800encType=" .. t .. "|r (ineligible — not a boss/dungeon/raid/delve).")
+            print("  This was blocking REQ responses. Fixed in this version — showing eligible encounter below.")
+        end
+        if not enc then
+            print("|cff00D1FFMidnight Sensei Debug:|r No eligible encounter in history (boss/dungeon/raid/delve).")
+        elseif not enc.finalScore then
+            print("|cff00D1FFMidnight Sensei Debug:|r Last eligible encounter has |cffFF4444no finalScore|r — old format entry.")
+            print("  encType=" .. tostring(enc.encType) .. "  bossName=" .. tostring(enc.bossName) .. "  addonVersion=" .. tostring(enc.addonVersion))
+        else
+            print("|cff00D1FFMidnight Sensei Debug:|r Last eligible encounter:")
+            print("  grade=" .. tostring(enc.finalGrade) .. "  score=" .. tostring(enc.finalScore) .. "  encType=" .. tostring(enc.encType))
+            print("  instance=" .. tostring(enc.instanceName) .. "  boss=" .. tostring(enc.bossName) .. "  isBoss=" .. tostring(enc.isBoss))
+            print("  addonVersion=" .. tostring(enc.addonVersion) .. "  duration=" .. tostring(enc.duration))
+            if enc.encType == "delve" and not enc.isBoss then
+                local history = MidnightSenseiCharDB and MidnightSenseiCharDB.encounters
+                local suppressedBy = nil
+                if history then
+                    for _, h in ipairs(history) do
+                        if h.encType == "delve" and (h.finalScore or 0) > (enc.finalScore or 0) then
+                            suppressedBy = h
+                            break
+                        end
+                    end
+                end
+                if suppressedBy then
+                    print("  |cffFF4444SUPPRESSED|r — history has higher delve score: " .. tostring(suppressedBy.finalScore) .. " (addonVersion=" .. tostring(suppressedBy.addonVersion) .. ")")
+                else
+                    print("  Delve suppression: |cff00FF00CLEAR|r — this score would broadcast.")
+                end
+            else
+                print("  Broadcast gate: |cff00FF00CLEAR|r — no suppression applies.")
+            end
+            local total, noScore, nonEligible = 0, 0, 0
+            local db = MidnightSenseiCharDB
+            if db and db.encounters then
+                for _, h in ipairs(db.encounters) do
+                    total = total + 1
+                    if not h.finalScore then noScore = noScore + 1 end
+                    local t = h.encType
+                    if not h.isBoss and t ~= "dungeon" and t ~= "raid" and t ~= "delve" then
+                        nonEligible = nonEligible + 1
+                    end
+                end
+            end
+            print("  History: " .. total .. " entries — " .. noScore .. " missing finalScore, " .. nonEligible .. " non-eligible (trash/normal)")
+        end
+    elseif msg == "debug encounters" then
+        local db = MidnightSenseiCharDB
+        if not db or not db.encounters or #db.encounters == 0 then
+            print("|cff00D1FFMidnight Sensei Debug:|r No encounter history.")
+        else
+            local hist = db.encounters
+            local count = #hist
+            local show = math.min(10, count)
+            print("|cff00D1FFMidnight Sensei Debug:|r Last " .. show .. " of " .. count .. " encounters (newest last):")
+            for i = count - show + 1, count do
+                local e = hist[i]
+                if e then
+                    local boss = e.bossName and (" boss=" .. e.bossName) or ""
+                    local inst = e.instanceName and (" inst=" .. tostring(e.instanceName)) or ""
+                    local score = e.finalScore and tostring(math.floor(e.finalScore)) or "?"
+                    local grade = e.finalGrade or "?"
+                    print(string.format("  [%d] encType=%-8s isBoss=%-5s grade=%s score=%s dur=%ss%s%s",
+                        i,
+                        tostring(e.encType or "nil"),
+                        tostring(e.isBoss or false),
+                        grade, score,
+                        tostring(math.floor(e.duration or 0)),
+                        inst, boss))
+                end
+            end
+            -- Show latest per content type so we can see what GetLastEncounterByType returns
+            print("|cff00D1FFMidnight Sensei Debug:|r Most recent by encType:")
+            for _, ctype in ipairs({ "delve", "dungeon", "raid" }) do
+                local found = nil
+                for i = count, 1, -1 do
+                    local e = hist[i]
+                    if e and e.finalScore and e.encType == ctype then
+                        found = e; break
+                    end
+                end
+                if found then
+                    local boss = found.bossName and (" boss=" .. found.bossName) or ""
+                    local inst = found.instanceName and (" inst=" .. tostring(found.instanceName)) or ""
+                    print(string.format("  %-8s → [idx searched] grade=%s score=%s%s%s",
+                        ctype, tostring(found.finalGrade), tostring(math.floor(found.finalScore or 0)), inst, boss))
+                else
+                    print("  " .. ctype .. " → |cffFF4444none found|r")
+                end
+            end
+            -- Scan for ANY scenario-type encounter (may be mislabelled delves)
+            local scenCount = 0
+            for i = count, 1, -1 do
+                local e = hist[i]
+                if e and e.encType == "normal" and e.instanceName and e.instanceName ~= "" and scenCount < 3 then
+                    scenCount = scenCount + 1
+                    print(string.format("  normal[%d] inst=%s isBoss=%s dur=%ss",
+                        i, e.instanceName, tostring(e.isBoss), tostring(math.floor(e.duration or 0))))
+                end
+            end
         end
     elseif msg == "debug rotational" or msg == "tracker" then
         -- Open the Rotation Tracker UI window; fall back to chat print if UI not loaded

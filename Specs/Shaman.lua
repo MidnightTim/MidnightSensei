@@ -112,6 +112,9 @@ Core.RegisterSpec(7, {
     },
 
     -- Restoration (Midnight 12.0 pass — April 2026)
+    -- Lava Burst (51505) added to rotationalSpells as isUtility — cast ID confirmed (same as Elemental);
+    --   optional filler DPS for Resto; bonus credit if used, never penalised for omission
+    -- Stormstream Totem (1267016) confirmed PASSIVE nodeID 110403 — not tracked (May 2026 audit)
     -- Removed:  Cloudburst Totem (157153) — pruned from Restoration in Midnight 12.0
     --           as part of spec simplification removing high-timing-skill buttons
     -- Removed:  Ancestral Guidance (108281) — removed from game in Midnight (patch 11.1.0 / Feb 25 2025)
@@ -147,6 +150,7 @@ Core.RegisterSpec(7, {
         },
         uptimeBuffs = {},
         rotationalSpells = {
+            { id = 51505,  label = "Lava Burst",            minFightSeconds = 20, isUtility = true },  -- optional filler DPS; bonus credit if used, never penalised
             { id = 61295,  label = "Riptide",               minFightSeconds = 15 },  -- confirmed nodeID 81027; core maintenance HoT
             { id = 77472,  label = "Healing Wave",          minFightSeconds = 15 },  -- confirmed id=77472 fired=6x; baseline filler heal
             { id = 1064,   label = "Chain Heal",            minFightSeconds = 20 },  -- confirmed in Resto files; primary group heal
@@ -167,6 +171,6 @@ Core.RegisterSpec(7, {
             "Avoid excessive overheal — cast slightly later on targets above 70% health",
         },
         scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-        sourceNote = "Midnight 12.0 PASSIVE audit against full Restoration talent tree 110 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 PASSIVE audit against full Restoration talent tree 110 nodes (April 2026); May 2026 second-pass",
     },
 })

@@ -316,6 +316,32 @@ local function MakeChecksum(score, duration, encType)
     return string.format("%03d", raw)
 end
 
+-- Builds a SCORE payload string from an encounter entry.
+local function BuildScorePayload(enc)
+    local charName  = UnitName("player") or "?"
+    local encType   = enc.encType  or "normal"
+    local diffLabel = enc.diffLabel or ""
+    local ks        = enc.keystoneLevel and tostring(enc.keystoneLevel) or "0"
+    local cs        = MakeChecksum(enc.finalScore, math.floor(enc.duration or 0), encType)
+    return table.concat({
+        "SCORE", Core.VERSION,
+        enc.className  or "?",
+        enc.specName   or "?",
+        enc.role       or "?",
+        enc.finalGrade or "?",
+        tostring(enc.finalScore or 0),
+        tostring(math.floor(enc.duration or 0)),
+        enc.isBoss and "1" or "0",
+        (enc.bossName    or ""):gsub("|", "_"),
+        encType,
+        cs,
+        diffLabel:gsub("|", "_"),
+        ks,
+        charName:gsub("|", "_"),
+        (enc.instanceName or ""):gsub("|", "_"),
+    }, "|")
+end
+
 local function ValidateChecksum(score, duration, encType, checksum)
     -- Checksum validation is intentionally disabled.
     -- Cross-version float/integer rounding differences cause false failures
@@ -960,26 +986,31 @@ local function OnAddonMessage(prefix, payload, channel, sender)
                 lbdb.friends[sender] = friendsData[sender]
             end
 
-            -- If this arrived via direct whisper (from /ms friend query), print to chat
-            if channel == "WHISPER" then
-                -- Cancel any pending friend query timeout on any whisper SCORE response
+            -- Only print confirmation for explicit /ms friend queries, not background syncs
+            if channel == "WHISPER" and LB._pendingFriendQuery then
                 LB._pendingFriendQuery = nil
                 print("|cff00D1FFMidnight Sensei:|r |cffFFFFFF" .. ShortName(sender) ..
                       "|r |cff20aa20(Online)|r — Updated")
+            elseif channel == "WHISPER" then
+                LB._pendingFriendQuery = nil
             end
         end
 
         LB.RefreshUI()
 
     elseif msgType == "REQ" then
-        -- A peer is asking everyone to resend their last score (triggered by Refresh).
-        C_Timer.After(0.5 + math.random() * 1.5, function()
-            local lastEnc = MS.Analytics and MS.Analytics.GetLastEncounter
-                            and MS.Analytics.GetLastEncounter()
-            if lastEnc and lastEnc.finalScore then
-                Core.Emit(Core.EVENTS.GRADE_CALCULATED, lastEnc)
-            end
-        end)
+        -- Broadcast the most recent score for each content type so all tabs
+        -- populate on the requester's end. Payloads built directly to bypass
+        -- the delve-suppression check in BroadcastScore (suppression is for
+        -- live broadcasts only; REQ responses should always send full data).
+        local base = 0.5 + math.random() * 0.5
+        for i, ctype in ipairs({"delve", "dungeon", "raid"}) do
+            C_Timer.After(base + (i - 1) * 0.6, function()
+                local enc = MS.Analytics and MS.Analytics.GetLastEncounterByType
+                            and MS.Analytics.GetLastEncounterByType(ctype)
+                if enc then BroadcastToAll(BuildScorePayload(enc)) end
+            end)
+        end
 
     elseif msgType == "REQD" then
         -- Direct request: a specific player is asking for our score via whisper.
@@ -989,38 +1020,16 @@ local function OnAddonMessage(prefix, payload, channel, sender)
         if channel ~= "WHISPER" then return end
         local returnAddr = parts[3]
         if not returnAddr or returnAddr == "" then return end
-        C_Timer.After(0.5 + math.random() * 0.5, function()
-            local lastEnc = MS.Analytics and MS.Analytics.GetLastEncounter
-                            and MS.Analytics.GetLastEncounter()
-            if lastEnc and lastEnc.finalScore then
-                -- Reuse BroadcastScore logic but whisper directly to requester
-                local charName  = UnitName("player") or "?"
-                local encType   = lastEnc.encType  or "normal"
-                local diffLabel = lastEnc.diffLabel or ""
-                local ks        = lastEnc.keystoneLevel and tostring(lastEnc.keystoneLevel) or "0"
-                local cs = MakeChecksum(lastEnc.finalScore,
-                                        math.floor(lastEnc.duration or 0),
-                                        encType)
-                local payload = table.concat({
-                    "SCORE", Core.VERSION,
-                    lastEnc.className  or "?",
-                    lastEnc.specName   or "?",
-                    lastEnc.role       or "?",
-                    lastEnc.finalGrade or "?",
-                    tostring(lastEnc.finalScore or 0),
-                    tostring(math.floor(lastEnc.duration or 0)),
-                    lastEnc.isBoss and "1" or "0",
-                    (lastEnc.bossName    or ""):gsub("|", "_"),
-                    encType,
-                    cs,
-                    diffLabel:gsub("|", "_"),
-                    ks,
-                    charName:gsub("|", "_"),
-                    (lastEnc.instanceName or ""):gsub("|", "_"),
-                }, "|")
-                SafeSend(LB_PREFIX, payload, "WHISPER", returnAddr)
-            end
-        end)
+        local base = 0.5 + math.random() * 0.5
+        for i, ctype in ipairs({"delve", "dungeon", "raid"}) do
+            C_Timer.After(base + (i - 1) * 0.6, function()
+                local enc = MS.Analytics and MS.Analytics.GetLastEncounterByType
+                            and MS.Analytics.GetLastEncounterByType(ctype)
+                if enc then
+                    SafeSend(LB_PREFIX, BuildScorePayload(enc), "WHISPER", returnAddr)
+                end
+            end)
+        end
 
     elseif msgType == "HELLO" then
         -- Guild: trust GUILD channel messages implicitly; use roster check for other channels
@@ -1707,14 +1716,18 @@ function LB.GetDelveData(tab)
                                or enc.charName
                                or GetPlayerName()
                 if not byChar[charKey] then
-                    byChar[charKey] = { weekScores = {}, allBest = 0, lastEnc = nil, charName = charKey }
+                    byChar[charKey] = { weekScores = {}, allBest = 0, bestEnc = nil, mostRecentEnc = nil, charName = charKey }
                 end
                 local s = enc.finalScore or 0
                 local entry = byChar[charKey]
+                -- bestEnc = highest-scoring run (used for score/grade/allBest ranking)
                 if s > entry.allBest then
                     entry.allBest = s
-                    entry.lastEnc = enc
+                    entry.bestEnc = enc
                 end
+                -- mostRecentEnc always advances — history array is chronological (oldest→newest)
+                -- Used for the "RECENT DELVE / BOSS" display label so self-entry matches peer semantics.
+                entry.mostRecentEnc = enc
                 if enc.weekKey == wk then
                     table.insert(entry.weekScores, s)
                 end
@@ -1722,8 +1735,9 @@ function LB.GetDelveData(tab)
         end
 
         for charKey, charData in pairs(byChar) do
-            local lastEnc = charData.lastEnc
-            if lastEnc then
+            local bestEnc    = charData.bestEnc
+            local displayEnc = charData.mostRecentEnc or bestEnc
+            if bestEnc then
                 local wAvg = 0
                 if #charData.weekScores > 0 then
                     local sum = 0
@@ -1735,19 +1749,19 @@ function LB.GetDelveData(tab)
                 if isCurrentPlayer or sortOrder ~= "weekly" or wAvg > 0 then
                     result[charKey] = {
                         name         = ShortName(charKey),
-                        className    = lastEnc.className or "?",
-                        specName     = lastEnc.specName  or "?",
-                        role         = lastEnc.role      or "?",
-                        grade        = lastEnc.finalGrade or lastEnc.grade or "?",
+                        className    = displayEnc.className or "?",
+                        specName     = displayEnc.specName  or "?",
+                        role         = displayEnc.role      or "?",
+                        grade        = bestEnc.finalGrade or bestEnc.grade or "?",
                         score        = charData.allBest,
                         weeklyAvg    = wAvg,
                         allTimeBest  = charData.allBest,
                         delveBest    = charData.allBest,
                         dungeonBest  = 0, raidBest = 0, normalBest = 0,
-                        diffLabel    = lastEnc.diffLabel    or "",
-                        instanceName = lastEnc.instanceName or "",
-                        bossName     = lastEnc.bossName     or "",
-                        timestamp    = lastEnc.timestamp    or 0,
+                        diffLabel    = displayEnc.diffLabel    or "",
+                        instanceName = displayEnc.instanceName or "",
+                        bossName     = displayEnc.bossName     or "",
+                        timestamp    = displayEnc.timestamp    or 0,
                         weekKey      = wk,
                         weekScores   = charData.weekScores,
                         isSelf       = isCurrentPlayer,
@@ -2672,8 +2686,27 @@ lbEventFrame:SetScript("OnEvent",function(self,event,...)
             local name=UnitName(unit)
             if name then current[name]=true end
         end
+        -- If any current member has no partyData yet, send REQ so everyone
+        -- re-broadcasts their last score. Covers the case where a player joins
+        -- after another member already completed content this session.
+        local myShort = UnitName("player") or ""
+        local missingData = false
+        for name in pairs(current) do
+            local short = ShortName(name)
+            if short ~= myShort and not partyData[short] then
+                missingData = true
+                break
+            end
+        end
         for name in pairs(partyData) do
             if not current[ShortName(name)] then partyData[name]=nil end
+        end
+        if missingData and IsInGroup() and not IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+            C_Timer.After(1.5, function()
+                if IsInGroup() and not IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+                    SafeSend(LB_PREFIX, "REQ|"..Core.VERSION, "PARTY")
+                end
+            end)
         end
         LB.RefreshUI()
     end
