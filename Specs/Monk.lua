@@ -59,12 +59,15 @@ Core.RegisterSpec(10, {
     -- Spear Hand Strike (116705) added as isInterrupt — baseline confirmed Mistweaver spell list
     -- Renewing Mist corrected 119611 → 115151 — 119611 is wrong ID; 115151 confirmed Mistweaver spell list
     -- Enveloping Mist (124682) added to rotational — nodeID 101134 non-PASSIVE ACTIVE
+    -- Mana Tea (115294) added to majorCooldowns — confirmed spell ID; mana recovery CD
+    -- Soothing Mist (115175) added to rotational — nodeID 101143; 10.2s channel; auto-channels from Enveloping Mist/Vivify targets; manual casts also tracked
     [2] = {
         name = "Mistweaver", role = "HEALER",
         resourceType = 0,
         majorCooldowns = {
             { id = 115310, label = "Revival",           expectedUses = "raid emergency",   healerConditional = true        },  -- nodeID 101131 non-PASSIVE ACTIVE
             { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"                                             },  -- nodeID 101133 non-PASSIVE ACTIVE
+            { id = 115294, label = "Mana Tea",          expectedUses = "mana recovery"                                    },  -- confirmed spell ID; use on cooldown to sustain mana
             { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE",    healerConditional = true        },  -- nodeID 101129 non-PASSIVE ACTIVE
             { id = 116849, label = "Life Cocoon",       expectedUses = "tank emergencies",  healerConditional = true        },  -- nodeID 101096 non-PASSIVE ACTIVE
             { id = 399491, label = "Sheilun's Gift",    expectedUses = "on CD"                                             },  -- nodeID 101120 non-PASSIVE ACTIVE; draws in mist clouds for burst heal
@@ -75,6 +78,7 @@ Core.RegisterSpec(10, {
             { id = 115151, label = "Renewing Mist",   minFightSeconds = 15 },  -- baseline confirmed Mistweaver spell list (was 119611 — wrong ID)
             { id = 107428, label = "Rising Sun Kick",  minFightSeconds = 15 },  -- nodeID 101186 non-PASSIVE ACTIVE
             { id = 124682, label = "Enveloping Mist",  minFightSeconds = 20 },  -- nodeID 101134 non-PASSIVE ACTIVE; primary ST heal
+            { id = 115175, label = "Soothing Mist",   minFightSeconds = 20 },  -- nodeID 101143; 10.2s channel; auto-channels from Enveloping Mist/Vivify — manual casts also fire SPELLCAST_SUCCEEDED
         },
         healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
         priorityNotes = {
@@ -82,6 +86,7 @@ Core.RegisterSpec(10, {
             "Rising Sun Kick on cooldown — damage amp and healing bonus",
             "Enveloping Mist for sustained single-target healing",
             "Thunder Focus Tea on cooldown — empowers next major heal",
+            "Mana Tea on cooldown — mana recovery, do not let charges sit",
             "Sheilun's Gift on cooldown — draws in mist clouds for burst healing",
             "Life Cocoon on the tank for heavy damage",
             "Invoke Chi-Ji for sustained AoE healing phases",
@@ -102,12 +107,15 @@ Core.RegisterSpec(10, {
     -- Tiger Palm (100780) added to rotational — baseline confirmed WW spell list
     -- Blackout Kick (100784) added to rotational — baseline confirmed WW spell list
     -- Whirling Dragon Punch (152175) added to rotational — nodeID 101207 non-PASSIVE ACTIVE
+    -- Touch of Death (322109) added to majorCooldowns — confirmed spell ID; 3 min CD; 99.6% adoption
+    -- Improved Touch of Death (322113) confirmed PASSIVE nodeID 101140 — expands health threshold to 15%
     [3] = {
         name = "Windwalker", role = "DPS",
         resourceType = 12, resourceLabel = "CHI", overcapAt = 6,
         majorCooldowns = {
             { id = 123904,  label = "Invoke Xuen",       expectedUses = "burst windows"           },  -- nodeID 101243 non-PASSIVE ACTIVE
             { id = 1249625, label = "Zenith",            expectedUses = "on CD"                   },  -- nodeID 101053 non-PASSIVE ACTIVE
+            { id = 322109,  label = "Touch of Death",    expectedUses = "on CD"                   },  -- confirmed spell ID; 3 min CD; usable below 15% HP (Improved Touch of Death PASSIVE)
             { id = 1217413, label = "Slicing Winds",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102250 INACTIVE this build
             { id = 116705,  label = "Spear Hand Strike", expectedUses = "situational",    isInterrupt = true },  -- nodeID 110098 non-PASSIVE ACTIVE
         },
@@ -125,6 +133,7 @@ Core.RegisterSpec(10, {
             "Tiger Palm and Blackout Kick as fillers — generate Chi and procs",
             "Zenith on cooldown — major burst window",
             "Invoke Xuen for additional burst — align with Zenith",
+            "Touch of Death on cooldown — usable below 15% HP; 3 min CD",
             "Slicing Winds on cooldown when talented",
             "Never overcap Chi at 6",
         },

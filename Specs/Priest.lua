@@ -64,6 +64,7 @@ Core.RegisterSpec(5, {
             { id = 200183, label = "Apotheosis",         expectedUses = "high damage phases",  healerConditional = true        },  -- nodeID 82614 non-PASSIVE ACTIVE
             { id = 47788,  label = "Guardian Spirit",    expectedUses = "tank emergencies",    healerConditional = true        },  -- nodeID 82637 non-PASSIVE ACTIVE
             { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows",       talentGated = true              },  -- nodeID 82556 non-PASSIVE ACTIVE; class talent
+            { id = 19236,  label = "Desperate Prayer",  expectedUses = "defensive",           healerConditional = true        },  -- confirmed id=19236; 1.2 min CD personal defensive; no penalty on successful fight
             -- Prayer of Mending: 33076 removed — Disc spec-variant; 17 is Holy baseline (rotational)
         },
         rotationalSpells = {
@@ -72,6 +73,7 @@ Core.RegisterSpec(5, {
             { id = 34861,  label = "Holy Word: Sanctify", minFightSeconds = 15 },  -- nodeID 82631 non-PASSIVE ACTIVE
             { id = 14914,  label = "Holy Fire",           minFightSeconds = 15 },  -- nodeID 108730 non-PASSIVE ACTIVE; reduces Holy Word CDs
             { id = 120517, label = "Halo",                minFightSeconds = 20, talentGated = true },  -- nodeID 108724 non-PASSIVE ACTIVE
+            -- Holy Nova (132157) excluded — situational; M+ vs raid usage varies too widely; same treatment as Scorch
         },
         healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
         priorityNotes = {

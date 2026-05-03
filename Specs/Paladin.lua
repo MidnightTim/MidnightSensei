@@ -10,6 +10,8 @@ Core.RegisterSpec(2, {
     -- Lay on Hands (633) added to majorCooldowns — nodeID 81597 non-PASSIVE ACTIVE
     -- Holy Bulwark (432459) added to majorCooldowns — nodeID 110257 non-PASSIVE ACTIVE
     -- Light of Dawn (85222) added to rotational — nodeID 81565 non-PASSIVE ACTIVE; AoE HP spender
+    -- Blessing of Freedom (1044) added to majorCooldowns as isUtility — nodeID 81631; 25s CD; talentGated; 100% adoption
+    -- Fist of Justice confirmed PASSIVE — not tracked
     [1] = {
         name = "Holy", role = "HEALER",
         resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
@@ -21,6 +23,7 @@ Core.RegisterSpec(2, {
             { id = 633,    label = "Lay on Hands",          expectedUses = "emergencies",         healerConditional = true                      },  -- nodeID 81597 non-PASSIVE ACTIVE
             { id = 432459, label = "Holy Bulwark",          expectedUses = "on CD"                                                              },  -- nodeID 110257 non-PASSIVE ACTIVE
             { id = 6940,   label = "Blessing of Sacrifice", expectedUses = "tank busters",        healerConditional = true, talentGated = true   },  -- nodeID 81614 INACTIVE this build
+            { id = 1044,   label = "Blessing of Freedom",  expectedUses = "situational",          isUtility = true,         talentGated = true   },  -- nodeID 81631; 25s CD; movement freedom for ally; tracked, never penalised
         },
         uptimeBuffs = {},
         rotationalSpells = {
@@ -55,6 +58,9 @@ Core.RegisterSpec(2, {
     -- Word of Glory (85673) added to rotational — session log x2; talentGated HP spender heal
     -- Templar Hero Spec: Hammer of Light (427453) isUtility — proc window 20s after Divine Toll via Light's Guidance (nodeID 95180); player-pressed when available; x6 per fight
     -- Templar Hero Spec: Divine Hammer (198137) isUtility — passive proc summoned by Divine Toll via Divine Hammer talent (nodeID 109747); not player-pressed; x20 per fight
+    -- Blessing of Sacrifice (6940) added to majorCooldowns as healerConditional — nodeID 81614; 2 min CD; 99.7% adoption; treat like external tank CD
+    -- Lay on Hands (633) added to majorCooldowns as healerConditional — nodeID 81597; 7 min CD; baseline (granted for free); no penalty on successful fight
+    -- Final Stand (204077) confirmed PASSIVE nodeID 81504 — not tracked
     [2] = {
         name = "Protection", role = "TANK",
         resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
@@ -64,7 +70,9 @@ Core.RegisterSpec(2, {
             { id = 31935,  label = "Avenger's Shield",       expectedUses = "on CD"               },  -- nodeID 81502 non-PASSIVE ACTIVE
             { id = 31884,  label = "Avenging Wrath",         expectedUses = "on CD",              talentGated = true },  -- nodeID 81483; class talent
             { id = 375576, label = "Divine Toll",            expectedUses = "on CD",              talentGated = true },  -- nodeID 110006; class talent
-            { id = 96231,  label = "Rebuke",                 expectedUses = "situational",  isInterrupt = true },  -- nodeID 81604 non-PASSIVE ACTIVE
+            { id = 96231,  label = "Rebuke",                 expectedUses = "situational",  isInterrupt = true              },  -- nodeID 81604 non-PASSIVE ACTIVE
+            { id = 6940,   label = "Blessing of Sacrifice",  expectedUses = "tank busters", healerConditional = true, talentGated = true },  -- nodeID 81614; 2 min CD; 99.7% adoption; no penalty on successful fight
+            { id = 633,    label = "Lay on Hands",           expectedUses = "emergencies",  healerConditional = true              },  -- nodeID 81597; 7 min CD; baseline (granted for free); no penalty on successful fight
         },
         uptimeBuffs = {
             { id = 132403, label = "Shield of the Righteous", targetUptime = 50, castSpellId = 53600, buffDuration = 4.5 },  -- cast 53600 applies buff 132403 for 4.5s
@@ -90,6 +98,8 @@ Core.RegisterSpec(2, {
             "Word of Glory for emergency self-healing (talent)",
             "Avenging Wrath and Divine Toll on cooldown for burst",
             "Ardent Defender and Guardian of Ancient Kings for heavy damage windows",
+            "Blessing of Sacrifice on a target taking heavy damage — 30% damage reduction",
+            "Lay on Hands as a last resort — 7 min CD emergency full heal",
         },
         scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
         sourceNote = "Midnight 12.0 verified against full Protection Paladin talent tree snapshot v1.4.3 114 nodes (April 2026)",
@@ -109,7 +119,9 @@ Core.RegisterSpec(2, {
     -- Divine Storm (53385) moved to majorCooldowns isUtility — AoE only; penalising single-target fights was wrong
     -- Judgment (20271) confirmed spell list ✅
     -- Art of War (406064) PASSIVE nodeID 81523 — procs reset Blade of Justice; tracked as procBuff (VERIFY)
-    -- Hammer of Light — not in talent tree or spell list; not tracked until confirmed
+    -- Hammer of Light (427453) added to majorCooldowns as isUtility — Light's Guidance nodeID 95180; 20s proc window after Wake of Ashes; Templar hero path (99.6%)
+    -- Wake of Ashes (255937) confirmed firing UNIT_SPELLCAST_SUCCEEDED — remains tracked; triggers HoL window
+    -- Crusading Strikes confirmed PASSIVE — not tracked
     [3] = {
         name = "Retribution", role = "DPS",
         resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
@@ -119,7 +131,8 @@ Core.RegisterSpec(2, {
             { id = 375576, label = "Divine Toll",         expectedUses = "on CD",              talentGated = true },  -- nodeID 109368; class talent; rotation priority #7
             { id = 343527, label = "Execution Sentence", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 109373 non-PASSIVE INACTIVE
             { id = 96231,  label = "Rebuke",             expectedUses = "situational",     isInterrupt = true },  -- nodeID 110093 non-PASSIVE ACTIVE
-            { id = 53385,  label = "Divine Storm",       expectedUses = "AoE only",        isUtility = true   },  -- nodeID 81527; AoE HP spender — moved from rotational; never penalise in ST
+            { id = 53385,  label = "Divine Storm",       expectedUses = "AoE only",        isUtility = true              },  -- nodeID 81527; AoE HP spender — moved from rotational; never penalise in ST
+            { id = 427453, label = "Hammer of Light",   expectedUses = "after Wake of Ashes", isUtility = true, talentGated = true },  -- Light's Guidance nodeID 95180; 20s window after Wake of Ashes; Templar (99.6%); tracked, never penalised
             -- Crusade (231895) removed — not in talent tree; 1253598 is a PASSIVE modifier
         },
         rotationalSpells = {
@@ -140,6 +153,7 @@ Core.RegisterSpec(2, {
             "Blade of Justice on cooldown — spend Art of War procs immediately",
             "Judgment on cooldown — Holy Power generator",
             "Divine Storm as AoE finisher at 5 Holy Power",
+            "Hammer of Light during the 20s window after Wake of Ashes (Templar)",
         },
         scoreWeights = { cooldownUsage = 35, activity = 30, resourceMgmt = 25, procUsage = 10 },
         sourceNote = "Midnight 12.0 verified against full Retribution talent tree snapshot v1.4.3 107 nodes (April 2026)",

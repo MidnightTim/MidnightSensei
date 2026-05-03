@@ -18,7 +18,10 @@ Core.RegisterSpec(7, {
     -- Added:    Lightning Bolt (188196) as baseline rotational — confirmed spell list; primary filler
     -- Added:    Earth Elemental (198103) to majorCooldowns — live-verified id=198103 fired=1x; baseline defensive CD
     -- Added:    Ancestral Swiftness (443454) to majorCooldowns — Farseer hero talent; talentGated; ~30s CD window
+    -- Added:    Spiritwalker's Grace (79206) to majorCooldowns as isUtility — nodeID 103584; 2 min CD; 100% adoption
+    -- Added:    Wind Rush Totem (192077) to majorCooldowns as isUtility — nodeID 103627; talentGated; 94% adoption
     -- Tempest (454009) — confirmed PASSIVE nodeID 94892; not tracked
+    -- Lightning Capacitor, Inferno Arc, Primal Elementalist — confirmed PASSIVE; not tracked
     -- Not added: Lava Surge (77756) to procBuffs — confirmed in Elemental Spell List as player aura
     --            but needs in-game C_UnitAuras.GetPlayerAuraBySpellID verification before adding
     -- Confirmed: Lava Burst cast ID = 51505 (UNIT_SPELLCAST_SUCCEEDED verified in-game, fired 7x)
@@ -30,7 +33,9 @@ Core.RegisterSpec(7, {
             { id = 191634, label = "Stormkeeper",        expectedUses = "on CD"                              },  -- confirmed nodeID 80988
             { id = 114050, label = "Ascendance",         expectedUses = "burst windows"                      },  -- live-verified fired=1x; fires SUCCEEDED on both hero paths
             { id = 198103, label = "Earth Elemental",    expectedUses = "defensive / tank threat"            },  -- live-verified id=198103 fired=1x; baseline CD
-            { id = 443454, label = "Ancestral Swiftness",expectedUses = "on CD (~30s)", talentGated = true, minFightSeconds = 30 },  -- Farseer hero talent; live-verified fired=1x
+            { id = 443454, label = "Ancestral Swiftness",  expectedUses = "on CD (~30s)",    talentGated = true, minFightSeconds = 30 },  -- Farseer hero talent; live-verified fired=1x
+            { id = 79206,  label = "Spiritwalker's Grace", expectedUses = "movement phases",  isUtility = true, talentGated = true },       -- nodeID 103584; 2 min CD; 100% adoption; tracked, never penalised
+            { id = 192077, label = "Wind Rush Totem",      expectedUses = "movement phases",  isUtility = true, talentGated = true },       -- nodeID 103627; 94% adoption; tracked, never penalised
         },
         -- uptimeBuffs intentionally empty: Flame Shock is a target debuff,
         -- not detectable via C_UnitAuras.GetPlayerAuraBySpellID.
@@ -68,6 +73,9 @@ Core.RegisterSpec(7, {
     -- Crash Lightning (187874) added to rotational — non-PASSIVE ACTIVE nodeID 80974
     -- Lava Lash (60103) added to rotational — non-PASSIVE ACTIVE nodeID 109389
     -- Voltaic Blaze (470057) added as talentGated rotational — non-PASSIVE ACTIVE nodeID 80954
+    -- Stormstrike (32175) added to rotational — primary builder; was missing from rotationalSpells
+    --   altId 17364 also fires UNIT_SPELLCAST_SUCCEEDED; 32176 is Off-Hand proc (not a cast event)
+    -- Fire Nova (1260666) confirmed PASSIVE nodeID 109909 — not tracked
     [2] = {
         name = "Enhancement", role = "DPS",
         resourceType = 11, resourceLabel = "MAELSTROM", overcapAt = 140,
@@ -84,6 +92,7 @@ Core.RegisterSpec(7, {
             { id = 187880, label = "Maelstrom Weapon", maxStackTime = 20 },  -- confirmed spell list (was 344179)
         },
         rotationalSpells = {
+            { id = 32175,  label = "Stormstrike",    minFightSeconds = 15, altIds = {17364} },    -- primary builder; 32176 is Off-Hand proc (not cast event)
             { id = 187874, label = "Crash Lightning", minFightSeconds = 15 },                     -- non-PASSIVE ACTIVE nodeID 80974
             { id = 60103,  label = "Lava Lash",       minFightSeconds = 15 },                     -- non-PASSIVE ACTIVE nodeID 109389
             { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 80954
@@ -133,6 +142,8 @@ Core.RegisterSpec(7, {
             { id = 73685,  label = "Unleash Life",      expectedUses = "on CD — pre-heal amplifier"                             },  -- non-PASSIVE ACTIVE nodeID 92675
             { id = 114052, label = "Ascendance",        expectedUses = "emergency throughput",         healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 81032
             -- Call of the Ancestors (443450) removed — confirmed PASSIVE nodeID 94888
+            -- Earth Shield (974) intentionally not tracked — nodeID 103596; cast pre-pull creates false negatives;
+            --   Midnight changes make mid-fight reapplication timing inconsistent; no penalty warranted
         },
         uptimeBuffs = {},
         rotationalSpells = {

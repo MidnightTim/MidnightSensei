@@ -10,7 +10,10 @@ Core.RegisterSpec(12, {
     -- 344862 removed from Havoc — this is Devourer's Reap ID, not a Havoc spell
     -- Blade Dance: correct ID is 188499 confirmed via spell snapshot — WAIT, 188499
     --   not in tree either. Blade Dance must be baseline. Retained as baseline spell.
-    -- Chaos Strike: 344862 confirmed NOT in Havoc tree — wrong ID. Needs VERIFY.
+    -- Chaos Strike added to rotational — primary Fury spender; confirmed IDs: 222031 (primary),
+    --   162794 and 199547 (alt IDs), 201428 Annihilation (Meta variant); all fire UNIT_SPELLCAST_SUCCEEDED
+    -- Disrupt (183752) added to majorCooldowns as isInterrupt — melee interrupt; tracked, never penalised
+    -- Glaive Tempest confirmed PASSIVE — not tracked
     -- Sigil of Misery (207684) added as isInterrupt — non-PASSIVE ACTIVE
     -- Chaos Nova (179057) added as talentGated CD — non-PASSIVE ACTIVE
     -- Felblade (232893) already in rotational — confirmed non-PASSIVE ACTIVE nodeID 91008
@@ -52,14 +55,15 @@ Core.RegisterSpec(12, {
             { id = 198013, label = "Eye Beam",      expectedUses = "on CD"                  },  -- non-PASSIVE nodeID 91018
             { id = 370965, label = "The Hunt",      expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE nodeID 90921
             { id = 179057, label = "Chaos Nova",    expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE nodeID 90993
-            { id = 207684, label = "Sigil of Misery",expectedUses = "situational",   isInterrupt = true },  -- non-PASSIVE ACTIVE; fear CC
+            { id = 207684, label = "Sigil of Misery", expectedUses = "situational",   isInterrupt = true },  -- non-PASSIVE ACTIVE; fear CC
+            { id = 183752, label = "Disrupt",          expectedUses = "situational",   isInterrupt = true },  -- melee interrupt; tracked, never penalised
         },
         rotationalSpells = {
-            { id = 188499, label = "Blade Dance",     minFightSeconds = 15 },                    -- baseline confirmed spellbook
-            { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },                    -- baseline confirmed spellbook
-            { id = 258860, label = "Essence Break",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 91033
-            { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 91008
-            -- 344862 (Chaos Strike) removed — ID not in Havoc talent tree; needs VERIFY for correct spec-variant
+            { id = 222031, label = "Chaos Strike",    minFightSeconds = 15, altIds = {162794, 199547, 201428} },  -- primary Fury spender; 201428=Annihilation (Meta variant)
+            { id = 188499, label = "Blade Dance",     minFightSeconds = 15 },                                     -- baseline confirmed spellbook
+            { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },                                     -- baseline confirmed spellbook
+            { id = 258860, label = "Essence Break",   minFightSeconds = 20, talentGated = true },                 -- non-PASSIVE ACTIVE nodeID 91033
+            { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true },                 -- non-PASSIVE ACTIVE nodeID 91008
         },
         procBuffs = {
             { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },   -- VERIFY C_UnitAuras
@@ -70,6 +74,7 @@ Core.RegisterSpec(12, {
             "Eye Beam on cooldown — core damage and Fury dump",
             "Blade Dance on cooldown — highest priority spender",
             "Essence Break before Chaos Strike when talented — amplifies damage",
+            "Chaos Strike to spend Fury — primary filler; becomes Annihilation during Metamorphosis",
             "Metamorphosis for burst — align with trinkets and lust",
             "Chaos Nova on cooldown when talented",
         },
@@ -80,10 +85,8 @@ Core.RegisterSpec(12, {
     -- Vengeance (Midnight 12.0 pass — April 2026)
     -- Verified against v1.4.3 talent snapshot (108 nodes, descriptions)
     -- 191427 Metamorphosis removed from majorCooldowns — shapeshifting, fires UPDATE_SHAPESHIFT_FORM not SUCCEEDED
-    -- 228477 Soul Cleave removed — old ID not in talent tree (was spec-variant fix that was itself wrong)
     -- 344862 removed — Devourer's Reap ID; wrong for Vengeance
     -- 344859 Fracture removed from rotational — confirmed not in Vengeance talent tree
-    -- Soul Cleave: correct ID unknown — needs VERIFY
     -- 203720 Demon Spikes: ID not in talent tree as non-PASSIVE — VERIFY aura ID for uptimeBuffs
     -- Sigil of Silence (202137) added as isInterrupt — non-PASSIVE ACTIVE
     -- Sigil of Misery (207684) added as isInterrupt — non-PASSIVE ACTIVE
@@ -91,6 +94,9 @@ Core.RegisterSpec(12, {
     -- Felblade (232893) already in rotational — confirmed ✓
     -- Spirit Bomb (247454) already in rotational — confirmed ✓
     -- Sigil of Spite (390163) already in majorCooldowns — confirmed ✓
+    -- Soul Cleave added to rotational — confirmed IDs: 228477 (primary), 228478 (altId)
+    -- Perfectly Balanced Glaive confirmed PASSIVE — not tracked
+    -- Quickened Sigils confirmed PASSIVE — not tracked
     [2] = {
         name = "Vengeance", role = "TANK",
         resourceType = 17, resourceLabel = "FURY", overcapAt = 100,
@@ -140,6 +146,7 @@ Core.RegisterSpec(12, {
         },
         rotationalSpells = {
             { id = 258920, label = "Immolation Aura", minFightSeconds = 15 },                                          -- live-verified x5; primary Fury generator
+            { id = 228477, label = "Soul Cleave",     minFightSeconds = 15, altIds = {228478} },                       -- confirmed IDs: 228477 primary, 228478 alt; core Fury spender
             { id = 225919, label = "Fracture",        minFightSeconds = 15, altIds = {263642, 225921} },               -- live-verified x15; multiple variant IDs all credit this entry
             { id = 247454, label = "Spirit Bomb",     minFightSeconds = 20 },                                          -- non-PASSIVE ACTIVE nodeID 90990
             { id = 189110, label = "Infernal Strike",  minFightSeconds = 15 },                                         -- live-verified x5; gap-closer with charges
@@ -149,6 +156,7 @@ Core.RegisterSpec(12, {
         priorityNotes = {
             "Maintain Demon Spikes for physical mitigation",
             "Immolation Aura on cooldown for Fury and damage",
+            "Soul Cleave to spend Fury — use when below 4 Soul Fragments for Spirit Bomb",
             "Spirit Bomb with 4-5 Soul Fragments for healing and damage",
             "Fiery Brand for magic damage or tank busters",
             "Fel Devastation on cooldown for sustained damage and healing",
@@ -159,7 +167,8 @@ Core.RegisterSpec(12, {
         sourceNote = "Midnight 12.0 verified against full Vengeance talent tree snapshot v1.4.3 108 nodes (April 2026)",
     },
 
-    -- Devourer (/ms verify confirmed April 2026 — all cast IDs live-verified)
+    -- Devourer (Midnight 12.0 Archon audit — May 2026; /ms verify confirmed April 2026 — all cast IDs live-verified)
+    -- Feast of Souls (1237270) confirmed PASSIVE nodeID 107343 — not tracked
     -- Spell IDs confirmed via UNIT_SPELLCAST_SUCCEEDED (/ms verify report):
     --   Consume:          473662  (was 344859 — snapshot ID was damage event ID, not cast ID)
     --   Reap:             1226019 (was 344862 — same issue)

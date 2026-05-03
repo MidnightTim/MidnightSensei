@@ -14,6 +14,8 @@ Core.RegisterSpec(1, {
     -- Colossus Smash (167105) added to rotational — nodeID 90290 non-PASSIVE ACTIVE
     -- Overpower (7384) added to rotational — nodeID 90271 non-PASSIVE ACTIVE
     -- Rend (772) added to rotational — nodeID 109391 non-PASSIVE ACTIVE
+    -- Cleave (845) added to rotational — confirmed combat cast ID x1; talentGated
+    -- Die by the Sword (118038) added to majorCooldowns as isUtility — confirmed id=118038; personal defensive
     -- Flags: Battlefield Commander/Deep Wounds/Mortal Wounds — Causes/Grants = effect
     --   descriptions only, no spell-replacement pattern. No suppressIfTalent needed.
     [1] = {
@@ -23,7 +25,8 @@ Core.RegisterSpec(1, {
             { id = 107574, label = "Avatar",     expectedUses = "on CD", talentGated = true },  -- nodeID 110176 non-PASSIVE ACTIVE; class talent
             { id = 228920, label = "Ravager",    expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90441 non-PASSIVE ACTIVE
             { id = 436358, label = "Demolish",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
-            { id = 46968,  label = "Shockwave",  expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+            { id = 46968,  label = "Shockwave",     expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+            { id = 118038, label = "Die by the Sword", expectedUses = "situational",    isUtility = true    },  -- confirmed id=118038; personal defensive — tracked, never penalised
             -- Bladestorm (227847) removed — not in Arms talent tree
             -- Warbreaker (262161) removed — not in Arms talent tree or spell list
         },
@@ -32,8 +35,9 @@ Core.RegisterSpec(1, {
             { id = 12294,  label = "Mortal Strike",  minFightSeconds = 15 },  -- nodeID 90270 non-PASSIVE ACTIVE
             { id = 167105, label = "Colossus Smash", minFightSeconds = 20 },  -- nodeID 90290 non-PASSIVE ACTIVE
             { id = 7384,   label = "Overpower",      minFightSeconds = 15 },  -- nodeID 90271 non-PASSIVE ACTIVE
-            { id = 772,    label = "Rend",            minFightSeconds = 15 },  -- nodeID 109391 non-PASSIVE ACTIVE
-            { id = 163201, label = "Execute",         minFightSeconds = 45 },  -- confirmed spell list; execute phase
+            { id = 772,    label = "Rend",            minFightSeconds = 15 },                      -- nodeID 109391 non-PASSIVE ACTIVE
+            { id = 163201, label = "Execute",         minFightSeconds = 45 },                      -- confirmed spell list; execute phase
+            { id = 845,    label = "Cleave",          minFightSeconds = 20, talentGated = true },  -- confirmed combat cast ID x1; AoE filler
         },
         priorityNotes = {
             "Maintain Rend on target — DoT setup before Colossus Smash",
@@ -41,8 +45,10 @@ Core.RegisterSpec(1, {
             "Colossus Smash to open damage windows — high priority",
             "Overpower on cooldown — free proc-based filler",
             "Execute during execute phase — replaces Mortal Strike below 20%",
+            "Cleave on cooldown when talented — AoE filler",
             "Avatar and Ravager for burst — align with Colossus Smash",
             "Shockwave on cooldown when talented — AoE stun and damage",
+            "Die by the Sword situationally — personal defensive, no penalty for unused",
             "Pool Rage for Colossus Smash windows — avoid overcapping at 100",
         },
         scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
@@ -60,6 +66,8 @@ Core.RegisterSpec(1, {
     -- Raging Blow (85288) added to rotational — nodeID 90396 non-PASSIVE ACTIVE
     -- Berserker Stance (386196) added to rotational — nodeID 90325 non-PASSIVE ACTIVE
     -- Rend (772) added to rotational — non-PASSIVE ACTIVE; shared class node, DoT maintenance
+    -- Whirlwind added to rotational — two combat cast IDs confirmed: 199667 (primary) and 190411 (altId)
+    -- Execute (280735) added to rotational — confirmed combat cast ID; Improved Execute (316402) is PASSIVE
     -- Enrage uptime buff: 184362 retained (VERIFY — spell list shows 184361; 184362 may be enhanced version)
     -- Flags: Battlefield Commander/Deep Wounds — Grants/Causes = effect descriptions only
     [2] = {
@@ -83,11 +91,15 @@ Core.RegisterSpec(1, {
             { id = 85288,  label = "Raging Blow",      minFightSeconds = 15 },  -- nodeID 90396 non-PASSIVE ACTIVE; core filler
             { id = 386196, label = "Berserker Stance", minFightSeconds = 15 },  -- nodeID 90325 non-PASSIVE ACTIVE
             { id = 772,    label = "Rend",             minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE; shared class node; DoT maintenance
+            { id = 199667, label = "Whirlwind",        minFightSeconds = 15, altIds = {190411} },   -- two combat cast IDs confirmed: 199667 and 190411; AoE filler
+            { id = 280735, label = "Execute",           minFightSeconds = 45 },                      -- confirmed combat cast ID; Improved Execute (316402) is PASSIVE
         },
         priorityNotes = {
             "Bloodthirst on cooldown — primary Enrage trigger and Rage builder",
             "Rampage to refresh Enrage and spend Rage — never sit on 100 Rage",
             "Raging Blow as filler during Enrage — high priority",
+            "Whirlwind on cooldown — AoE filler, applies Whirlwind buff for cleave",
+            "Execute during execute phase — high priority below 20% HP",
             "Maintain Rend for the DoT when talented",
             "Recklessness to align with Enrage and trinkets for burst",
             "Odyn's Fury, Avatar, Champion's Spear on cooldown when talented",

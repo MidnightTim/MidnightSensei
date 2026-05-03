@@ -7,6 +7,7 @@ Core.RegisterSpec(13, {
     -- All majorCooldowns confirmed non-PASSIVE or baseline (Fire Breath, Deep Breath not in talent tree — baseline spells)
     -- Pyre (357211) added to rotational — non-PASSIVE ACTIVE nodeID 93334
     -- Quell (351338) added as isInterrupt — non-PASSIVE ACTIVE nodeID 93332
+    -- Zephyr (374227) added to majorCooldowns as isUtility — nodeID 93346; 2 min CD; talentGated; 97.8% adoption
     -- VERIFY resource enum: resourceType 17 pending in-game confirmation
     [1] = {
         name = "Devastation", role = "DPS",
@@ -16,7 +17,8 @@ Core.RegisterSpec(13, {
             { id = 357208, label = "Fire Breath",    expectedUses = "on CD"         },  -- baseline confirmed spell list
             { id = 359073, label = "Eternity Surge", expectedUses = "on CD"         },  -- non-PASSIVE ACTIVE nodeID 93275
             { id = 357210, label = "Deep Breath",    expectedUses = "burst windows" },  -- baseline confirmed spell list
-            { id = 351338, label = "Quell",          expectedUses = "situational",   isInterrupt = true },  -- non-PASSIVE ACTIVE nodeID 93332
+            { id = 351338, label = "Quell",    expectedUses = "situational",  isInterrupt = true              },  -- non-PASSIVE ACTIVE nodeID 93332
+            { id = 374227, label = "Zephyr",   expectedUses = "AoE damage phases", isUtility = true, talentGated = true },  -- nodeID 93346; 2 min CD; reduces AoE damage taken 20%; tracked, never penalised
         },
         rotationalSpells = {
             { id = 361469, label = "Living Flame",  minFightSeconds = 20 },  -- baseline confirmed spell list
@@ -44,6 +46,9 @@ Core.RegisterSpec(13, {
     -- Temporal Barrier (1291636) added — non-PASSIVE ACTIVE nodeID 93258; absorb + Echo on up to 5 targets (patch 12.0)
     -- Resonating Sphere removed from game (patch 12.0) — was not tracked
     -- Energy Cycles removed from game (patch 12.0) — was not tracked
+    -- Verdant Embrace (360995) added to rotational — nodeID 93341; talentGated; 15s CD instant heal; 100% adoption
+    -- Zephyr (374227) added to majorCooldowns as isUtility — nodeID 93346; 2 min CD; talentGated; 100% adoption
+    -- Lifebind confirmed PASSIVE — not tracked
     [2] = {
         name = "Preservation", role = "HEALER",
         resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,
@@ -51,19 +56,22 @@ Core.RegisterSpec(13, {
             { id = 363534,  label = "Rewind",            expectedUses = "emergency",     healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93337
             { id = 355936,  label = "Dream Breath",      expectedUses = "on CD AoE"                              },  -- non-PASSIVE ACTIVE nodeID 93240
             { id = 370553,  label = "Tip the Scales",    expectedUses = "burst ramp"                             },  -- non-PASSIVE ACTIVE nodeID 93350 (was 374348 — wrong)
-            { id = 357170,  label = "Time Dilation",     expectedUses = "emergency HoT", healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 93336
-            { id = 1291636, label = "Temporal Barrier",  expectedUses = "on CD (talent)", talentGated = true      },  -- non-PASSIVE ACTIVE nodeID 93258; absorb + Echo 30% on up to 5 allies
+            { id = 357170,  label = "Time Dilation",     expectedUses = "emergency HoT",  healerConditional = true              },  -- non-PASSIVE ACTIVE nodeID 93336
+            { id = 1291636, label = "Temporal Barrier",  expectedUses = "on CD (talent)", talentGated = true                    },  -- non-PASSIVE ACTIVE nodeID 93258; absorb + Echo 30% on up to 5 allies
+            { id = 374227,  label = "Zephyr",            expectedUses = "AoE damage phases", isUtility = true, talentGated = true },  -- nodeID 93346; 2 min CD; tracked, never penalised
             -- Emerald Communion (370960) removed — not in Preservation talent tree or spell list
         },
         rotationalSpells = {
             { id = 366155, label = "Reversion",        minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 93338
             { id = 355913, label = "Emerald Blossom",  minFightSeconds = 30 },  -- baseline confirmed spell list
             { id = 373861, label = "Temporal Anomaly", minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 93257
-            { id = 364343, label = "Echo",             minFightSeconds = 15 },  -- non-PASSIVE ACTIVE nodeID 93339; core mechanic
+            { id = 364343, label = "Echo",             minFightSeconds = 15 },                      -- non-PASSIVE ACTIVE nodeID 93339; core mechanic
+            { id = 360995, label = "Verdant Embrace", minFightSeconds = 20, talentGated = true },  -- nodeID 93341; 15s CD instant heal; 100% adoption
         },
         healerMetrics = { targetOverheal = 30, targetActivity = 80, targetManaEnd = 10 },
         priorityNotes = {
             "Reversion on cooldown — primary single-target HoT filler",
+            "Verdant Embrace on cooldown when talented — instant 15s CD targeted heal",
             "Emerald Blossom for group healing efficiency",
             "Dream Breath on cooldown — primary AoE healing",
             "Echo before high-throughput spells to amplify effect",
@@ -81,6 +89,9 @@ Core.RegisterSpec(13, {
     -- Time Skip (404977) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 93232
     -- Blistering Scales (360827) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 93209; party defensive
     -- Quell (351338) added as isInterrupt — non-PASSIVE ACTIVE nodeID 93199
+    -- Bestow Weyrnstone (408233) added to majorCooldowns as isUtility — nodeID 93382; 54s CD; talentGated; 82% adoption
+    -- Defy Fate confirmed PASSIVE — not tracked
+    -- Stretch Time confirmed PASSIVE — not tracked
     [3] = {
         name = "Augmentation", role = "DPS",
         resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,
@@ -90,7 +101,8 @@ Core.RegisterSpec(13, {
             { id = 409311, label = "Prescience",        expectedUses = "pre-burst"         },  -- non-PASSIVE ACTIVE nodeID 93358
             { id = 404977, label = "Time Skip",         expectedUses = "on CD",            talentGated = true, suppressIfTalent = 412713 },  -- non-PASSIVE ACTIVE nodeID 93232; replaced by Interwoven Threads (412713) PASSIVE
             { id = 360827, label = "Blistering Scales", expectedUses = "party mitigation", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 93209
-            { id = 351338, label = "Quell",             expectedUses = "situational",      isInterrupt = true },  -- non-PASSIVE ACTIVE nodeID 93199
+            { id = 351338, label = "Quell",             expectedUses = "situational",      isInterrupt = true              },  -- non-PASSIVE ACTIVE nodeID 93199
+            { id = 408233, label = "Bestow Weyrnstone", expectedUses = "situational",      isUtility = true, talentGated = true },  -- nodeID 93382; 54s CD; transport utility; tracked, never penalised
         },
         uptimeBuffs = {
             { id = 395152, label = "Ebon Might", targetUptime = 70, castSpellId = 395152, buffDuration = 10 },  -- 10s base duration; recast every ~30s
