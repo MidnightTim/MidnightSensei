@@ -82,7 +82,7 @@ Core.RegisterSpec(2, {
             { id = 35395,   label = "Blessed Hammer",          minFightSeconds = 15,  altIds = {204019} },  -- combat cast fires 204019; spellbook ID 35395
             { id = 26573,   label = "Consecration",            minFightSeconds = 15 },  -- confirmed spell list baseline; AoE damage and ground effect
             { id = 275779,  label = "Judgment",                minFightSeconds = 15 },  -- HP generator; x33 per fight in session log
-            { id = 1241413, label = "Hammer of Wrath",         minFightSeconds = 30,  talentGated = true },  -- execute/AW window; x19 per fight in session log
+            { id = 1241413, label = "Hammer of Wrath",         minFightSeconds = 30,  talentGated = true, altIds = {1241288} },  -- execute/AW window; 1241288 = morphed form when Judgment is empowered by Avenging Wrath
             { id = 85673,   label = "Word of Glory",           minFightSeconds = 30,  talentGated = true },  -- HP spender heal; x2 per fight in session log
             { id = 427453,  label = "Hammer of Light",          isUtility = true,      talentGated = true },  -- Templar: 20s window after Divine Toll (Light's Guidance); player-pressed when available
             { id = 198137,  label = "Divine Hammer",            isUtility = true,      talentGated = true },  -- Templar: passive proc summoned by Divine Toll (Divine Hammer talent); not player-pressed
@@ -102,7 +102,7 @@ Core.RegisterSpec(2, {
             "Lay on Hands as a last resort — 7 min CD emergency full heal",
         },
         scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-        sourceNote = "Midnight 12.0 verified against full Protection Paladin talent tree snapshot v1.4.3 114 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Protection Paladin talent tree snapshot v1.4.3 114 nodes (April 2026); May 2026 second-pass",
     },
 
     -- Retribution (Midnight 12.0 PASSIVE audit + rotation guide — April 2026)

@@ -9,14 +9,19 @@ Core.RegisterSpec(9, {
     -- Drain Soul 388667: nodeID 72045 confirmed PASSIVE — removed from rotational
     --   686 (baseline) remains as the trackable cast ID
     -- All other entries confirmed non-PASSIVE from talent snapshot
+    -- Curse of Tongues + Curse of Exhaustion: both 86%+ adoption on Archon (May 2026 audit)
+    --   situational debuffs — tracked as isUtility, never penalised; bonus credit if used
+    --   VERIFY spell IDs in-game: 1714 (Tongues) and 334275 (Exhaustion) are pre-Midnight IDs
     [1] = {
         name = "Affliction", role = "DPS",
         resourceType = 7, resourceLabel = "SOUL SHARDS", overcapAt = 5,
         majorCooldowns = {
-            { id = 205180,  label = "Summon Darkglare", expectedUses = "on CD"           },  -- nodeID 72034 non-PASSIVE ACTIVE
-            { id = 442726,  label = "Malevolence",      expectedUses = "on CD",          talentGated = true },  -- nodeID 94842; shared class talent — talentGated to avoid tracking grayed cross-spec spell
-            { id = 1257052, label = "Dark Harvest",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 109860 non-PASSIVE ACTIVE
-            { id = 445468,  label = "Wither",           expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94840 non-PASSIVE ACTIVE confirmed
+            { id = 205180,  label = "Summon Darkglare",      expectedUses = "on CD"                                    },  -- nodeID 72034 non-PASSIVE ACTIVE
+            { id = 442726,  label = "Malevolence",           expectedUses = "on CD",          talentGated = true        },  -- nodeID 94842; shared class talent — talentGated to avoid tracking grayed cross-spec spell
+            { id = 1257052, label = "Dark Harvest",          expectedUses = "on CD (talent)", talentGated = true        },  -- nodeID 109860 non-PASSIVE ACTIVE
+            { id = 445468,  label = "Wither",                expectedUses = "on CD (talent)", talentGated = true        },  -- nodeID 94840 non-PASSIVE ACTIVE confirmed
+            { id = 1714,    label = "Curse of Tongues",      expectedUses = "situational",    isUtility = true          },  -- VERIFY id=1714 in Midnight 12.0; 87% adoption; debuff slows cast speed; never penalised
+            { id = 334275,  label = "Curse of Exhaustion",   expectedUses = "situational",    isUtility = true          },  -- VERIFY id=334275 in Midnight 12.0; 87% adoption; debuff slows movement; never penalised
         },
         rotationalSpells = {
             { id = 48181,   label = "Haunt",               minFightSeconds = 20 },  -- nodeID 72032 non-PASSIVE ACTIVE
@@ -39,7 +44,7 @@ Core.RegisterSpec(9, {
             "Spend Nightfall procs immediately on Shadow Bolt",
         },
         scoreWeights = { cooldownUsage = 35, procUsage = 15, activity = 30, resourceMgmt = 20 },
-        sourceNote = "Midnight 12.0 verified against full Affliction talent tree snapshot 103 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Affliction talent tree snapshot 103 nodes (April 2026); May 2026 second-pass",
     },
 
     -- Demonology (Full talent tree pass — April 2026)

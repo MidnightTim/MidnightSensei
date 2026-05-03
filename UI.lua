@@ -688,7 +688,8 @@ end
 --------------------------------------------------------------------------------
 -- Main HUD Frame
 --------------------------------------------------------------------------------
-local mainFrame = nil
+local mainFrame      = nil
+local updateAvailable = false   -- set true when a newer version is detected via version broadcast
 
 -- Forward-declared so the reviewBtn closure inside CreateMainFrame can
 -- reference it before the function body is defined below.
@@ -930,6 +931,51 @@ local function CreateMainFrame()
 
     vBar:SetShown(MS.Core and MS.Core.VerifyMode or false)
     mainFrame.verifyBar = vBar
+
+    -- Update available bar — anchored above mainFrame; shown when a newer version is broadcast
+    local uBar = CreateFrame("Button", nil, mainFrame, "BackdropTemplate")
+    uBar:SetHeight(20)
+    uBar:SetPoint("BOTTOMLEFT",  mainFrame, "TOPLEFT",  0, 2)
+    uBar:SetPoint("BOTTOMRIGHT", mainFrame, "TOPRIGHT", 0, 2)
+    ApplyBackdrop(uBar, {0.20, 0.14, 0.02, 0.97}, {0.85, 0.65, 0.10, 0.9})
+    uBar:SetFrameStrata("MEDIUM")
+
+    local uBarLbl = MakeFont(uBar, 9, "CENTER")
+    uBarLbl:SetPoint("LEFT", uBar, "LEFT", 6, 0)
+    uBarLbl:SetPoint("RIGHT", uBar, "RIGHT", -22, 0)
+    uBarLbl:SetTextColor(1.0, 0.85, 0.20, 1)
+    uBarLbl:SetText("New Version Available  (click for details)")
+
+    uBar:SetScript("OnClick", function() UI.ShowUpdatePopup() end)
+    uBar:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(uBar, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Update Available", 1.0, 0.85, 0.20)
+        GameTooltip:AddLine("Check Curseforge or Wago for the latest version.", 0.8, 0.8, 0.8)
+        GameTooltip:Show()
+    end)
+    uBar:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- Dismiss X
+    local uBarX = CreateFrame("Button", nil, uBar)
+    uBarX:SetSize(16, 16)
+    uBarX:SetPoint("RIGHT", uBar, "RIGHT", -3, 0)
+    local uBarXFs = MakeFont(uBarX, 11, "CENTER")
+    uBarXFs:SetPoint("CENTER")
+    uBarXFs:SetText("|cffaaaaaaX|r")
+    uBarX:SetScript("OnClick", function() uBar:Hide() end)
+    uBarX:SetScript("OnEnter", function()
+        uBarXFs:SetTextColor(1, 0.3, 0.3, 1)
+        GameTooltip:SetOwner(uBarX, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Dismiss", 1, 0.3, 0.3)
+        GameTooltip:Show()
+    end)
+    uBarX:SetScript("OnLeave", function()
+        uBarXFs:SetTextColor(0.67, 0.67, 0.67, 1)
+        GameTooltip:Hide()
+    end)
+
+    uBar:SetShown(updateAvailable)
+    mainFrame.updateBar = uBar
 
     -- Timer tick
     Core.RegisterTick("hud_timer", 0.5, function()
@@ -2863,19 +2909,41 @@ function UI.RefreshRotationalTracker()
 end
 
 --------------------------------------------------------------------------------
--- Update toast
+-- Update available banner + popup
 --------------------------------------------------------------------------------
-function UI.ShowUpdateToast(sender, version)
-    local toast = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
-    toast:SetSize(300, 40)
-    toast:SetPoint("TOP", UIParent, "TOP", 0, -120)
-    toast:SetFrameStrata("HIGH")
-    ApplyBackdrop(toast, C.TITLE_BG, C.BORDER_GOLD)
-    local msg = MakeFont(toast, 10, "CENTER")
-    msg:SetPoint("CENTER")
-    msg:SetText("|cff00D1FFMidnight Sensei:|r " .. sender ..
-                " has v" .. version .. " -> /ms update")
-    C_Timer.After(8.0, function() toast:Hide() end)
+local updatePopup = nil
+
+function UI.ShowUpdateBanner()
+    updateAvailable = true
+    if mainFrame and mainFrame.updateBar then
+        mainFrame.updateBar:SetShown(true)
+    end
+end
+
+function UI.ShowUpdatePopup()
+    if updatePopup then
+        updatePopup:SetShown(not updatePopup:IsShown())
+        return
+    end
+    local pop = CreateFrame("Frame", "MidnightSenseiUpdatePopup", UIParent, "BackdropTemplate")
+    pop:SetSize(300, 110)
+    pop:SetPoint("CENTER", UIParent, "CENTER")
+    pop:SetFrameStrata("DIALOG")
+    pop:SetMovable(true)
+    pop:SetClampedToScreen(true)
+    ApplyBackdrop(pop, C.TITLE_BG, C.BORDER_GOLD)
+    MakeTitleBar(pop, "Midnight Sensei — Update Available")
+
+    local msg = MakeFont(pop, 10, "CENTER")
+    msg:SetPoint("CENTER", pop, "CENTER", 0, 4)
+    msg:SetWidth(264)
+    msg:SetText("A new version of Midnight Sensei is available.\nCheck |cff00D1FFCurseforge|r or |cff00D1FFWago|r for the latest version.")
+
+    local closeBtn = MakeButton(pop, 80, 22, "Close")
+    closeBtn:SetPoint("BOTTOM", pop, "BOTTOM", 0, 8)
+    closeBtn:SetScript("OnClick", function() pop:Hide() end)
+
+    updatePopup = pop
 end
 
 --------------------------------------------------------------------------------
