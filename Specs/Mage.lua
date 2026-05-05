@@ -32,7 +32,7 @@ Core.RegisterSpec(8, {
         },
         rotationalSpells = {
             { id = 116,    label = "Arcane Blast",     minFightSeconds = 15 },  -- baseline confirmed spell list; primary charge builder
-            { id = 319836, label = "Arcane Barrage",   minFightSeconds = 20 },  -- confirmed Arcane spell list (was 44425 — Fire/Frost variant)
+            { id = 319836, label = "Arcane Barrage",   minFightSeconds = 20, altIds = {44425} },  -- confirmed Arcane spell list; altId 44425 per Archon (May 2026)
             { id = 5143,   label = "Arcane Missiles",  minFightSeconds = 15, talentGated = true },  -- nodeID 102467 non-PASSIVE ACTIVE; Clearcasting consumer
             { id = 1449,   label = "Arcane Explosion", minFightSeconds = 20 },  -- baseline confirmed Arcane spell list; AoE filler
         },
@@ -122,7 +122,7 @@ Core.RegisterSpec(8, {
             { id = 44614,  label = "Flurry",         expectedUses = "Brain Freeze procs" },  -- nodeID 62178 non-PASSIVE ACTIVE
             { id = 55342,  label = "Mirror Image",   expectedUses = "on CD (talent)",  talentGated = true },  -- live-verified x2; class talent
             { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 94636 non-PASSIVE ACTIVE
-            { id = 205021, label = "Ray of Frost",   expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 62153 non-PASSIVE ACTIVE
+            { id = 205021, label = "Ray of Frost",   expectedUses = "on CD (talent)",  talentGated = true, altIds = {1247777} },  -- nodeID 62153 non-PASSIVE ACTIVE; 1247777=Comet Storm PASSIVE proc fires in place of Ray of Frost (May 2026)
             { id = 31661,  label = "Dragon's Breath",expectedUses = "on CD (talent)",  talentGated = true },  -- talentGated; pending one live cast to confirm ID fires
             -- Icy Veins (12472) removed — not in Frost talent tree or spell list
             { id = 2139,   label = "Counterspell",   isInterrupt = true, minFightSeconds = 20 },

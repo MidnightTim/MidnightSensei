@@ -142,7 +142,7 @@ Core.RegisterSpec(2, {
             -- Divine Storm moved to majorCooldowns as isUtility — AoE only, not a ST rotational spell
         },
         procBuffs = {
-            { id = 406064, label = "Art of War", maxStackTime = 10 },  -- PASSIVE nodeID 81523; procs reset Blade of Justice — VERIFY C_UnitAuras
+            { id = 406064, label = "Art of War", maxStackTime = 10 },  -- PASSIVE nodeID 81523; procs reset Blade of Justice; verified C_UnitAuras (May 2026)
         },
         priorityNotes = {
             "Avenging Wrath on cooldown — primary burst window, priority #1",

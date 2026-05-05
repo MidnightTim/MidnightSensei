@@ -27,6 +27,7 @@ Core.RegisterSpec(1, {
             { id = 436358, label = "Demolish",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
             { id = 46968,  label = "Shockwave",     expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
             { id = 118038, label = "Die by the Sword", expectedUses = "situational",    isUtility = true    },  -- confirmed id=118038; personal defensive — tracked, never penalised
+            { id = 97462,  label = "Rallying Cry",     expectedUses = "situational",    isUtility = true, talentGated = true },  -- confirmed id=97462; party HP utility; talent gated (May 2026)
             -- Bladestorm (227847) removed — not in Arms talent tree
             -- Warbreaker (262161) removed — not in Arms talent tree or spell list
         },
@@ -79,7 +80,9 @@ Core.RegisterSpec(1, {
             { id = 385059, label = "Odyn's Fury",      expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 110203 non-PASSIVE ACTIVE
             { id = 436358, label = "Demolish",         expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
             { id = 46968,  label = "Shockwave",        expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
-            { id = 376079, label = "Champion's Spear", expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+            { id = 376079, label = "Champion's Spear",     expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node
+            { id = 97462,  label = "Rallying Cry",         expectedUses = "situational",    isUtility = true, talentGated = true },  -- confirmed id=97462; party HP utility; talent gated (May 2026)
+            { id = 184364, label = "Enraged Regeneration", expectedUses = "situational",    healerConditional = true, talentGated = true },  -- confirmed id=184364; personal healing CD; talent gated (May 2026)
             -- Onslaught (315720) removed — not in Fury talent tree or spell list
         },
         uptimeBuffs = {
@@ -133,7 +136,9 @@ Core.RegisterSpec(1, {
             { id = 1160,   label = "Demoralizing Shout", expectedUses = "on CD"           },  -- nodeID 90305 non-PASSIVE ACTIVE
             { id = 436358, label = "Demolish",           expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
             { id = 386071, label = "Disrupting Shout",   expectedUses = "situational",    isInterrupt = true },  -- nodeID 107579 non-PASSIVE ACTIVE
-            { id = 107570, label = "Storm Bolt",         expectedUses = "situational",    isUtility = true, talentGated = true },  -- nodeID 90337; 27s CD stun; tracked as CC, never penalised
+            { id = 107570, label = "Storm Bolt",   expectedUses = "situational",    isUtility = true, talentGated = true },  -- nodeID 90337; 27s CD stun; tracked as CC, never penalised
+            { id = 97462,  label = "Rallying Cry", expectedUses = "situational",    isUtility = true, talentGated = true },  -- confirmed id=97462; party HP utility; talent gated (May 2026)
+            { id = 46968,  label = "Shockwave",    expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE; shared class node; consistent with Arms/Fury placement (May 2026)
             -- Last Stand (12975) removed — confirmed PASSIVE in talent tree
         },
         uptimeBuffs = {

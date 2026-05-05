@@ -45,12 +45,15 @@ Core.RegisterSpec(11, {
         sourceNote = "Midnight 12.0 verified against full Balance talent tree snapshot v1.4.3 113 nodes (April 2026)",
     },
 
-    -- Feral (PASSIVE audit — April 2026)
+    -- Feral (PASSIVE audit — April 2026; May 2026 Archon sweep)
     -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
     -- Predatory Swiftness (69369) removed from procBuffs — not in talent tree or spell list, VERIFY never confirmed
     -- Frantic Frenzy (1243807) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82111, confirmed spell list
     -- Feral Frenzy (274837) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82112, confirmed spell list
     -- Primal Wrath (285381) added as talentGated rotational — non-PASSIVE ACTIVE nodeID 82120; AoE finisher
+    -- Ravage (441583) added as altId on Ferocious Bite — May 2026; Druid of the Claw hero talent PASSIVE proc
+    --   Auto-attack proc makes next Ferocious Bite fire as Ravage (441583) instead; counted alongside Ferocious Bite
+    --   Archon reported ID 441591 — WRONG; in-game tooltip confirms Spell ID 441583 for both Feral and Guardian
     [2] = {
         name = "Feral", role = "DPS",
         resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
@@ -58,7 +61,7 @@ Core.RegisterSpec(11, {
             { id = 5217,   label = "Tiger's Fury",       expectedUses = "on CD"          },  -- non-PASSIVE ACTIVE nodeID 82124
             { id = 106951, label = "Berserk",             expectedUses = "burst windows"  },  -- non-PASSIVE ACTIVE nodeID 82101
             { id = 391528, label = "Convoke the Spirits", expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82114
-            { id = 1243807, label = "Frantic Frenzy", expectedUses = "on CD (talent)", talentGated = true },                              -- non-PASSIVE ACTIVE nodeID 82111; replaces Feral Frenzy
+            { id = 1243807, label = "Frantic Frenzy", expectedUses = "on CD (talent)", talentGated = true, altIds = {1244079} },         -- non-PASSIVE ACTIVE nodeID 82111; replaces Feral Frenzy; altId 1244079 per Archon (May 2026)
             { id = 274837,  label = "Feral Frenzy",  expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 1243807 },  -- non-PASSIVE ACTIVE nodeID 82112; suppress when Frantic Frenzy taken (Frantic replaces Feral — IsTalentActive returns true on both)
             { id = 61336,   label = "Survival Instincts", expectedUses = "situational", isUtility = true },  -- confirmed id=61336; reactive personal defensive — tracked but never penalised
             -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
@@ -67,7 +70,7 @@ Core.RegisterSpec(11, {
         rotationalSpells = {
             { id = 1079,   label = "Rip",            minFightSeconds = 15 },                      -- non-PASSIVE ACTIVE nodeID 82222
             { id = 1822,   label = "Rake",           minFightSeconds = 15 },                      -- non-PASSIVE ACTIVE nodeID 82199
-            { id = 22568,  label = "Ferocious Bite", minFightSeconds = 20 },                      -- baseline confirmed spell list
+            { id = 22568,  label = "Ferocious Bite", minFightSeconds = 20, altIds = {441583} },  -- baseline; Ravage (441583) PASSIVE proc fires in place of Ferocious Bite when proc is active
             { id = 5221,   label = "Shred",          minFightSeconds = 15 },                      -- baseline confirmed spell list; primary CP builder
             { id = 285381, label = "Primal Wrath",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82120; AoE finisher
             { id = 106785, label = "Swipe",          minFightSeconds = 20, talentGated = true },  -- Cat Form Swipe; confirmed combat cast ID 106785 (class talent; Bear Form is 213764)
@@ -83,15 +86,18 @@ Core.RegisterSpec(11, {
             "Primal Wrath as AoE finisher when talented — replaces Ferocious Bite on multi-target",
         },
         scoreWeights = { cooldownUsage = 25, procUsage = 15, activity = 35, resourceMgmt = 25 },
-        sourceNote = "Midnight 12.0 verified against full Feral talent tree snapshot v1.4.3 114 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Feral talent tree snapshot v1.4.3 114 nodes (April 2026); May 2026 Archon sweep",
     },
 
-    -- Guardian (PASSIVE audit — April 2026)
+    -- Guardian (PASSIVE audit — April 2026; May 2026 Archon sweep)
     -- Maul/Raze (6807) added to rotational — non-PASSIVE ACTIVE nodeID 82127; Rage spender
     --   Note: 6807 shows as "Raze" in Guardian spell list (spec-variant)
     -- Lunar Beam (204066) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 92587
     -- Red Moon: confirmed in Balance spell list only — NOT present in Guardian files, not tracked
     -- Catform spells excluded — Bear form only for Guardian
+    -- Ravage (441583) added as altId on Maul — May 2026; Druid of the Claw hero talent PASSIVE proc
+    --   Auto-attack proc makes next Maul fire as Ravage (441583); counted alongside Maul; same spell ID as Feral Ravage
+    --   Archon reported ID 441605 — WRONG; in-game tooltip confirms Spell ID 441583
     [3] = {
         name = "Guardian", role = "TANK",
         resourceType = 8, resourceLabel = "RAGE", overcapAt = 100,
@@ -110,7 +116,7 @@ Core.RegisterSpec(11, {
             { id = 8921,    label = "Moonfire",  minFightSeconds = 15 },                      -- baseline; rotation priority #1
             { id = 33917,   label = "Mangle",    minFightSeconds = 15 },                      -- baseline; rotation priority #4
             { id = 77758,   label = "Thrash",    minFightSeconds = 15 },                      -- baseline; rotation priority #5
-            { id = 6807,    label = "Maul",      minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82127; Rage spender
+            { id = 6807,    label = "Maul",      minFightSeconds = 20, altIds = {441583, 400254} },  -- non-PASSIVE ACTIVE nodeID 82127; Rage spender; Ravage (441583) PASSIVE proc; 400254=Raze stellar variant per Archon (May 2026)
             { id = 213764,  label = "Swipe",     minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82223; filler only
             -- Red Moon (1252871) removed — confirmed in Balance spell list only, not Guardian
         },
@@ -127,10 +133,10 @@ Core.RegisterSpec(11, {
             "Swipe as a filler only — never delay Mangle or Thrash for it",
         },
         scoreWeights = { cooldownUsage = 25, mitigationUptime = 40, activity = 20, resourceMgmt = 15 },
-        sourceNote = "Midnight 12.0 verified against full Guardian talent tree snapshot v1.4.3 116 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Guardian talent tree snapshot v1.4.3 116 nodes (April 2026); May 2026 Archon sweep",
     },
 
-    -- Restoration (PASSIVE audit — April 2026)
+    -- Restoration (PASSIVE audit — April 2026; May 2026 Archon sweep)
     -- Incarnation: Tree of Life (33891) removed — not in Restoration talent tree
     -- Flourish (197721) removed — not in Restoration talent tree or spell list
     -- Wild Growth moved from majorCooldowns to rotational — it's a maintenance spell, not a burst CD
@@ -139,6 +145,10 @@ Core.RegisterSpec(11, {
     -- Nature's Swiftness (132158) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82050; instant cast CD
     -- Lifebloom (33763) added to rotational — non-PASSIVE ACTIVE nodeID 82049; core HoT
     -- Innervate (29166) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82244; mana CD
+    -- Regrowth (8936) added to rotational — May 2026; id=8936 confirmed in-game; 24.3% healing per Archon; baseline cast
+    -- Efflorescence (145205) NOT tracked — replaced by Lifetreading (1217941) which is PASSIVE (nodeID 103874);
+    --   Lifetreading passively plants Efflorescence beneath the Lifebloom target; neither Efflor nor Lifetreading is cast by player
+    -- Grove Guardians — confirmed PASSIVE; not tracked
     [4] = {
         name = "Restoration", role = "HEALER",
         resourceType = 0,
@@ -153,6 +163,7 @@ Core.RegisterSpec(11, {
         },
         rotationalSpells = {
             { id = 774,   label = "Rejuvenation",  minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82217
+            { id = 8936,  label = "Regrowth",      minFightSeconds = 20 },  -- baseline; id=8936 confirmed in-game (May 2026); 24.3% healing
             { id = 18562, label = "Swiftmend",     minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82047
             { id = 33763, label = "Lifebloom",     minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82049; core single-target HoT
             { id = 48438, label = "Wild Growth",   minFightSeconds = 30 },  -- non-PASSIVE ACTIVE nodeID 82205; AoE HoT
@@ -161,6 +172,7 @@ Core.RegisterSpec(11, {
         priorityNotes = {
             "Keep Rejuvenation rolling on injured targets — core HoT foundation",
             "Maintain Lifebloom on the tank — primary single-target HoT",
+            "Regrowth for direct single-target healing — primary instant cast",
             "Wild Growth for efficient AoE healing on grouped targets",
             "Swiftmend for emergency instant healing",
             "Nature's Swiftness for an instant cast of any spell in an emergency",
@@ -170,6 +182,6 @@ Core.RegisterSpec(11, {
             "Convoke the Spirits for burst throughput when talented",
         },
         scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
-        sourceNote = "Midnight 12.0 verified against full Restoration Druid talent tree snapshot v1.4.3 119 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Restoration Druid talent tree snapshot v1.4.3 119 nodes (April 2026); May 2026 Archon sweep",
     },
 })
