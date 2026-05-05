@@ -26,7 +26,7 @@ This addon is built around practical coaching. The goal is not to bury you in no
 Midnight Sensei currently supports:
 
 - All **13 classes**
-- All **39 specs**
+- All **40 specs**
 - DPS, healer, and tank role-aware scoring
 - Boss encounter tracking for **Delves**, **Dungeons**, and **Raids**
 - Social score sharing through **Party**, **Guild**, and **Friends**

@@ -14,6 +14,8 @@ Core.RegisterSpec(5, {
     -- Penance (47540) added to rotational — baseline confirmed spell list; primary damage/heal cast
     -- Mind Blast (8092) added to rotational — nodeID 82713 non-PASSIVE ACTIVE
     -- Shadow Word: Death (32379) added to rotational — nodeID 82712 non-PASSIVE ACTIVE
+    -- Void Shield (1205350) added to rotational — confirmed spell list (May 2026)
+    -- Shadow Word: Pain (589) added to rotational — confirmed Disc cast for Atonement (May 2026)
     [1] = {
         name = "Discipline", role = "HEALER",
         resourceType = 0,
@@ -31,7 +33,9 @@ Core.RegisterSpec(5, {
             { id = 47540,  label = "Penance",              minFightSeconds = 15 },  -- baseline confirmed spell list; primary damage/heal
             { id = 194509, label = "Power Word: Radiance", minFightSeconds = 20 },  -- nodeID 82593 non-PASSIVE ACTIVE; AoE Atonement applicator
             { id = 8092,   label = "Mind Blast",           minFightSeconds = 20, talentGated = true },  -- nodeID 82713 non-PASSIVE ACTIVE; class talent
-            { id = 32379,  label = "Shadow Word: Death",   minFightSeconds = 20 },  -- nodeID 82712 non-PASSIVE ACTIVE
+            { id = 32379,   label = "Shadow Word: Death", minFightSeconds = 20 },  -- nodeID 82712 non-PASSIVE ACTIVE
+            { id = 1205350, label = "Void Shield",        minFightSeconds = 20 },  -- confirmed spell list (May 2026)
+            { id = 589,     label = "Shadow Word: Pain",  minFightSeconds = 15 },  -- confirmed Disc cast for Atonement (May 2026)
         },
         healerMetrics = { targetOverheal = 20, targetActivity = 90, targetManaEnd = 5 },
         priorityNotes = {

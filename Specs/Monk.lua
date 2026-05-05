@@ -3,9 +3,11 @@
 Core.RegisterSpec(10, {
     className = "Monk",
 
-    -- Brewmaster (Midnight 12.0 PASSIVE audit — April 2026)
+    -- Brewmaster (Midnight 12.0 PASSIVE audit — April 2026; May 2026 Archon sweep)
     -- Celestial Brew (322507) removed — not in Brewmaster talent tree or spell list
     -- Exploding Keg (325153) added to majorCooldowns — nodeID 101197 non-PASSIVE ACTIVE
+    -- Black Ox Brew (115399) added to majorCooldowns talentGated — May 2026; Spell ID confirmed in-game tooltip;
+    --   2 min CD; refills Energy + all Purifying Brew charges + 1 Celestial Brew/Infusion charge; expected on longer fights
     -- Celestial Infusion (1241059) added to majorCooldowns — nodeID 101067 non-PASSIVE ACTIVE
     -- Spear Hand Strike (116705) added as isInterrupt — nodeID 101152 non-PASSIVE ACTIVE
     -- Ironskin Brew (215479) removed from uptimeBuffs — not in Midnight 12.0 talent tree or spell list
@@ -17,9 +19,10 @@ Core.RegisterSpec(10, {
         name = "Brewmaster", role = "TANK",
         resourceType = 1, resourceLabel = "ENERGY", overcapAt = 100,
         majorCooldowns = {
-            { id = 132578,  label = "Invoke Niuzao",     expectedUses = "burst damage"  },  -- nodeID 101075 non-PASSIVE ACTIVE
-            { id = 115203,  label = "Fortifying Brew",   expectedUses = "emergency"     },  -- nodeID 101173 non-PASSIVE ACTIVE
-            { id = 325153,  label = "Exploding Keg",     expectedUses = "on CD"         },  -- nodeID 101197 non-PASSIVE ACTIVE
+            { id = 132578,  label = "Invoke Niuzao",     expectedUses = "burst damage"           },  -- nodeID 101075 non-PASSIVE ACTIVE
+            { id = 115203,  label = "Fortifying Brew",   expectedUses = "emergency"              },  -- nodeID 101173 non-PASSIVE ACTIVE
+            { id = 325153,  label = "Exploding Keg",     expectedUses = "on CD", talentGated = true          },  -- nodeID 101197 non-PASSIVE ACTIVE; confirmed talentGated 1 min CD (May 2026)
+            { id = 115399,  label = "Black Ox Brew",     expectedUses = "on CD (2 min)", talentGated = true },  -- Spell ID confirmed in-game; 2 min CD; refills Energy + Purifying Brew charges
             { id = 1241059, label = "Celestial Infusion",expectedUses = "on CD"         },  -- nodeID 101067 non-PASSIVE ACTIVE
             { id = 116705,  label = "Spear Hand Strike", expectedUses = "situational",  isInterrupt = true },  -- nodeID 101152 non-PASSIVE ACTIVE
             { id = 116847,  label = "Rushing Jade Wind",  expectedUses = "situational",  talentGated = true, isUtility = true, altIds = {148187} },
@@ -42,11 +45,12 @@ Core.RegisterSpec(10, {
             "Tiger Palm and Blackout Kick as fillers between cooldowns",
             "Expel Harm on cooldown — consumes Healing Spheres (Gift of the Ox) for self-healing",
             "Invoke Niuzao for heavy sustained damage phases",
+            "Black Ox Brew on cooldown when talented — immediately resets Purifying Brew charges for stagger clearing",
             "Exploding Keg and Celestial Infusion on cooldown",
             "Fortifying Brew for true emergencies",
         },
         scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
-        sourceNote = "Midnight 12.0 verified against full Brewmaster talent tree snapshot v1.4.3 117 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against full Brewmaster talent tree snapshot v1.4.3 117 nodes (April 2026); May 2026 Archon sweep",
     },
 
     -- Mistweaver (Midnight 12.0 PASSIVE audit — April 2026)

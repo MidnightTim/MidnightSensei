@@ -3,7 +3,8 @@
 Core.RegisterSpec(7, {
     className = "Shaman",
 
-    -- Elemental (Midnight 12.0 pass — April 2026; spell snapshot + verify audit April 2026)
+    -- Elemental (Midnight 12.0 pass — April 2026; spell snapshot + verify audit April 2026; May 2026 Archon sweep)
+    -- Chain Lightning (188443) added to rotational — previously tracked, lost to compaction; id=188443 confirmed; primary AoE filler
     -- Removed:  Primordial Wave (375982) — pruned in Midnight 12.0; functionality merged into
     --           Voltaic Blaze which handles AoE Flame Shock automatically
     -- Removed:  Fire Elemental (198067) — no longer a manual summon in Midnight 12.0;
@@ -43,8 +44,9 @@ Core.RegisterSpec(7, {
         rotationalSpells = {
             { id = 188196, label = "Lightning Bolt",  minFightSeconds = 15 },                          -- confirmed spell list; primary filler
             { id = 51505,  label = "Lava Burst",      minFightSeconds = 15 },                          -- non-PASSIVE ACTIVE nodeID 103598; cast ID confirmed in-game
-            { id = 462620, label = "Earthquake",      minFightSeconds = 30, talentGated = true },      -- non-PASSIVE ACTIVE nodeID 80985
+            { id = 462620, label = "Earthquake",      minFightSeconds = 30, talentGated = true, altIds = {61882, 61982} },  -- altIds: classic cast IDs per Archon (May 2026); both added per mismatch policy
             { id = 117014, label = "Elemental Blast", minFightSeconds = 20, talentGated = true },      -- non-PASSIVE ACTIVE nodeID 80984
+            { id = 188443, label = "Chain Lightning",  minFightSeconds = 15 },                          -- primary AoE filler; empowered by Stormkeeper; id=188443 confirmed; previously tracked, re-added May 2026
             { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true },      -- nodeID 81007; Flame Shock replacement for Elemental — DoT applicator
             -- Flame Shock (470411) removed — Enhancement only in Midnight 12.0; Voltaic Blaze replaces it for Elemental
             -- Tempest (454009) removed — confirmed PASSIVE nodeID 94892
@@ -52,8 +54,9 @@ Core.RegisterSpec(7, {
         priorityNotes = {
             "Voltaic Blaze is the Flame Shock replacement for Elemental — maintain the DoT when talented",
             "Lava Burst on cooldown — always consume Lava Surge procs immediately",
-            "Lightning Bolt as primary filler — empowered by Stormkeeper for burst",
-            "Stormkeeper before empowered Lightning Bolt casts for maximum burst",
+            "Chain Lightning as primary AoE filler — empowered by Stormkeeper on multi-target pulls",
+            "Lightning Bolt as primary ST filler — empowered by Stormkeeper for single-target burst",
+            "Stormkeeper before empowered Lightning Bolt or Chain Lightning casts for maximum burst",
             "Elemental Blast to spend Maelstrom (single target, when talented) — avoid overcap at 90",
             "Earthquake to spend Maelstrom on AoE — avoid overcap at 90",
             "Ascendance for burst — automatically summons Fire Elemental in Midnight 12.0",
@@ -61,7 +64,7 @@ Core.RegisterSpec(7, {
             "Ancestral Swiftness on cooldown when talented (Farseer) — ~30s window, use proactively",
         },
         scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
-        sourceNote = "Midnight 12.0 verified against spell snapshot + talent tree 112 nodes (April 2026)",
+        sourceNote = "Midnight 12.0 verified against spell snapshot + talent tree 112 nodes (April 2026); May 2026 Archon sweep",
     },
 
     -- Enhancement (Midnight 12.0 PASSIVE audit — April 2026)
@@ -96,6 +99,7 @@ Core.RegisterSpec(7, {
             { id = 187874, label = "Crash Lightning", minFightSeconds = 15 },                     -- non-PASSIVE ACTIVE nodeID 80974
             { id = 60103,  label = "Lava Lash",       minFightSeconds = 15 },                     -- non-PASSIVE ACTIVE nodeID 109389
             { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true }, -- non-PASSIVE ACTIVE nodeID 80954
+            { id = 188443, label = "Chain Lightning", minFightSeconds = 20, talentGated = true }, -- AoE optional; same ID as Elemental; talentGated given ~7.5% adoption (May 2026)
         },
         priorityNotes = {
             "Maintain Flame Shock on targets for Hot Hand procs and Lava Lash damage (not directly tracked)",
@@ -118,7 +122,8 @@ Core.RegisterSpec(7, {
     -- Removed:  Cloudburst Totem (157153) — pruned from Restoration in Midnight 12.0
     --           as part of spec simplification removing high-timing-skill buttons
     -- Removed:  Ancestral Guidance (108281) — removed from game in Midnight (patch 11.1.0 / Feb 25 2025)
-    -- Removed:  Healing Tide Totem (108280) — confirmed removed from Resto in Midnight 12.0
+    -- Healing Tide Totem (108280) — re-added to majorCooldowns (May 2026); in-game tooltip confirmed active, talentGated, healerConditional (3 min CD)
+    --   prior removal note was incorrect; tooltip confirmed active via in-game test
     -- Also pruned by Blizzard (not tracked): Earthen Wall Totem, Ancestral Protection Totem,
     --           Wellspring, High Tide, Tidebringer, Undulation, Master of the Elements,
     --           Mana Tide, Tide Turner, Spiritwalker's Tidal Totem
@@ -144,6 +149,7 @@ Core.RegisterSpec(7, {
             { id = 444995, label = "Surging Totem",     expectedUses = "before damage windows",        healerConditional = true, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 94877; Totem hero talent
             { id = 73685,  label = "Unleash Life",      expectedUses = "on CD — pre-heal amplifier"                             },  -- non-PASSIVE ACTIVE nodeID 92675
             { id = 114052, label = "Ascendance",        expectedUses = "emergency throughput",         healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 81032
+            { id = 108280, label = "Healing Tide Totem", expectedUses = "healing CD (talent)",         healerConditional = true, talentGated = true },  -- confirmed active Midnight 12.0; re-added May 2026; 3 min CD
             -- Call of the Ancestors (443450) removed — confirmed PASSIVE nodeID 94888
             -- Earth Shield (974) intentionally not tracked — nodeID 103596; cast pre-pull creates false negatives;
             --   Midnight changes make mid-fight reapplication timing inconsistent; no penalty warranted

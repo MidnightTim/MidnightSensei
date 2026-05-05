@@ -26,6 +26,7 @@ Core.RegisterSpec(6, {
             { id = 48792,   label = "Icebound Fortitude",  expectedUses = "big damage",     healerConditional = true },  -- reactive personal defensive
             { id = 48707,   label = "Anti-Magic Shell",    expectedUses = "magic damage",   healerConditional = true },  -- reactive magic absorb
             { id = 47528,   label = "Mind Freeze",         expectedUses = "situational",    isInterrupt = true       },  -- nodeID 76084 non-PASSIVE ACTIVE
+            { id = 109199,  label = "Gauntlet's Grasp",    expectedUses = "situational",    talentGated = true       },  -- Rider hero talent; ~99.8% adoption; confirmed id=109199 (May 2026)
         },
         uptimeBuffs = {},
         rotationalSpells = {
@@ -59,8 +60,8 @@ Core.RegisterSpec(6, {
     -- Mind Freeze (47528) added as isInterrupt — nodeID 76084 non-PASSIVE ACTIVE
     -- Howling Blast (49184) added to rotational — nodeID 76114 non-PASSIVE ACTIVE; primary AoE + Rime proc consumer
     -- Frostscythe (207230) added to rotational — nodeID 76113 non-PASSIVE ACTIVE; AoE alternative to Obliterate
-    -- Killing Machine procBuff: 59052 (old aura ID) — VERIFY; talent tree shows 51128 at nodeID 76117 PASSIVE
-    -- Rime procBuff: 51124 (old aura ID) — VERIFY; spell list shows 59057 Rime
+    -- Killing Machine procBuff: 59052 primary; altId 51128 added (talent tree nodeID 76117) — VERIFY closed May 2026
+    -- Rime procBuff: 51124 primary; altId 59057 added (spell list variant) — VERIFY closed May 2026
     -- Remorseless Winter (196771) added to rotational — combat cast ID 196771 (spellbook 196770); session log x39; baseline not talent-gated
     -- Frostbane (1228433) added to rotational talentGated — altIds={1228436}; both IDs seen in session log (x2 each)
     -- Glacial Advance (194913) added to rotational talentGated — AoE; session log x2
@@ -85,8 +86,8 @@ Core.RegisterSpec(6, {
             { id = 194913, label = "Glacial Advance",    minFightSeconds = 20, talentGated = true },  -- AoE; session log x2
         },
         procBuffs = {
-            { id = 59052, label = "Killing Machine",      maxStackTime = 10 },  -- VERIFY aura ID — talent tree shows 51128 at nodeID 76117
-            { id = 51124, label = "Rime (Howling Blast)", maxStackTime = 15 },  -- VERIFY aura ID — spell list shows 59057 Rime
+            { id = 59052, label = "Killing Machine",      maxStackTime = 10, altIds = {51128} },  -- altId 51128 (talent tree nodeID 76117); VERIFY closed May 2026
+            { id = 51124, label = "Rime (Howling Blast)", maxStackTime = 15, altIds = {59057} },  -- altId 59057 (spell list variant); VERIFY closed May 2026
         },
         priorityNotes = {
             "Spend Killing Machine procs with Obliterate immediately",

@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.1"
+    Core.VERSION = ver or "1.6.2"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -291,6 +291,22 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.2",
+        tagline = "Spec DB May 2026 Audit — New Abilities, Alt ID Fixes, 40 Specs",
+        date    = "May 2026",
+        changes = {
+            -- Spec DB — May 2026 audit pass
+            "Spec DB: 40 specs total confirmed (was 39) — Devourer is the third Demon Hunter spec in Midnight 12.0",
+            "Warrior (all specs): Rallying Cry (97462) added as isUtility talentGated — party max HP utility",
+            "Warrior Fury: Enraged Regeneration (184364) added as healerConditional talentGated",
+            "Warrior Protection: Shockwave (46968) added to major cooldowns talentGated",
+            "Priest Discipline: Void Shield (1205350) and Shadow Word: Pain (589) added to rotational",
+            "Blood DK: Gauntlet's Grasp (109199) added as talentGated CD — Rider of the Apocalypse hero talent",
+            "Frost DK: Killing Machine and Rime procBuff alt IDs added — improved detection accuracy",
+            "Multiple alt ID corrections across Hunter, Mage, Shaman, Warlock, Evoker, Druid — fewer false 'not detected' reports",
+        },
+    },
     {
         version = "1.6.1",
         tagline = "Leaderboard Sync Fixes, Evoker Tooltip Pass, Update Banner",
@@ -1402,7 +1418,7 @@ Core.CHANGELOG = {
 
 --------------------------------------------------------------------------------
 -- SPEC_DATABASE
--- All 13 classes / 39 specs.
+-- All 13 classes / 40 specs.
 -- Spell IDs: verified against 11.x / Midnight 12.0 where noted.
 -- IDs marked "-- VERIFY" should be confirmed with /eventtrace in-game.
 --

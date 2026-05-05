@@ -29,7 +29,7 @@ Core.RegisterSpec(13, {
             { id = 365585, label = "Expunge",         expectedUses = "situational",       isUtility = true, altIds = {360823} },  -- 365585 confirmed; 360823=Naturalize (replaces Expunge when talented); tracked, never penalised
         },
         rotationalSpells = {
-            { id = 361469, label = "Living Flame",  minFightSeconds = 20 },  -- baseline confirmed spell list
+            { id = 361469, label = "Living Flame",  minFightSeconds = 20, altIds = {1265867} },  -- baseline confirmed spell list; 1265867=Azure Sweep PASSIVE proc fires in place of Living Flame (May 2026)
             { id = 356995, label = "Disintegrate",  minFightSeconds = 20 },  -- baseline confirmed spell list
             { id = 357211, label = "Pyre",          minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 93334; AoE spender
         },
@@ -115,7 +115,7 @@ Core.RegisterSpec(13, {
         name = "Augmentation", role = "DPS",
         resourceType = 17, resourceLabel = "ESSENCE", overcapAt = 6,
         majorCooldowns = {
-            { id = 403631, label = "Breath of Eons",    expectedUses = "burst windows"     },  -- non-PASSIVE ACTIVE nodeID 93234
+            { id = 403631, label = "Breath of Eons",    expectedUses = "burst windows",     altIds = {442204} },  -- non-PASSIVE ACTIVE nodeID 93234; altId 442204 per Archon (May 2026)
             { id = 395152, label = "Ebon Might",        expectedUses = "on CD"             },  -- non-PASSIVE ACTIVE nodeID 93198
             { id = 409311, label = "Prescience",        expectedUses = "pre-burst"         },  -- non-PASSIVE ACTIVE nodeID 93358
             { id = 404977, label = "Time Skip",         expectedUses = "on CD",            talentGated = true, suppressIfTalent = 412713 },  -- non-PASSIVE ACTIVE nodeID 93232; replaced by Interwoven Threads (412713) PASSIVE

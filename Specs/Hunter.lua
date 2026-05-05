@@ -51,7 +51,7 @@ Core.RegisterSpec(3, {
         resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
         majorCooldowns = {
             { id = 288613, label = "Trueshot",        expectedUses = "on CD"             },  -- nodeID 103947 non-PASSIVE ACTIVE
-            { id = 257044, label = "Rapid Fire",      expectedUses = "on CD"             },  -- nodeID 103961 non-PASSIVE ACTIVE
+            { id = 257044, label = "Rapid Fire",      expectedUses = "on CD",  altIds = {257045} },  -- nodeID 103961; altId 257045 per Archon (May 2026)
             { id = 260243, label = "Volley",          expectedUses = "AoE on CD"         },  -- nodeID 103956 non-PASSIVE ACTIVE
             { id = 147362, label = "Counter Shot",    expectedUses = "situational",      isInterrupt = true },  -- nodeID 102402 non-PASSIVE ACTIVE
             { id = 212431, label = "Explosive Shot",  expectedUses = "on CD (talent)",   talentGated = true },  -- nodeID 110575 non-PASSIVE; Shrapnel Shot (473520) and Precision Detonation (471369) are PASSIVE modifiers
@@ -62,6 +62,7 @@ Core.RegisterSpec(3, {
             { id = 185358, label = "Arcane Shot",  minFightSeconds = 15 },  -- baseline confirmed spell list; Focus spender
             { id = 56641,  label = "Steady Shot",  minFightSeconds = 15 },  -- confirmed spell ID; baseline filler
             { id = 257620, label = "Multi-Shot",   minFightSeconds = 20, talentGated = true },  -- confirmed spell ID; AoE filler / Bulletstorm trigger
+            { id = 53351,  label = "Kill Shot",    minFightSeconds = 20, talentGated = true },  -- confirmed id=53351; execute window ability (May 2026)
         },
         priorityNotes = {
             "Aimed Shot on cooldown — primary Focus spender and damage",
@@ -95,11 +96,11 @@ Core.RegisterSpec(3, {
         },
         uptimeBuffs = {},
         rotationalSpells = {
-            { id = 259489,  label = "Kill Command",  minFightSeconds = 15 },  -- nodeID 102255 non-PASSIVE ACTIVE (Survival spec-variant; was 34026 BM ID)
+            { id = 259489,  label = "Kill Command",  minFightSeconds = 15, altIds = {259277} },  -- nodeID 102255; altId 259277 per Archon (May 2026)
             { id = 186270,  label = "Raptor Strike", minFightSeconds = 15 },  -- nodeID 102262 non-PASSIVE ACTIVE
             { id = 259495,  label = "Wildfire Bomb", minFightSeconds = 20 },  -- also rotational between CD windows
-            { id = 1250646, label = "Takedown",      minFightSeconds = 20, talentGated = true },  -- nodeID 109323 non-PASSIVE ACTIVE
-            { id = 1261193, label = "Boomstick",     minFightSeconds = 20, talentGated = true },  -- nodeID 109324 non-PASSIVE ACTIVE
+            { id = 1250646, label = "Takedown",      minFightSeconds = 20, talentGated = true, altIds = {1253859} },  -- nodeID 109323; altId 1253859 per Archon (May 2026)
+            { id = 1261193, label = "Boomstick",     minFightSeconds = 20, talentGated = true, altIds = {1261215} },  -- nodeID 109324; altId 1261215 per Archon (May 2026)
         },
         priorityNotes = {
             "Wildfire Bomb on cooldown — highest priority damage ability",

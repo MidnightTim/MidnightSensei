@@ -2374,7 +2374,7 @@ function UI.ShowCredits()
             "|cffFFD700Author:|r  Midnight - Thrall (US)",
             " ",
             "A combat performance coaching addon for World of Warcraft: Midnight.",
-            "Grades your fights A+ through F across all 13 classes and 39 specs,",
+            "Grades your fights A+ through F across all 13 classes and 40 specs,",
             "with actionable feedback tailored to your role and spec.",
             " ",
             "|cffFFD700Features:|r",
