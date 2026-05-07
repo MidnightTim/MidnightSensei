@@ -58,10 +58,11 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
     end
 
     -- ── Cooldown Usage ──────────────────────────────────────────────────────
-    local neverUsed          = {}
-    local underused          = {}
-    local interruptNeverUsed = {}   -- informational only — never penalised
-    local utilityNeverUsed   = {}   -- informational only — never penalised
+    local neverUsed             = {}
+    local underused             = {}
+    local interruptNeverUsed    = {}   -- informational only — never penalised
+    local utilityNeverUsed      = {}   -- informational only — never penalised
+    local combatUtilityNeverUsed = {}  -- informational only — utility + stun/damage, never penalised
 
     if next(cdTracking) then
         for _, cd in ipairs(spec.majorCooldowns or {}) do
@@ -73,6 +74,11 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                     -- Interrupts: track but never penalise — surface as informational note
                     if data.useCount == 0 and duration >= minSecs then
                         table.insert(interruptNeverUsed, label)
+                    end
+                elseif cd.isUtility and cd.hasCombatValue then
+                    -- Combat utility: stuns/damages as well as utility — separate note
+                    if data.useCount == 0 and duration >= minSecs then
+                        table.insert(combatUtilityNeverUsed, label)
                     end
                 elseif cd.isUtility then
                     -- Utility spells: track but never penalise — surface as informational note
@@ -422,6 +428,13 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
     if #utilityNeverUsed > 0 then
         table.insert(feedback, "Note: " .. table.concat(utilityNeverUsed, "; ") ..
             " — not used or detected this fight. No penalty.")
+    end
+
+    -- Combat utility note — stuns/damages in addition to utility; situational by design
+    if #combatUtilityNeverUsed > 0 then
+        table.insert(feedback, "Note: " .. table.concat(combatUtilityNeverUsed, ", ") ..
+            " — stuns and deals damage in addition to utility. Use it where the situation" ..
+            " allows; no penalty for holding it.")
     end
 
     return feedback

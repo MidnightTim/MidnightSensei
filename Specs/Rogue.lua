@@ -19,6 +19,7 @@ Core.RegisterSpec(4, {
             { id = 360194, label = "Deathmark",        expectedUses = "on CD"           },  -- nodeID 90769 non-PASSIVE ACTIVE
             { id = 385627, label = "Kingsbane",        expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90770 non-PASSIVE ACTIVE
             { id = 1766,   label = "Kick",             expectedUses = "situational",    isInterrupt = true },  -- confirmed Assassination spell list
+            { id = 31224,  label = "Cloak of Shadows", expectedUses = "situational",   isUtility = true   },  -- defensive/immunity CD; added 05/06/2026; cross-spec
             -- Vendetta (79140) removed — not in Assassination talent tree or spell list
         },
         uptimeBuffs = {},
@@ -64,6 +65,8 @@ Core.RegisterSpec(4, {
             { id = 381989,  label = "Keep It Rolling",  expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90652 non-PASSIVE ACTIVE
             { id = 51690,   label = "Killing Spree",    expectedUses = "burst windows (talent)", talentGated = true },  -- nodeID 94565 INACTIVE this build
             { id = 1766,    label = "Kick",             expectedUses = "situational",    isInterrupt = true },
+            { id = 31224,   label = "Cloak of Shadows", expectedUses = "situational",   isUtility = true   },  -- added 05/06/2026; cross-spec
+            { id = 14185,   label = "Preparation",      expectedUses = "situational (boss fights)", isUtility = true, talentGated = true },  -- CD reset utility; added 05/06/2026
         },
         rotationalSpells = {
             { id = 193315, label = "Sinister Strike",  minFightSeconds = 15 },  -- session log confirmed (was 1752)
@@ -105,6 +108,7 @@ Core.RegisterSpec(4, {
             { id = 426591, label = "Goremaw's Bite",    expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94581 INACTIVE this build
             { id = 280719, label = "Secret Technique", expectedUses = "on CD (talent)", talentGated = true },  -- session log confirmed (guide showed 280720)
             { id = 1766,   label = "Kick",             expectedUses = "situational",    isInterrupt = true },
+            { id = 31224,  label = "Cloak of Shadows", expectedUses = "situational",   isUtility = true   },  -- added 05/06/2026; cross-spec
         },
         uptimeBuffs = {},
         rotationalSpells = {

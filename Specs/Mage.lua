@@ -123,7 +123,7 @@ Core.RegisterSpec(8, {
             { id = 55342,  label = "Mirror Image",   expectedUses = "on CD (talent)",  talentGated = true },  -- live-verified x2; class talent
             { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 94636 non-PASSIVE ACTIVE
             { id = 205021, label = "Ray of Frost",   expectedUses = "on CD (talent)",  talentGated = true, altIds = {1247777} },  -- nodeID 62153 non-PASSIVE ACTIVE; 1247777=Comet Storm PASSIVE proc fires in place of Ray of Frost (May 2026)
-            { id = 31661,  label = "Dragon's Breath",expectedUses = "on CD (talent)",  talentGated = true },  -- talentGated; pending one live cast to confirm ID fires
+            { id = 31661,  label = "Dragon's Breath", expectedUses = "situational",     talentGated = true, isUtility = true, hasCombatValue = true },  -- AoE disorient + damage; aimed/held for packs — never penalised
             -- Icy Veins (12472) removed — not in Frost talent tree or spell list
             { id = 2139,   label = "Counterspell",   isInterrupt = true, minFightSeconds = 20 },
             { id = 30449,  label = "Spellsteal",     isUtility   = true, minFightSeconds = 20 },

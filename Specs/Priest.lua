@@ -24,6 +24,9 @@ Core.RegisterSpec(5, {
             { id = 33206,  label = "Pain Suppression",   expectedUses = "tank busters",   healerConditional = true        },  -- nodeID 82587 non-PASSIVE ACTIVE
             { id = 472433, label = "Evangelism",         expectedUses = "ramp windows"                                    },  -- nodeID 82577 non-PASSIVE ACTIVE (was 246287)
             { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows",  talentGated = true              },  -- nodeID 82556 non-PASSIVE ACTIVE; class talent
+            { id = 73325,  label = "Leap of Faith",     expectedUses = "situational",    isUtility = true, talentGated = true },  -- grip utility; added 05/06/2026; cross-spec with Holy
+            { id = 586,    label = "Fade",               expectedUses = "situational",    isUtility = true, talentGated = true },  -- threat drop + movement; added 05/06/2026
+            { id = 19236,  label = "Desperate Prayer",  expectedUses = "defensive",      healerConditional = true, talentGated = true },  -- personal defensive; added 05/06/2026
             -- Power Word: Barrier (62618) removed — not in talent tree
             -- Rapture (47536) removed — not in talent tree or spell list
             -- Schism (204263) removed — not in talent tree or spell list
@@ -69,6 +72,7 @@ Core.RegisterSpec(5, {
             { id = 47788,  label = "Guardian Spirit",    expectedUses = "tank emergencies",    healerConditional = true        },  -- nodeID 82637 non-PASSIVE ACTIVE
             { id = 10060,  label = "Power Infusion",     expectedUses = "burst windows",       talentGated = true              },  -- nodeID 82556 non-PASSIVE ACTIVE; class talent
             { id = 19236,  label = "Desperate Prayer",  expectedUses = "defensive",           healerConditional = true        },  -- confirmed id=19236; 1.2 min CD personal defensive; no penalty on successful fight
+            { id = 73325,  label = "Leap of Faith",    expectedUses = "situational",         isUtility = true, talentGated = true },  -- grip utility; added 05/06/2026; cross-spec with Disc
             -- Prayer of Mending: 33076 removed — Disc spec-variant; 17 is Holy baseline (rotational)
         },
         rotationalSpells = {

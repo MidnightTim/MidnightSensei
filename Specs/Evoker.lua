@@ -27,6 +27,7 @@ Core.RegisterSpec(13, {
             { id = 370665, label = "Rescue",          expectedUses = "situational",       isUtility = true, talentGated = true },  -- 1 min CD; movement + self/ally cleanse; tracked, never penalised
             { id = 374251, label = "Cauterizing Flame", expectedUses = "situational",     isUtility = true,                    },  -- confirmed id=374251; tracked, never penalised
             { id = 365585, label = "Expunge",         expectedUses = "situational",       isUtility = true, altIds = {360823} },  -- 365585 confirmed; 360823=Naturalize (replaces Expunge when talented); tracked, never penalised
+            { id = 374968, label = "Time Spiral",    expectedUses = "situational",       isUtility = true, talentGated = true },  -- group movement CD reset; added 05/06/2026
         },
         rotationalSpells = {
             { id = 361469, label = "Living Flame",  minFightSeconds = 20, altIds = {1265867} },  -- baseline confirmed spell list; 1265867=Azure Sweep PASSIVE proc fires in place of Living Flame (May 2026)
@@ -125,6 +126,7 @@ Core.RegisterSpec(13, {
             { id = 370665, label = "Rescue",            expectedUses = "situational",      isUtility = true, talentGated = true },  -- 1 min CD; movement + self/ally cleanse; tracked, never penalised
             { id = 374251, label = "Cauterizing Flame", expectedUses = "situational",      isUtility = true,                    },  -- confirmed id=374251; tracked, never penalised
             { id = 365585, label = "Expunge",           expectedUses = "situational",      isUtility = true, altIds = {360823}  },  -- 365585 confirmed; 360823=Naturalize (replaces Expunge when talented); tracked, never penalised
+            { id = 406732, label = "Spatial Paradox",  expectedUses = "situational",      isUtility = true, talentGated = true },  -- Aug class talent; added 05/06/2026
         },
         uptimeBuffs = {
             { id = 395152, label = "Ebon Might", targetUptime = 70, castSpellId = 395152, buffDuration = 10 },  -- 10s base duration; recast every ~30s

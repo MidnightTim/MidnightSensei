@@ -19,7 +19,7 @@ Core.RegisterSpec(11, {
             { id = 194223, label = "Celestial Alignment",          expectedUses = "on CD",          talentGated = true, suppressIfTalent = 102560 },  -- CA build; suppress when Incarnation taken (CA is a prereq node — IsTalentActive returns true on both builds)
             -- 383410 (Orbital Strike) removed — PASSIVE modifier to Incarnation, never fires UNIT_SPELLCAST_SUCCEEDED
             { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)", talentGated = true },  -- Incarnation build; confirmed fires UNIT_SPELLCAST_SUCCEEDED (verify 2x)
-            { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true, isUtility = true },  -- priority #3-5 in both builds; optional — not widely used on cooldown
+            { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true, isUtility = true, hasCombatValue = true },  -- treants root + damage; optional — not widely used on cooldown
             { id = 78675,  label = "Solar Beam",                  expectedUses = "situational",     talentGated = true, isInterrupt = true },  -- silence/interrupt; informational only — no penalty
         },
         uptimeBuffs = {},

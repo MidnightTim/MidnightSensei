@@ -29,7 +29,8 @@ Core.RegisterSpec(2, {
         rotationalSpells = {
             { id = 20473, label = "Holy Shock",    minFightSeconds = 15 },  -- nodeID 81555 non-PASSIVE ACTIVE; primary HP generator
             { id = 85673, label = "Word of Glory", minFightSeconds = 20 },  -- confirmed spell list; ST HP spender
-            { id = 85222, label = "Light of Dawn", minFightSeconds = 20 },  -- nodeID 81565 non-PASSIVE ACTIVE; AoE HP spender
+            { id = 85222,   label = "Light of Dawn",    minFightSeconds = 20 },  -- nodeID 81565 non-PASSIVE ACTIVE; AoE HP spender
+            { id = 1241413, label = "Hammer of Wrath",  minFightSeconds = 20, talentGated = true, altIds = {1241288} },  -- added 05/06/2026; same ID as Prot/Ret
         },
         healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
         priorityNotes = {
@@ -73,6 +74,7 @@ Core.RegisterSpec(2, {
             { id = 96231,  label = "Rebuke",                 expectedUses = "situational",  isInterrupt = true              },  -- nodeID 81604 non-PASSIVE ACTIVE
             { id = 6940,   label = "Blessing of Sacrifice",  expectedUses = "tank busters", healerConditional = true, talentGated = true },  -- nodeID 81614; 2 min CD; 99.7% adoption; no penalty on successful fight
             { id = 633,    label = "Lay on Hands",           expectedUses = "emergencies",  healerConditional = true              },  -- nodeID 81597; 7 min CD; baseline (granted for free); no penalty on successful fight
+            { id = 389539, label = "Sentinel",               expectedUses = "situational",  healerConditional = true, talentGated = true },  -- defensive CD at 100% adoption; added 05/06/2026
         },
         uptimeBuffs = {
             { id = 132403, label = "Shield of the Righteous", targetUptime = 50, castSpellId = 53600, buffDuration = 4.5 },  -- cast 53600 applies buff 132403 for 4.5s
@@ -138,7 +140,8 @@ Core.RegisterSpec(2, {
         rotationalSpells = {
             { id = 383328, label = "Final Verdict",  minFightSeconds = 15 },  -- nodeID 81532 non-PASSIVE ACTIVE; primary 5 HP spender (was 85256 Templar's Verdict — Midnight 12.0 rename)
             { id = 20271,  label = "Judgment",       minFightSeconds = 15 },  -- confirmed spell list; rotation priority #12
-            { id = 184575, label = "Blade of Justice",minFightSeconds = 15 },  -- nodeID 81526 non-PASSIVE ACTIVE; rotation priority #8/10
+            { id = 184575,  label = "Blade of Justice",  minFightSeconds = 15 },  -- nodeID 81526 non-PASSIVE ACTIVE; rotation priority #8/10
+            { id = 1241413, label = "Hammer of Wrath",   minFightSeconds = 20, talentGated = true, altIds = {1241288} },  -- execute/AW window; added 05/06/2026; same ID as Prot
             -- Divine Storm moved to majorCooldowns as isUtility — AoE only, not a ST rotational spell
         },
         procBuffs = {

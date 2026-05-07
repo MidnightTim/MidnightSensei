@@ -54,7 +54,7 @@ Core.RegisterSpec(12, {
             { id = 191427, label = "Metamorphosis", expectedUses = "burst windows"           },  -- non-PASSIVE confirmed
             { id = 198013, label = "Eye Beam",      expectedUses = "on CD"                  },  -- non-PASSIVE nodeID 91018
             { id = 370965, label = "The Hunt",      expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE nodeID 90921
-            { id = 179057, label = "Chaos Nova",    expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE nodeID 90993
+            { id = 179057, label = "Chaos Nova",    expectedUses = "situational",    talentGated = true, isUtility = true, hasCombatValue = true },  -- non-PASSIVE nodeID 90993; AoE stun + damage — situational hold, never penalised
             { id = 207684, label = "Sigil of Misery", expectedUses = "situational",   isInterrupt = true },  -- non-PASSIVE ACTIVE; fear CC
             { id = 183752, label = "Disrupt",          expectedUses = "situational",   isInterrupt = true },  -- melee interrupt; tracked, never penalised
         },
@@ -137,7 +137,7 @@ Core.RegisterSpec(12, {
             { id = 212084, label = "Fel Devastation",  expectedUses = "on CD"                     },  -- non-PASSIVE ACTIVE nodeID 90991
             { id = 203720, label = "Demon Spikes",     expectedUses = "on CD — physical mitigation" },  -- confirmed pressed spell; aura also tracked in uptimeBuffs
             { id = 390163, label = "Sigil of Spite",   expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 90978
-            { id = 179057, label = "Chaos Nova",       expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE
+            { id = 179057, label = "Chaos Nova",       expectedUses = "situational",    talentGated = true, isUtility = true, hasCombatValue = true },  -- non-PASSIVE ACTIVE; AoE stun + damage — situational hold, never penalised
             { id = 202137, label = "Sigil of Silence", expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
             { id = 207684, label = "Sigil of Misery",  expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
         },
@@ -221,6 +221,7 @@ Core.RegisterSpec(12, {
             { id = 1217605, label = "Void Metamorphosis", expectedUses = "on CD — required for Collapsing Star",
               displayOnly = true },  -- shapeshift: fires UPDATE_SHAPESHIFT_FORM not SUCCEEDED; displayOnly for My Spell List
             { id = 1246167, label = "The Hunt",        expectedUses = "on CD (talent)", talentGated = true },  -- Devourer spec-variant; live-verified SKIP (not talented)
+            { id = 278326,  label = "Consume Magic",  expectedUses = "situational", isInterrupt = true, talentGated = true },  -- nodeID 91006 non-PASSIVE ACTIVE; added 05/06/2026
             -- Removed (confirmed PASSIVE): Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
         },
         rotationalSpells = {

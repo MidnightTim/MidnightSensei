@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.2"
+    Core.VERSION = ver or "1.6.3"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -291,6 +291,31 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.3",
+        tagline = "Combat Utility Coaching + 16 New Tracked Abilities",
+        date    = "May 2026",
+        changes = {
+            -- hasCombatValue flag
+            "New: hasCombatValue flag for CC utility spells — stun/disorient + damage abilities now show a distinct coaching note instead of the generic utility reminder",
+            "Shockwave (all 3 Warrior specs): reclassified to isUtility + hasCombatValue — no more false penalty for holding it in M+ packs",
+            "Dragon's Breath (Frost Mage): reclassified to isUtility + hasCombatValue — AoE disorient, no penalty for situational holds",
+            "Chaos Nova (Havoc + Vengeance DH): hasCombatValue added",
+            "Force of Nature (Balance Druid): hasCombatValue added — treants root + deal damage",
+            -- Spec DB additions — 05/06/2026 audit review
+            "DH Devourer: Consume Magic added as isInterrupt talentGated",
+            "Evoker Devastation: Time Spiral added as isUtility talentGated",
+            "Evoker Augmentation: Spatial Paradox added as isUtility talentGated",
+            "Paladin Holy + Retribution: Hammer of Wrath (1241413) added to rotational talentGated",
+            "Paladin Protection: Sentinel added as healerConditional talentGated",
+            "Priest Discipline: Leap of Faith, Fade, and Desperate Prayer added",
+            "Priest Holy: Leap of Faith added as isUtility talentGated",
+            "Rogue (all 3 specs): Cloak of Shadows added as isUtility",
+            "Rogue Outlaw: Preparation added as isUtility talentGated",
+            "Warrior Fury: Storm Bolt added as isUtility + hasCombatValue talentGated",
+            "Warrior Protection: Piercing Howl added as isUtility talentGated",
+        },
+    },
     {
         version = "1.6.2",
         tagline = "Spec DB May 2026 Audit — New Abilities, Alt ID Fixes, 40 Specs",
