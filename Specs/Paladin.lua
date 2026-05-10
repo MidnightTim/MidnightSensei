@@ -12,6 +12,8 @@ Core.RegisterSpec(2, {
     -- Light of Dawn (85222) added to rotational — nodeID 81565 non-PASSIVE ACTIVE; AoE HP spender
     -- Blessing of Freedom (1044) added to majorCooldowns as isUtility — nodeID 81631; 25s CD; talentGated; 100% adoption
     -- Fist of Justice confirmed PASSIVE — not tracked
+    -- Beacon of Faith (156910) added as healerConditional talentGated — nodeID 81554; choice node with Beacon of Virtue; suppressIfTalent=200025
+    -- Beacon of Virtue (200025) added as healerConditional talentGated — nodeID 81554; Replaces Beacon of Light; 15s CD; suppressIfTalent=156910
     [1] = {
         name = "Holy", role = "HEALER",
         resourceType = 9, resourceLabel = "HOLY POWER", overcapAt = 5,
@@ -22,8 +24,12 @@ Core.RegisterSpec(2, {
             { id = 86659,  label = "Guardian of Anc. Kings",expectedUses = "emergency throughput",healerConditional = true                      },  -- confirmed spell list
             { id = 633,    label = "Lay on Hands",          expectedUses = "emergencies",         healerConditional = true                      },  -- nodeID 81597 non-PASSIVE ACTIVE
             { id = 432459, label = "Holy Bulwark",          expectedUses = "on CD"                                                              },  -- nodeID 110257 non-PASSIVE ACTIVE
+            { id = 156322, label = "Eternal Flame",         expectedUses = "on CD (talent)",      talentGated = true, healerConditional = true    },  -- HP spender that applies a HoT; choice node with Word of Glory
+            { id = 216331, label = "Avenging Crusader",     expectedUses = "burst phases",        talentGated = true                              },  -- heals on damage dealt; choice node with Avenging Wrath
             { id = 6940,   label = "Blessing of Sacrifice", expectedUses = "tank busters",        healerConditional = true, talentGated = true   },  -- nodeID 81614 INACTIVE this build
             { id = 1044,   label = "Blessing of Freedom",  expectedUses = "situational",          isUtility = true,         talentGated = true   },  -- nodeID 81631; 25s CD; movement freedom for ally; tracked, never penalised
+            { id = 156910, label = "Beacon of Faith",      expectedUses = "per-fight application", healerConditional = true, talentGated = true, suppressIfTalent = 200025 },  -- nodeID 81554; choice node with Beacon of Virtue; apply to second beacon target
+            { id = 200025, label = "Beacon of Virtue",     expectedUses = "on CD (talent)",        healerConditional = true, talentGated = true, suppressIfTalent = 156910 },  -- nodeID 81554; Replaces Beacon of Light; 15s CD; choice node with Beacon of Faith
         },
         uptimeBuffs = {},
         rotationalSpells = {
@@ -75,6 +81,8 @@ Core.RegisterSpec(2, {
             { id = 6940,   label = "Blessing of Sacrifice",  expectedUses = "tank busters", healerConditional = true, talentGated = true },  -- nodeID 81614; 2 min CD; 99.7% adoption; no penalty on successful fight
             { id = 633,    label = "Lay on Hands",           expectedUses = "emergencies",  healerConditional = true              },  -- nodeID 81597; 7 min CD; baseline (granted for free); no penalty on successful fight
             { id = 389539, label = "Sentinel",               expectedUses = "situational",  healerConditional = true, talentGated = true },  -- defensive CD at 100% adoption; added 05/06/2026
+            { id = 156322, label = "Eternal Flame",          expectedUses = "on CD (talent)", talentGated = true, healerConditional = true },  -- HP spender HoT; self-sustain for tank
+            { id = 204018, label = "Blessing of Spellwarding", expectedUses = "situational",  talentGated = true, isUtility = true, healerConditional = true },  -- magic immunity for ally; Blessing of Protection replacement
         },
         uptimeBuffs = {
             { id = 132403, label = "Shield of the Righteous", targetUptime = 50, castSpellId = 53600, buffDuration = 4.5 },  -- cast 53600 applies buff 132403 for 4.5s
@@ -86,8 +94,9 @@ Core.RegisterSpec(2, {
             { id = 275779,  label = "Judgment",                minFightSeconds = 15 },  -- HP generator; x33 per fight in session log
             { id = 1241413, label = "Hammer of Wrath",         minFightSeconds = 30,  talentGated = true, altIds = {1241288} },  -- execute/AW window; 1241288 = morphed form when Judgment is empowered by Avenging Wrath
             { id = 85673,   label = "Word of Glory",           minFightSeconds = 30,  talentGated = true },  -- HP spender heal; x2 per fight in session log
+            { id = 53595,   label = "Hammer of the Righteous", minFightSeconds = 15,  talentGated = true, isUtility = true },  -- AoE HP generator; tracked, never penalised
             { id = 427453,  label = "Hammer of Light",          isUtility = true,      talentGated = true },  -- Templar: 20s window after Divine Toll (Light's Guidance); player-pressed when available
-            { id = 198137,  label = "Divine Hammer",            isUtility = true,      talentGated = true },  -- Templar: passive proc summoned by Divine Toll (Divine Hammer talent); not player-pressed
+            { id = 198137,  label = "Divine Hammer",            isUtility = true,      talentGated = true, altIds = {432929} },  -- Templar: passive proc summoned by Divine Toll (Divine Hammer talent); not player-pressed
         },
         tankMetrics = { targetMitigationUptime = 50 },
         priorityNotes = {
@@ -132,6 +141,7 @@ Core.RegisterSpec(2, {
             { id = 255937, label = "Wake of Ashes",      expectedUses = "at 0 HP / burst windows"  },  -- nodeID 81525 non-PASSIVE ACTIVE; rotation priority #6; generates 3 HP
             { id = 375576, label = "Divine Toll",         expectedUses = "on CD",              talentGated = true },  -- nodeID 109368; class talent; rotation priority #7
             { id = 343527, label = "Execution Sentence", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 109373 non-PASSIVE INACTIVE
+            { id = 156322, label = "Eternal Flame",      expectedUses = "on CD (talent)",  talentGated = true, healerConditional = true },  -- HP spender HoT; choice node with Final Verdict
             { id = 96231,  label = "Rebuke",             expectedUses = "situational",     isInterrupt = true },  -- nodeID 110093 non-PASSIVE ACTIVE
             { id = 53385,  label = "Divine Storm",       expectedUses = "AoE only",        isUtility = true              },  -- nodeID 81527; AoE HP spender — moved from rotational; never penalise in ST
             { id = 427453, label = "Hammer of Light",   expectedUses = "after Wake of Ashes", isUtility = true, talentGated = true },  -- Light's Guidance nodeID 95180; 20s window after Wake of Ashes; Templar (99.6%); tracked, never penalised

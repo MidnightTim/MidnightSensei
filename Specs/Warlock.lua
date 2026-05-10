@@ -24,9 +24,10 @@ Core.RegisterSpec(9, {
             { id = 334275,  label = "Curse of Exhaustion",   expectedUses = "situational",    isUtility = true          },  -- confirmed id=334275 by Archon (May 2026); 87% adoption; debuff slows movement; never penalised
         },
         rotationalSpells = {
+            { id = 980,     label = "Agony",               minFightSeconds = 15, hasCombatValue = true, isUtility = true },  -- DoT; bonus credit, never penalised — other talents auto-apply or replace it
             { id = 48181,   label = "Haunt",               minFightSeconds = 20 },  -- nodeID 72032 non-PASSIVE ACTIVE
             { id = 1259790, label = "Unstable Affliction",  minFightSeconds = 15 },  -- nodeID 109862 non-PASSIVE ACTIVE
-            { id = 686,     label = "Drain Soul",           minFightSeconds = 15 },  -- baseline spell list; 388667 removed (PASSIVE nodeID 72045)
+            { id = 686,     label = "Drain Soul",           minFightSeconds = 15, altIds = {388667} },  -- baseline spell list; 388667 = Archon alt ID (nodeID 72045)
             { id = 27243,   label = "Seed of Corruption",   minFightSeconds = 30 },  -- nodeID 72050 non-PASSIVE ACTIVE
         },
         uptimeBuffs = {},
@@ -75,6 +76,7 @@ Core.RegisterSpec(9, {
         rotationalSpells = {
             { id = 196277,  label = "Implosion",       minFightSeconds = 15 },                          -- nodeID 101893
             { id = 105174,  label = "Hand of Gul'dan", minFightSeconds = 15, talentGated = true },      -- nodeID 101891; confirmed cast ID in Demonology
+            { id = 264130,  label = "Power Siphon",    minFightSeconds = 20, talentGated = true },      -- destroys 2 Wild Imps to generate Demonic Core stacks; use before Demonbolt
             { id = 264178,  label = "Demonbolt",       minFightSeconds = 20 },                          -- baseline; Demonic Core spender
             -- Doom (460551) removed — appears as damage tick in logs but not directly cast via UNIT_SPELLCAST_SUCCEEDED
             -- Applied automatically; cannot be tracked via cast detection. Re-add if confirmed castable via /ms verify.
@@ -126,8 +128,9 @@ Core.RegisterSpec(9, {
             { id = 686,    label = "Incinerate",   minFightSeconds = 15, altIds = {29722} },      -- spell list confirmed; altId 29722 per Archon (May 2026)
             { id = 116858, label = "Chaos Bolt",   minFightSeconds = 20 },                      -- nodeID 110282 ACTIVE; primary spender
             { id = 17962,  label = "Conflagrate",  minFightSeconds = 15 },                      -- nodeID 72068 ACTIVE; core builder
+            { id = 6353,   label = "Soul Fire",    minFightSeconds = 20, talentGated = true },  -- high-damage cast; generates Burning Ember; use on cooldown when talented
             { id = 17877,  label = "Shadowburn",   minFightSeconds = 20, talentGated = true },  -- nodeID 72060 ACTIVE; execute finisher
-            { id = 5740,   label = "Rain of Fire", minFightSeconds = 30, talentGated = true },  -- nodeID 72069 ACTIVE; AoE
+            { id = 5740,   label = "Rain of Fire", minFightSeconds = 30, talentGated = true, altIds = {1214467} },  -- nodeID 72069 ACTIVE; AoE
         },
         priorityNotes = {
             "Maintain Immolate on all targets for shard generation (not directly tracked)",

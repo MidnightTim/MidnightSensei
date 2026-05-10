@@ -28,6 +28,7 @@ Core.RegisterSpec(1, {
             { id = 46968,  label = "Shockwave",     expectedUses = "situational",    talentGated = true, isUtility = true, hasCombatValue = true },  -- AoE stun + damage; aimed/held for packs — never penalised
             { id = 118038, label = "Die by the Sword", expectedUses = "situational",    isUtility = true    },  -- confirmed id=118038; personal defensive — tracked, never penalised
             { id = 97462,  label = "Rallying Cry",     expectedUses = "situational",    isUtility = true, talentGated = true },  -- confirmed id=97462; party HP utility; talent gated (May 2026)
+            { id = 1277297, label = "Ignore Pain",    expectedUses = "physical hits",   talentGated = true },  -- absorb shield for Arms; Midnight 12.0 class talent; proactive mitigation
             -- Bladestorm (227847) removed — not in Arms talent tree
             -- Warbreaker (262161) removed — not in Arms talent tree or spell list
         },
@@ -140,6 +141,8 @@ Core.RegisterSpec(1, {
             { id = 107570, label = "Storm Bolt",   expectedUses = "situational",    isUtility = true, hasCombatValue = true, talentGated = true },  -- nodeID 90337; 27s CD stun + damage; tracked as CC, never penalised
             { id = 97462,  label = "Rallying Cry", expectedUses = "situational",    isUtility = true, talentGated = true },  -- confirmed id=97462; party HP utility; talent gated (May 2026)
             { id = 46968,  label = "Shockwave",    expectedUses = "situational",    talentGated = true, isUtility = true, hasCombatValue = true },  -- AoE stun + damage; aimed/held for packs — never penalised
+            { id = 228920, label = "Ravager",      expectedUses = "on CD (talent)", talentGated = true, hasCombatValue = true },  -- spinning weapon; AoE damage + Rage; situational — bonus credit, never penalised
+            { id = 385952, label = "Shield Charge", expectedUses = "situational",   talentGated = true },  -- mobility + damage; Prot Warrior talent
             { id = 12323,  label = "Piercing Howl", expectedUses = "situational",  isUtility = true, talentGated = true },  -- AoE slowing shout; added 05/06/2026
             -- Last Stand (12975) removed — confirmed PASSIVE in talent tree
         },

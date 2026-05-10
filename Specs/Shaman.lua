@@ -48,6 +48,7 @@ Core.RegisterSpec(7, {
             { id = 117014, label = "Elemental Blast", minFightSeconds = 20, talentGated = true },      -- non-PASSIVE ACTIVE nodeID 80984
             { id = 188443, label = "Chain Lightning",  minFightSeconds = 15 },                          -- primary AoE filler; empowered by Stormkeeper; id=188443 confirmed; previously tracked, re-added May 2026
             { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true },      -- nodeID 81007; Flame Shock replacement for Elemental — DoT applicator
+            { id = 8042,   label = "Earth Shock",    minFightSeconds = 15, hasCombatValue = true, isUtility = true },  -- Maelstrom spender; situational — bonus credit, never penalised
             -- Flame Shock (470411) removed — Enhancement only in Midnight 12.0; Voltaic Blaze replaces it for Elemental
             -- Tempest (454009) removed — confirmed PASSIVE nodeID 94892
         },
@@ -139,6 +140,10 @@ Core.RegisterSpec(7, {
     --           Ascendance (114052) confirmed nodeID 81032; healerConditional (emergency use)
     --           Surging Totem (444995) healerConditional (may not be needed every fight)
     --           Healing Rain (73920) moved to rotationalSpells (maintained on CD, not a burst CD)
+    -- Added:    Nature's Swiftness (378081) to majorCooldowns — nodeID 103620; 1 min CD; talentGated; suppressIfTalent=443454
+    --           (Ancestral Swiftness replaces it when Farseer hero talent is taken)
+    -- Added:    Ancestral Swiftness (443454) to majorCooldowns — Farseer hero talent; nodeID 94894; talentGated
+    --           replaces Nature's Swiftness (378081) when taken
     [3] = {
         name = "Restoration", role = "HEALER",
         resourceType = 0,
@@ -149,7 +154,10 @@ Core.RegisterSpec(7, {
             { id = 444995, label = "Surging Totem",     expectedUses = "before damage windows",        healerConditional = true, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 94877; Totem hero talent
             { id = 73685,  label = "Unleash Life",      expectedUses = "on CD — pre-heal amplifier"                             },  -- non-PASSIVE ACTIVE nodeID 92675
             { id = 114052, label = "Ascendance",        expectedUses = "emergency throughput",         healerConditional = true },  -- non-PASSIVE ACTIVE nodeID 81032
-            { id = 108280, label = "Healing Tide Totem", expectedUses = "healing CD (talent)",         healerConditional = true, talentGated = true },  -- confirmed active Midnight 12.0; re-added May 2026; 3 min CD
+            { id = 108280, label = "Healing Tide Totem",    expectedUses = "healing CD (talent)",  healerConditional = true, talentGated = true },  -- confirmed active Midnight 12.0; re-added May 2026; 3 min CD
+            { id = 378081, label = "Nature's Swiftness",   expectedUses = "on CD (talent)",        talentGated = true, suppressIfTalent = 443454 },  -- nodeID 103620; 1 min CD; suppressed when Farseer hero talent (Ancestral Swiftness 443454) is taken
+            { id = 443454, label = "Ancestral Swiftness",  expectedUses = "on CD (~30s)",          talentGated = true },  -- Farseer hero talent; nodeID 94894; replaces Nature's Swiftness (378081)
+            { id = 462486, label = "Downpour",           expectedUses = "on CD (talent)",              talentGated = true, isUtility = true },  -- AoE spot healing; tracked, never penalised
             -- Call of the Ancestors (443450) removed — confirmed PASSIVE nodeID 94888
             -- Earth Shield (974) intentionally not tracked — nodeID 103596; cast pre-pull creates false negatives;
             --   Midnight changes make mid-fight reapplication timing inconsistent; no penalty warranted

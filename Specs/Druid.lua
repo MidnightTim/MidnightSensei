@@ -20,6 +20,7 @@ Core.RegisterSpec(11, {
             -- 383410 (Orbital Strike) removed — PASSIVE modifier to Incarnation, never fires UNIT_SPELLCAST_SUCCEEDED
             { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)", talentGated = true },  -- Incarnation build; confirmed fires UNIT_SPELLCAST_SUCCEEDED (verify 2x)
             { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true, isUtility = true, hasCombatValue = true },  -- treants root + damage; optional — not widely used on cooldown
+            { id = 391528, label = "Convoke the Spirits",         expectedUses = "burst windows",   talentGated = true },  -- nodeID 88206 non-PASSIVE ACTIVE; added May 2026
             { id = 78675,  label = "Solar Beam",                  expectedUses = "situational",     talentGated = true, isInterrupt = true },  -- silence/interrupt; informational only — no penalty
         },
         uptimeBuffs = {},
@@ -31,6 +32,8 @@ Core.RegisterSpec(11, {
             { id = 78674,  label = "Starsurge", minFightSeconds = 20, suppressIfTalent = 1271206 },                   -- priority #9 — main ST spender; suppress when Star Cascade (1271206) auto-fires it passively
             { id = 5176,   label = "Wrath",     minFightSeconds = 15, orGroup = "filler", suppressIfTalent = 429523, altIds = {190984} }, -- Solar Eclipse filler; 190984 = Eclipse:Wrath combat cast ID (spellbook=5176 differs from UNIT_SPELLCAST_SUCCEEDED in Midnight 12.0); suppress when Lunar Calling (429523)
             { id = 194153, label = "Starfire",  minFightSeconds = 15, orGroup = "filler" },                           -- Lunar Eclipse filler / AoE; live-verified cast ID 194153
+            { id = 274281, label = "New Moon",      minFightSeconds = 20, talentGated = true },  -- cycles through New/Half/Full Moon charges; use on cooldown
+            { id = 88747,  label = "Wild Mushroom", minFightSeconds = 20, talentGated = true },  -- place under target for AoE damage; triggers on movement
         },
         priorityNotes = {
             "Maintain Moonfire and Sunfire on all targets — refresh within pandemic (not directly tracked)",
@@ -74,6 +77,7 @@ Core.RegisterSpec(11, {
             { id = 5221,   label = "Shred",          minFightSeconds = 15 },                      -- baseline confirmed spell list; primary CP builder
             { id = 285381, label = "Primal Wrath",   minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82120; AoE finisher
             { id = 106785, label = "Swipe",          minFightSeconds = 20, talentGated = true },  -- Cat Form Swipe; confirmed combat cast ID 106785 (class talent; Bear Form is 213764)
+            { id = 1244258, label = "Chomp",         minFightSeconds = 20, talentGated = true, hasCombatValue = true, isUtility = true },  -- Druid of the Claw hero talent; situational; bonus credit, never penalised
         },
         priorityNotes = {
             "Ferocious Bite on Apex Predator's Craving procs — highest priority",
@@ -102,12 +106,14 @@ Core.RegisterSpec(11, {
         name = "Guardian", role = "TANK",
         resourceType = 8, resourceLabel = "RAGE", overcapAt = 100,
         majorCooldowns = {
-            { id = 102558, label = "Incarnation: Guardian", expectedUses = "on CD"                                              },  -- non-PASSIVE ACTIVE nodeID 82136; replaces Berserk when taken
+            { id = 102558, label = "Incarnation: Guardian", expectedUses = "on CD", suppressIfTalent = 391528                  },  -- non-PASSIVE ACTIVE nodeID 82136; choice node with Convoke; suppress when Convoke taken
             { id = 50334,  label = "Berserk",               expectedUses = "on CD",          talentGated = true, suppressIfTalent = 102558 },  -- nodeID 82149; replaced by Incarnation — suppress when Incarnation taken
             { id = 61336,  label = "Survival Instincts",    expectedUses = "defensive",      healerConditional = true          },  -- confirmed id=61336; reactive tank defensive — no penalty on successful fight
             { id = 22812,  label = "Barkskin",              expectedUses = "magic damage"                                       },  -- baseline confirmed spell list
             { id = 22842,  label = "Frenzied Regeneration", expectedUses = "low health"                                         },  -- non-PASSIVE ACTIVE nodeID 82220
             { id = 204066, label = "Lunar Beam",            expectedUses = "on CD (talent)", talentGated = true                },  -- non-PASSIVE ACTIVE nodeID 92587
+            { id = 391528, label = "Convoke the Spirits",  expectedUses = "burst windows",  talentGated = true, suppressIfTalent = 102558 },  -- nodeID 82136; choice node with Incarnation: Guardian; suppress when Incarnation taken
+            { id = 155835, label = "Bristling Fur",        expectedUses = "defensive",      talentGated = true, healerConditional = true },  -- converts Rage generated into Armor for 8s; reactive defensive
         },
         uptimeBuffs = {
             { id = 192081, label = "Ironfur", targetUptime = 70, castSpellId = 192081, buffDuration = 7 },  -- each cast applies a 7s stack
@@ -117,7 +123,8 @@ Core.RegisterSpec(11, {
             { id = 33917,   label = "Mangle",    minFightSeconds = 15 },                      -- baseline; rotation priority #4
             { id = 77758,   label = "Thrash",    minFightSeconds = 15 },                      -- baseline; rotation priority #5
             { id = 6807,    label = "Maul",      minFightSeconds = 20, altIds = {441583, 400254} },  -- non-PASSIVE ACTIVE nodeID 82127; Rage spender; Ravage (441583) PASSIVE proc; 400254=Raze stellar variant per Archon (May 2026)
-            { id = 213764,  label = "Swipe",     minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82223; filler only
+            { id = 213764,  label = "Swipe",        minFightSeconds = 20 },                      -- non-PASSIVE ACTIVE nodeID 82223; filler only
+            { id = 1253799, label = "Sundering Roar", minFightSeconds = 15, talentGated = true },  -- AoE interrupt + damage; added May 2026
             -- Red Moon (1252871) removed — confirmed in Balance spell list only, not Guardian
         },
         tankMetrics = { targetMitigationUptime = 70 },

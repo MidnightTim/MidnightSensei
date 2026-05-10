@@ -48,7 +48,9 @@ Core.RegisterSpec(12, {
             [185123]=true,  -- Throw Glaive
             [185245]=true,  -- Torment
             [337567]=true,  -- Furious Gaze proc
+            [343311]=true,  -- Furious Gaze proc (Archon alt ID)
             [389860]=true,  -- Unbound Chaos proc
+            [347461]=true,  -- Unbound Chaos proc (Archon alt ID)
         },
         majorCooldowns = {
             { id = 191427, label = "Metamorphosis", expectedUses = "burst windows"           },  -- non-PASSIVE confirmed
@@ -66,8 +68,8 @@ Core.RegisterSpec(12, {
             { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true },                 -- non-PASSIVE ACTIVE nodeID 91008
         },
         procBuffs = {
-            { id = 337567, label = "Furious Gaze",  maxStackTime = 8  },   -- VERIFY C_UnitAuras
-            { id = 389860, label = "Unbound Chaos", maxStackTime = 12 },   -- VERIFY C_UnitAuras
+            { id = 337567, label = "Furious Gaze",  maxStackTime = 8,  altIds = {343311} },   -- VERIFY C_UnitAuras
+            { id = 389860, label = "Unbound Chaos", maxStackTime = 12, altIds = {347461} },   -- VERIFY C_UnitAuras
         },
         priorityNotes = {
             "Immolation Aura on cooldown — primary Fury generator",
@@ -130,6 +132,8 @@ Core.RegisterSpec(12, {
             [390163]=true,  -- Sigil of Spite
             [179057]=true,  -- Chaos Nova
             [232893]=true,  -- Felblade
+            [202138]=true,  -- Sigil of Chains
+            [207407]=true,  -- Soul Carver
         },
         majorCooldowns = {
             -- 191427 Metamorphosis removed — shapeshifting spell, UPDATE_SHAPESHIFT_FORM not SUCCEEDED
@@ -139,7 +143,8 @@ Core.RegisterSpec(12, {
             { id = 390163, label = "Sigil of Spite",   expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 90978
             { id = 179057, label = "Chaos Nova",       expectedUses = "situational",    talentGated = true, isUtility = true, hasCombatValue = true },  -- non-PASSIVE ACTIVE; AoE stun + damage — situational hold, never penalised
             { id = 202137, label = "Sigil of Silence", expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
-            { id = 207684, label = "Sigil of Misery",  expectedUses = "situational",    isInterrupt = true },  -- non-PASSIVE ACTIVE
+            { id = 207684, label = "Sigil of Misery",  expectedUses = "situational",    isInterrupt = true, suppressIfTalent = 202138 },  -- non-PASSIVE ACTIVE; suppressed when Sigil of Chains taken
+            { id = 202138, label = "Sigil of Chains",  expectedUses = "situational",    isUtility = true, talentGated = true },  -- choice node; root CC; suppress Sigil of Misery when taken
         },
         uptimeBuffs = {
             { id = 203720, label = "Demon Spikes", targetUptime = 50, castSpellId = 203720, buffDuration = 6 },  -- each cast applies/extends for 6s
@@ -151,6 +156,7 @@ Core.RegisterSpec(12, {
             { id = 247454, label = "Spirit Bomb",     minFightSeconds = 20 },                                          -- non-PASSIVE ACTIVE nodeID 90990
             { id = 189110, label = "Infernal Strike",  minFightSeconds = 15 },                                         -- live-verified x5; gap-closer with charges
             { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true, altIds = {213243} },   -- non-PASSIVE ACTIVE nodeID 108722; 213243 is spec-variant ID
+            { id = 207407, label = "Soul Carver",     minFightSeconds = 20, talentGated = true },                         -- burst damage + Soul Fragment generation
         },
         tankMetrics = { targetMitigationUptime = 50 },
         priorityNotes = {
@@ -187,7 +193,9 @@ Core.RegisterSpec(12, {
         -- Strict whitelist — hard-blocks all Havoc/Vengeance abilities
         validSpells = {
             [1217605]=true, -- Void Metamorphosis — Devourer cast ID (live-verified)
+            [471306]=true,  -- Void Metamorphosis (Archon alt ID)
             [1221150]=true, -- Collapsing Star (live-verified CHANNEL_START)
+            [1221167]=true, -- Collapsing Star (Archon alt ID)
             [473662]=true,  -- Consume (live-verified cast ID)
             [1226019]=true, -- Reap (live-verified cast ID)
             [1217610]=true, -- Devour (live-verified)
@@ -219,7 +227,7 @@ Core.RegisterSpec(12, {
         },
         majorCooldowns = {
             { id = 1217605, label = "Void Metamorphosis", expectedUses = "on CD — required for Collapsing Star",
-              displayOnly = true },  -- shapeshift: fires UPDATE_SHAPESHIFT_FORM not SUCCEEDED; displayOnly for My Spell List
+              displayOnly = true, altIds = {471306} },  -- shapeshift: fires UPDATE_SHAPESHIFT_FORM not SUCCEEDED; displayOnly for My Spell List
             { id = 1246167, label = "The Hunt",        expectedUses = "on CD (talent)", talentGated = true },  -- Devourer spec-variant; live-verified SKIP (not talented)
             { id = 278326,  label = "Consume Magic",  expectedUses = "situational", isInterrupt = true, talentGated = true },  -- nodeID 91006 non-PASSIVE ACTIVE; added 05/06/2026
             -- Removed (confirmed PASSIVE): Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
@@ -230,7 +238,7 @@ Core.RegisterSpec(12, {
             { id = 1241937, label = "Soul Immolation", minFightSeconds = 15, talentGated = true },  -- CD resets on kill; Spontaneous Immolation redesigned to buff not replace
             { id = 1217610, label = "Devour",          minFightSeconds = 15, combatGated = true },  -- live-verified cast ID; inside Void Metamorphosis window
             { id = 1245453, label = "Cull",            minFightSeconds = 15, combatGated = true },  -- live-verified cast ID; inside Void Metamorphosis window
-            { id = 1221150, label = "Collapsing Star", minFightSeconds = 45, combatGated = true },  -- live-verified CHANNEL_START; inside Void Metamorphosis window
+            { id = 1221150, label = "Collapsing Star", minFightSeconds = 45, combatGated = true, altIds = {1221167} },  -- live-verified CHANNEL_START; inside Void Metamorphosis window
             { id = 473728,  label = "Void Ray",        minFightSeconds = 15 },                     -- live-verified; non-PASSIVE ACTIVE nodeID 107336
             { id = 1245412, label = "Voidblade",       minFightSeconds = 15, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 108723
             { id = 1234195, label = "Void Nova",       minFightSeconds = 20, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 107347

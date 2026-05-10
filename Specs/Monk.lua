@@ -25,6 +25,7 @@ Core.RegisterSpec(10, {
             { id = 115399,  label = "Black Ox Brew",     expectedUses = "on CD (2 min)", talentGated = true },  -- Spell ID confirmed in-game; 2 min CD; refills Energy + Purifying Brew charges
             { id = 1241059, label = "Celestial Infusion",expectedUses = "on CD"         },  -- nodeID 101067 non-PASSIVE ACTIVE
             { id = 116705,  label = "Spear Hand Strike", expectedUses = "situational",  isInterrupt = true },  -- nodeID 101152 non-PASSIVE ACTIVE
+            { id = 322960,  label = "Fortifying Brew: Determination", expectedUses = "emergency", talentGated = true, healerConditional = true },  -- enhanced Fortifying Brew; major personal defensive CD
             { id = 116847,  label = "Rushing Jade Wind",  expectedUses = "situational",  talentGated = true, isUtility = true, altIds = {148187} },
             -- Celestial Brew (322507) removed — not in talent tree or spell list
         },
@@ -71,11 +72,12 @@ Core.RegisterSpec(10, {
         majorCooldowns = {
             { id = 115310, label = "Revival",           expectedUses = "raid emergency",   healerConditional = true        },  -- nodeID 101131 non-PASSIVE ACTIVE
             { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"                                             },  -- nodeID 101133 non-PASSIVE ACTIVE
-            { id = 115294, label = "Mana Tea",          expectedUses = "mana recovery"                                    },  -- confirmed spell ID; use on cooldown to sustain mana
+            { id = 115294, label = "Mana Tea",          expectedUses = "mana recovery",  altIds = {115869}              },  -- confirmed spell ID; use on cooldown to sustain mana
             { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE",    healerConditional = true        },  -- nodeID 101129 non-PASSIVE ACTIVE
             { id = 116849, label = "Life Cocoon",       expectedUses = "tank emergencies",  healerConditional = true        },  -- nodeID 101096 non-PASSIVE ACTIVE
             { id = 399491, label = "Sheilun's Gift",    expectedUses = "on CD"                                             },  -- nodeID 101120 non-PASSIVE ACTIVE; draws in mist clouds for burst heal
             { id = 443028, label = "Celestial Conduit", expectedUses = "on CD (talent)",   talentGated = true              },  -- nodeID 110067 non-PASSIVE ACTIVE
+            { id = 388615, label = "Restoral",          expectedUses = "emergency AoE",    talentGated = true, healerConditional = true },  -- channel heal + dispels all magic debuffs from group; major emergency CD
             { id = 116705, label = "Spear Hand Strike", expectedUses = "situational",       isInterrupt = true              },
         },
         rotationalSpells = {
@@ -129,6 +131,7 @@ Core.RegisterSpec(10, {
             { id = 152175, label = "Whirling Dragon Punch", minFightSeconds = 15, talentGated = true },  -- nodeID 101207 non-PASSIVE ACTIVE
             { id = 100780, label = "Tiger Palm",            minFightSeconds = 15 },  -- baseline confirmed WW spell list
             { id = 100784, label = "Blackout Kick",         minFightSeconds = 15, altIds = {205523} },  -- baseline confirmed WW spell list
+            { id = 392983, label = "Strike of the Windlord", minFightSeconds = 20, talentGated = true, hasCombatValue = true, isUtility = true },  -- major AoE damage + knock up; situational — bonus credit, never penalised
         },
         priorityNotes = {
             "Fists of Fury on cooldown — highest damage ability",

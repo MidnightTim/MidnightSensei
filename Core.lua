@@ -33,7 +33,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.3"
+    Core.VERSION = ver or "1.6.4"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -291,6 +291,18 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.4",
+        tagline = "Spec DB additions: Dark Ranger, Rogue, Paladin, Shaman",
+        date    = "May 2026",
+        changes = {
+            "Assassination Rogue: Thistle Tea (381623) added as talentGated majorCooldown — 3 charges, 1 min recharge; tracks proactive use alongside Kingsbane/Deathmark",
+            "MM Hunter: Black Arrow (466932) added as talentGated rotational; Kill Shot suppressIfTalent=94987 — Dark Ranger hero talent replaces Kill Shot with Black Arrow, preventing false 'never used Kill Shot' penalties",
+            "Paladin Holy: Beacon of Faith (156910) and Beacon of Virtue (200025) added as healerConditional talentGated — choice-node pair on node 81554; mutual suppressIfTalent prevents double-tracking; only the chosen variant is tracked per player",
+            "Shaman Restoration: Nature's Swiftness (378081) added as talentGated CD — 1 min CD; suppressIfTalent=443454 (Farseer hero talent replaces it with Ancestral Swiftness)",
+            "Shaman Restoration: Ancestral Swiftness (443454) added as talentGated CD — Farseer hero talent; replaces Nature's Swiftness; ~30s CD instant-cast window",
+        },
+    },
     {
         version = "1.6.3",
         tagline = "Combat Utility Coaching + 16 New Tracked Abilities",

@@ -26,6 +26,8 @@ Core.RegisterSpec(8, {
             { id = 321507, label = "Touch of the Magi",expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102468 INACTIVE (was 210824 — wrong ID)
             { id = 153626, label = "Arcane Orb",       expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 104113 INACTIVE this build
             { id = 1241462,label = "Arcane Pulse",     expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 102439 INACTIVE this build
+            { id = 12051,  label = "Evocation",       expectedUses = "mana recovery"                      },  -- baseline mana CD; re-added May 2026 per session review
+            { id = 205025, label = "Presence of Mind", expectedUses = "on CD (talent)", talentGated = true },  -- instant cast empowerment; use before Arcane Blast for free proc
             { id = 55342,  label = "Mirror Image",    expectedUses = "on CD (talent)", talentGated = true },  -- confirmed x1; 100% class talent adoption
             { id = 2139,   label = "Counterspell",     isInterrupt = true, minFightSeconds = 20 },
             { id = 30449,  label = "Spellsteal",       isUtility   = true, minFightSeconds = 20 },
@@ -84,7 +86,7 @@ Core.RegisterSpec(8, {
             { id = 108853,  label = "Fire Blast",  minFightSeconds = 15 },  -- nodeID 100989 non-PASSIVE ACTIVE; instant Hot Streak proc
             { id = 11366,   label = "Pyroblast",   minFightSeconds = 15 },  -- nodeID 100998 non-PASSIVE ACTIVE; Hot Streak proc consumer
             -- Scorch (2948) removed — situational; penalises more than rewards
-            { id = 1254851, label = "Flamestrike", minFightSeconds = 20, talentGated = true },  -- nodeID 109409 non-PASSIVE ACTIVE; Fire spec-variant AoE
+            { id = 1254851, label = "Flamestrike", minFightSeconds = 20, talentGated = true, altIds = {2120} },  -- nodeID 109409 non-PASSIVE ACTIVE; Fire spec-variant AoE
         },
         procBuffs = {
             { id = 48108, label = "Hot Streak", maxStackTime = 10 },  -- live-verified aura ID (seen not active confirmed)
@@ -124,6 +126,7 @@ Core.RegisterSpec(8, {
             { id = 431044, label = "Frostfire Bolt", expectedUses = "on CD (talent)",  talentGated = true },  -- nodeID 94636 non-PASSIVE ACTIVE
             { id = 205021, label = "Ray of Frost",   expectedUses = "on CD (talent)",  talentGated = true, altIds = {1247777} },  -- nodeID 62153 non-PASSIVE ACTIVE; 1247777=Comet Storm PASSIVE proc fires in place of Ray of Frost (May 2026)
             { id = 31661,  label = "Dragon's Breath", expectedUses = "situational",     talentGated = true, isUtility = true, hasCombatValue = true },  -- AoE disorient + damage; aimed/held for packs — never penalised
+            { id = 235219, label = "Cold Snap",       expectedUses = "situational",     talentGated = true, hasCombatValue = true },  -- resets Frozen Orb + Ice Barrier CDs; defensive or extra burst; never penalised
             -- Icy Veins (12472) removed — not in Frost talent tree or spell list
             { id = 2139,   label = "Counterspell",   isInterrupt = true, minFightSeconds = 20 },
             { id = 30449,  label = "Spellsteal",     isUtility   = true, minFightSeconds = 20 },
@@ -137,8 +140,8 @@ Core.RegisterSpec(8, {
             { id = 190356, label = "Blizzard",      minFightSeconds = 20, talentGated = true },  -- confirmed combat cast ID 190356 x3 (talent node 1248829 is not cast ID)
         },
         procBuffs = {
-            { id = 190446, label = "Brain Freeze",     maxStackTime = 15 },  -- live-verified aura ID (seen not active confirmed)
-            { id = 44544,  label = "Fingers of Frost", maxStackTime = 15 },  -- live-verified aura ID (seen not active confirmed)
+            { id = 190446, label = "Brain Freeze",     maxStackTime = 15, altIds = {190447} },  -- live-verified aura ID (seen not active confirmed)
+            { id = 44544,  label = "Fingers of Frost", maxStackTime = 15, altIds = {112965} },  -- live-verified aura ID (seen not active confirmed)
         },
         uptimeBuffs = {
             { id = 1459, label = "Arcane Intellect", targetUptime = 100, infoOnly = true },

@@ -27,6 +27,8 @@ Core.RegisterSpec(6, {
             { id = 48707,   label = "Anti-Magic Shell",    expectedUses = "magic damage",   healerConditional = true },  -- reactive magic absorb
             { id = 47528,   label = "Mind Freeze",         expectedUses = "situational",    isInterrupt = true       },  -- nodeID 76084 non-PASSIVE ACTIVE
             { id = 109199,  label = "Gauntlet's Grasp",    expectedUses = "situational",    talentGated = true       },  -- Rider hero talent; ~99.8% adoption; confirmed id=109199 (May 2026)
+            { id = 1263569, label = "Abomination Limb",  expectedUses = "situational", talentGated = true, isUtility = true, hasCombatValue = true, suppressIfTalent = 108199 },  -- Midnight 12.0 ID; choice node with Gorefiend's Grasp; suppress when Gorefiend's Grasp taken
+            { id = 108199,  label = "Gorefiend's Grasp", expectedUses = "situational", talentGated = true, isUtility = true, suppressIfTalent = 1263569 },  -- group grip utility; choice node with Abomination Limb; suppress when Abomination Limb taken
         },
         uptimeBuffs = {},
         rotationalSpells = {

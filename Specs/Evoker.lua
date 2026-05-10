@@ -72,6 +72,7 @@ Core.RegisterSpec(13, {
             { id = 357170,  label = "Time Dilation",     expectedUses = "emergency HoT",  healerConditional = true              },  -- non-PASSIVE ACTIVE nodeID 93336
             { id = 1291636, label = "Temporal Barrier",  expectedUses = "on CD (talent)", talentGated = true                    },  -- non-PASSIVE ACTIVE nodeID 93258; absorb + Echo 30% on up to 5 allies
             { id = 374227,  label = "Zephyr",            expectedUses = "AoE damage phases",  isUtility = true, talentGated = true },  -- nodeID 93346; 2 min CD; tracked, never penalised
+            { id = 359816,  label = "Dream Flight",      expectedUses = "heavy AoE damage",    healerConditional = true, talentGated = true },  -- flies in a line healing all party; major AoE heal CD
             { id = 370537,  label = "Stasis",            expectedUses = "burst ramp"                                              },  -- 1.5 min CD; stores last 3 casts and releases simultaneously; major burst window
             { id = 370665,  label = "Rescue",            expectedUses = "situational",         isUtility = true, talentGated = true },  -- 1 min CD; movement + self/ally cleanse; tracked, never penalised
             { id = 374251,  label = "Cauterizing Flame", expectedUses = "situational",         isUtility = true                     },  -- confirmed id=374251; tracked, never penalised

@@ -81,6 +81,8 @@ Core.RegisterSpec(5, {
             { id = 34861,  label = "Holy Word: Sanctify", minFightSeconds = 15 },  -- nodeID 82631 non-PASSIVE ACTIVE
             { id = 14914,  label = "Holy Fire",           minFightSeconds = 15 },  -- nodeID 108730 non-PASSIVE ACTIVE; reduces Holy Word CDs
             { id = 120517, label = "Halo",                minFightSeconds = 20, talentGated = true },  -- nodeID 108724 non-PASSIVE ACTIVE
+            { id = 88625,  label = "Holy Word: Chastise", minFightSeconds = 20, talentGated = true, hasCombatValue = true, isUtility = true },  -- reduces Holy Word CDs via Answered Prayers; bonus credit, never penalised
+            { id = 596,    label = "Prayer of Healing",   minFightSeconds = 20, healerConditional = true },  -- AoE group heal; use when multiple targets are injured
             -- Holy Nova (132157) excluded — situational; M+ vs raid usage varies too widely; same treatment as Scorch
         },
         healerMetrics = { targetOverheal = 25, targetActivity = 85, targetManaEnd = 10 },
@@ -125,7 +127,7 @@ Core.RegisterSpec(5, {
             { id = 8092,   label = "Mind Blast",           minFightSeconds = 20, talentGated = true },  -- class talent; nodeID 82713
             { id = 15407,  label = "Mind Flay",            minFightSeconds = 15 },                      -- baseline filler
             { id = 32379,  label = "Shadow Word: Death",   minFightSeconds = 20, talentGated = true },  -- class talent; nodeID 82712
-            { id = 450983, label = "Void Blast",           minFightSeconds = 20, talentGated = true },  -- Voidweaver: empowered MB during Voidform
+            { id = 450983, label = "Void Blast",           minFightSeconds = 20, talentGated = true, altIds = {450405} },  -- Voidweaver: empowered MB during Voidform
             { id = 1242173, label = "Void Volley",         minFightSeconds = 20, talentGated = true },  -- Voidweaver AoE
             { id = 120644, label = "Halo",                 minFightSeconds = 30, talentGated = true },  -- Shadow spec-variant; nodeID 94697 non-PASSIVE ACTIVE
         },
