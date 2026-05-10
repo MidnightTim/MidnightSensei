@@ -23,6 +23,7 @@
 --------------------------------------------------------------------------------
 
 MidnightSensei             = MidnightSensei             or {}
+local L = MidnightSensei.L
 MidnightSensei.Core        = MidnightSensei.Core        or {}
 MidnightSensei.Analytics   = MidnightSensei.Analytics   or {}
 MidnightSensei.Leaderboard = MidnightSensei.Leaderboard or {}
@@ -263,14 +264,14 @@ end
 -- They respond automatically if they have the addon. Result prints to chat.
 function LB.QueryFriend(target)
     if not target or target == "" then
-        print("|cff00D1FFMidnight Sensei:|r Usage: /ms friend Name  or  /ms friend Name-Realm")
+        print("|cff00D1FFMidnight Sensei:|r " .. L["FRIEND_QUERY_USAGE"])
         return
     end
     local myFullName = UnitName("player") .. "-" .. (GetRealmName() or "")
     local payload = table.concat({ "REQD", Core.VERSION, myFullName }, "|")
     local ok, err = pcall(C_ChatInfo.SendAddonMessage, LB_PREFIX, payload, "WHISPER", target)
     if ok then
-        print("|cff00D1FFMidnight Sensei:|r Checking |cffFFFFFF" .. target .. "|r...")
+        print("|cff00D1FFMidnight Sensei:|r " .. string.format(L["FRIEND_CHECKING"], target))
         -- If no response arrives within 5s, let the player know
         local responded = false
         -- Mark as pending so the SCORE whisper handler can cancel the timeout
@@ -278,13 +279,11 @@ function LB.QueryFriend(target)
         C_Timer.After(8.0, function()
             if LB._pendingFriendQuery == target then
                 LB._pendingFriendQuery = nil
-                print("|cff00D1FFMidnight Sensei:|r |cffFFFFFF" .. target ..
-                      "|r |cffaa3333(Offline)|r — Not updated or addon not installed")
+                print("|cff00D1FFMidnight Sensei:|r " .. string.format(L["FRIEND_OFFLINE"], target))
             end
         end)
     else
-        print("|cffFF4444Midnight Sensei:|r Could not reach |cffFFFFFF" .. target ..
-              "|r — check the name/realm spelling. Error: " .. tostring(err))
+        print("|cffFF4444Midnight Sensei:|r " .. string.format(L["FRIEND_CANNOT_REACH"], target, tostring(err)))
     end
 end
 
@@ -460,23 +459,20 @@ function LB.AddFriend(nameRealm)
     end
     -- Enforce cap
     if #friendList >= FRIEND_LIST_MAX then
-        print("|cffFF4444Midnight Sensei:|r Friend list is full (" .. FRIEND_LIST_MAX ..
-              " max). Remove someone first with right-click or /ms friend remove Name.")
+        print("|cffFF4444Midnight Sensei:|r " .. string.format(L["FRIEND_LIST_FULL"], FRIEND_LIST_MAX))
         return
     end
     -- Deduplicate
     for _, f in ipairs(friendList) do
         if f:lower() == nameRealm:lower() then
-            print("|cff00D1FFMidnight Sensei:|r |cffFFFFFF" .. nameRealm ..
-                  "|r is already in your friend list.")
+            print("|cff00D1FFMidnight Sensei:|r " .. string.format(L["FRIEND_ALREADY_IN"], nameRealm))
             return
         end
     end
     table.insert(friendList, nameRealm)
     local db = GetFriendListDB()
     if db then table.insert(db, nameRealm) end
-    print("|cff00D1FFMidnight Sensei:|r Added |cffFFFFFF" .. nameRealm ..
-          "|r to your friend list (" .. #friendList .. "/" .. FRIEND_LIST_MAX .. ").")
+    print("|cff00D1FFMidnight Sensei:|r " .. string.format(L["FRIEND_ADDED"], nameRealm, #friendList, FRIEND_LIST_MAX))
     -- Immediately query them
     LB.QueryFriend(nameRealm)
     LB.RefreshUI()
@@ -508,15 +504,12 @@ function LB.RemoveFriend(nameRealm)
                     break
                 end
             end
-            print("|cff00D1FFMidnight Sensei:|r Removed |cffFFFFFF" ..
-                  ShortName(removed) .. "|r from your friend list (" ..
-                  #friendList .. "/" .. FRIEND_LIST_MAX .. ").")
+            print("|cff00D1FFMidnight Sensei:|r " .. string.format(L["FRIEND_REMOVED"], ShortName(removed), #friendList, FRIEND_LIST_MAX))
             LB.RefreshUI()
             return
         end
     end
-    print("|cffFF4444Midnight Sensei:|r |cffFFFFFF" .. ShortName(nameRealm) ..
-          "|r not found in friend list.")
+    print("|cffFF4444Midnight Sensei:|r " .. string.format(L["FRIEND_NOT_FOUND"], ShortName(nameRealm)))
 end
 
 function LB.QueryAllFriends()
@@ -989,8 +982,7 @@ local function OnAddonMessage(prefix, payload, channel, sender)
             -- Only print confirmation for explicit /ms friend queries, not background syncs
             if channel == "WHISPER" and LB._pendingFriendQuery then
                 LB._pendingFriendQuery = nil
-                print("|cff00D1FFMidnight Sensei:|r |cffFFFFFF" .. ShortName(sender) ..
-                      "|r |cff20aa20(Online)|r — Updated")
+                print("|cff00D1FFMidnight Sensei:|r " .. string.format(L["FRIEND_ONLINE_UPDATED"], ShortName(sender)))
             elseif channel == "WHISPER" then
                 LB._pendingFriendQuery = nil
             end

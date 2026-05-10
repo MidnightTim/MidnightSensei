@@ -2,7 +2,7 @@
 ## Title: Midnight Sensei
 ## Notes: Combat performance coaching for all 13 classes — grade your fights A+ to F.
 ## Author: Midnight - Thrall (US)
-## Version: 1.6.4
+## Version: 1.6.5
 ## IconTexture: Interface\AddOns\MidnightSensei\logo
 ## SavedVariables: MidnightSenseiDB
 ## SavedVariablesPerCharacter: MidnightSenseiCharDB
@@ -11,6 +11,11 @@
 libs\LibStub\LibStub.lua
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+
+Locales\enUS.lua
+Locales\esES.lua
+Locales\deDE.lua
+Locales\frFR.lua
 
 Utils.lua
 Core.lua

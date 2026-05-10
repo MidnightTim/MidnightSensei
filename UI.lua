@@ -11,6 +11,7 @@ MidnightSensei.UI = MidnightSensei.UI or {}
 local MS   = MidnightSensei
 local UI   = MS.UI
 local Core = MS.Core or MidnightSensei.Core or {}  -- fallback guards against load-order races
+local L    = MidnightSensei.L
 
 --------------------------------------------------------------------------------
 -- Colour palette
@@ -137,10 +138,10 @@ end
 local function TimeAgo(ts)
     if not ts or ts == 0 then return "" end
     local d = time() - ts
-    if d < 60 then return "just now"
-    elseif d < 3600 then return math.floor(d/60) .. "m ago"
-    elseif d < 86400 then return math.floor(d/3600) .. "h ago"
-    else return math.floor(d/86400) .. "d ago" end
+    if d < 60 then return L["TIME_JUST_NOW"]
+    elseif d < 3600 then return string.format(L["TIME_MINUTES_AGO"], math.floor(d/60))
+    elseif d < 86400 then return string.format(L["TIME_HOURS_AGO"], math.floor(d/3600))
+    else return string.format(L["TIME_DAYS_AGO"], math.floor(d/86400)) end
 end
 
 -- Truncate a string to at most maxChars *visible* characters, appending ".."
@@ -249,17 +250,17 @@ end
 --------------------------------------------------------------------------------
 local histCtxMenu   -- forward declare so closures below can reference it
 histCtxMenu = BuildCtxMenu("MidnightSenseiCtxMenu", {
-    { label = "Inspect Details", fn = function()
+    { label = L["CTX_INSPECT_DETAILS"], fn = function()
         if histCtxMenu._enc then UI.ShowEncounterDetail(histCtxMenu._enc) end
     end },
-    { label = "Delete Entry", fn = function()
+    { label = L["CTX_DELETE_ENTRY"], fn = function()
         local idx = histCtxMenu._idx
         if idx and MidnightSenseiCharDB and MidnightSenseiCharDB.encounters then
             table.remove(MidnightSenseiCharDB.encounters, idx)
             UI.RefreshHistory()
         end
     end },
-    { label = "Cancel" },
+    { label = L["CTX_CANCEL"] },
 })
 
 local function ShowHistCtxMenu(enc, idx)
@@ -288,7 +289,7 @@ function UI.ShowEncounterDetail(enc)
         detailFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
         detailFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
         ApplyBackdrop(detailFrame, C.BG, C.BORDER_GOLD)
-        MakeTitleBar(detailFrame, "Midnight Sensei - Encounter Detail")
+        MakeTitleBar(detailFrame, L["TITLE_ENCOUNTER_DETAIL"])
 
         local sf = CreateFrame("ScrollFrame", nil, detailFrame, "UIPanelScrollFrameTemplate")
         sf:SetPoint("TOPLEFT",     detailFrame, "TOPLEFT",  10, -34)
@@ -304,7 +305,7 @@ function UI.ShowEncounterDetail(enc)
         detailFrame.content:SetSpacing(2)
         detailFrame._sc = sc
 
-        local closeBtn = MakeButton(detailFrame, 60, 22, "Close")
+        local closeBtn = MakeButton(detailFrame, 60, 22, L["BTN_CLOSE"])
         closeBtn:SetPoint("BOTTOM", detailFrame, "BOTTOM", 0, 8)
         closeBtn:SetScript("OnClick", function() detailFrame:Hide() end)
     end
@@ -313,7 +314,12 @@ function UI.ShowEncounterDetail(enc)
     local char  = enc.charName and (enc.charName .. (enc.realmName and ("-"..enc.realmName) or "")) or "?"
 
     -- Build a rich encounter type descriptor
-    local typeMap = { dungeon="Dungeon", raid="Raid", delve="Delve", normal="World" }
+    local typeMap = {
+        dungeon = L["DETAIL_ENC_DUNGEON"],
+        raid    = L["DETAIL_ENC_RAID"],
+        delve   = L["DETAIL_ENC_DELVE"],
+        normal  = L["DETAIL_ENC_WORLD"],
+    }
     local encLabel
     if enc.isBoss then
         local diff = enc.diffLabel and enc.diffLabel ~= "" and (" " .. enc.diffLabel) or ""
@@ -330,14 +336,15 @@ function UI.ShowEncounterDetail(enc)
         "|cff00D1FF" .. (enc.specName or "?") .. " " .. (enc.className or "?") .. "|r",
         char .. "  -  " .. (enc.timestamp and date("%b %d %Y  %H:%M", enc.timestamp) or "?"),
         encLabel,
-        "Duration: " .. FormatDuration(enc.duration) ..
-            "    Grade: |cff" .. hex .. (enc.finalGrade or "?") .. "|r" ..
-            "  (" .. (enc.gradeLabel or "") .. ")",
-        "Score: " .. (enc.finalScore or 0),
+        string.format(L["DETAIL_DURATION_GRADE"],
+            FormatDuration(enc.duration),
+            "|cff" .. hex .. (enc.finalGrade or "?") .. "|r",
+            enc.gradeLabel or ""),
+        string.format(L["DETAIL_SCORE"], enc.finalScore or 0),
         " ",
     }
     if enc.componentScores then
-        table.insert(lines, "|cffFFD700Component Scores:|r")
+        table.insert(lines, "|cffFFD700" .. L["DETAIL_COMPONENT_SCORES"] .. "|r")
         for k, v in pairs(enc.componentScores) do
             if k ~= "_final" then
                 local lbl = k:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
@@ -347,7 +354,7 @@ function UI.ShowEncounterDetail(enc)
         table.insert(lines, " ")
     end
     if enc.feedback and #enc.feedback > 0 then
-        table.insert(lines, "|cffFFD700Feedback:|r")
+        table.insert(lines, "|cffFFD700" .. L["DETAIL_FEEDBACK"] .. "|r")
         for _, fb in ipairs(enc.feedback) do
             table.insert(lines, "  - " .. fb)
         end
@@ -555,14 +562,15 @@ local function RefreshHistoryContent()
         local wipes  = #filtered - killCount
         local avg    = killCount > 0 and math.floor(tot / killCount) or 0
         local suffix = wipes > 0
-            and ("  -  |cffFF6644" .. wipes .. " wipe" .. (wipes == 1 and "" or "s") .. "|r")
+            and ("  -  |cffFF6644" .. string.format(L["HISTORY_WIPES_SUFFIX"], wipes, wipes == 1 and "" or "s") .. "|r")
             or ""
         historyFrame.statsText:SetText(
-            #filtered .. " fights  -  Avg: " .. avg ..
-            "  -  Best: |cff" .. GradeHex(best)  .. best  .. "|r" ..
-            "  -  Worst: |cff" .. GradeHex(worst) .. worst .. "|r" .. suffix)
+            string.format(L["HISTORY_STATS"],
+                #filtered, avg,
+                "|cff" .. GradeHex(best)  .. best  .. "|r",
+                "|cff" .. GradeHex(worst) .. worst .. "|r") .. suffix)
     else
-        historyFrame.statsText:SetText("No encounters match the current filter.")
+        historyFrame.statsText:SetText(L["HISTORY_NO_MATCHES"])
     end
 
     BuildHistoryRows(historyFrame.scrollChild, filtered, historyFrame.rowFrames)
@@ -596,13 +604,13 @@ function UI.ShowHistory()
         historyFrame:SetClampedToScreen(true)
         historyFrame:EnableMouse(true)
         ApplyBackdrop(historyFrame, C.BG, C.BORDER_GOLD)
-        MakeTitleBar(historyFrame, "Midnight Sensei - Grade History")
+        MakeTitleBar(historyFrame, L["TITLE_GRADE_HISTORY"])
 
         -- Sparkline
         local sparkLabel = MakeFont(historyFrame, 9, "LEFT")
         sparkLabel:SetPoint("TOPLEFT", historyFrame, "TOPLEFT", 12, -34)
         sparkLabel:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-        sparkLabel:SetText("Trend (last 20):")
+        sparkLabel:SetText(L["HISTORY_TREND_LABEL"])
 
         local sparkContainer = CreateFrame("Frame", nil, historyFrame, "BackdropTemplate")
         sparkContainer:SetSize(460, 32)
@@ -619,12 +627,12 @@ function UI.ShowHistory()
         local filterLabel = MakeFont(historyFrame, 9, "LEFT")
         filterLabel:SetPoint("TOPLEFT", historyFrame, "TOPLEFT", 12, -104)
         filterLabel:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-        filterLabel:SetText("Filter:")
+        filterLabel:SetText(L["HISTORY_FILTER_LABEL"])
 
         historyFrame.filterBtns = {}
         local filterDefs = {
-            { label = "This Character", key = "current" },
-            { label = "[Boss] Only",    key = "boss"    },
+            { label = L["FILTER_THIS_CHARACTER"], key = "current" },
+            { label = L["FILTER_BOSS_ONLY"],      key = "boss"    },
         }
         -- Add per-spec filters dynamically when populating
         local xFilterOff = 48
@@ -656,12 +664,12 @@ function UI.ShowHistory()
             fs:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
             fs:SetText(t)
         end
-        Hdr("GR",         "LEFT",   8,  28)
-        Hdr("CHARACTER",  "LEFT",  42,  88)
-        Hdr("SPEC / DIFF","LEFT", 134, 136)
-        Hdr("SCORE",      "RIGHT", -126, 34)
-        Hdr("DUR",        "RIGHT",  -48, 40)
-        Hdr("WHEN",       "RIGHT",   -2, 44)
+        Hdr(L["HISTORY_COL_GR"],        "LEFT",   8,  28)
+        Hdr(L["HISTORY_COL_CHARACTER"], "LEFT",  42,  88)
+        Hdr(L["HISTORY_COL_SPEC_DIFF"], "LEFT", 134, 136)
+        Hdr(L["HISTORY_COL_SCORE"],     "RIGHT", -126, 34)
+        Hdr(L["HISTORY_COL_DUR"],       "RIGHT",  -48, 40)
+        Hdr(L["HISTORY_COL_WHEN"],      "RIGHT",   -2, 44)
 
         -- Scroll frame
         local scroll = CreateFrame("ScrollFrame", "MidnightSenseiHistoryScroll",
@@ -676,7 +684,7 @@ function UI.ShowHistory()
         historyFrame.rowFrames   = {}
 
         -- Footer
-        local lbBtn = MakeButton(historyFrame, 110, 22, "Leaderboard ->")
+        local lbBtn = MakeButton(historyFrame, 110, 22, L["HISTORY_LB_BTN"])
         lbBtn:SetPoint("BOTTOMRIGHT", historyFrame, "BOTTOMRIGHT", -10, 10)
         lbBtn:SetScript("OnClick", function() Core.Call(MS.Leaderboard, "Toggle") end)
     end
@@ -777,7 +785,7 @@ local function CreateMainFrame()
     local titleText = MakeFont(mainFrame, 10, "CENTER")
     titleText:SetPoint("TOP", mainFrame, "TOP", 0, -6)
     titleText:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
-    titleText:SetText("Midnight Sensei")
+    titleText:SetText(L["TITLE_HUD"])
 
     -- Grade (large, left)
     mainFrame.gradeText = MakeFont(mainFrame, 32, "CENTER")
@@ -795,7 +803,7 @@ local function CreateMainFrame()
     -- Label (encouraging text / status)
     mainFrame.labelText = MakeFont(mainFrame, 9, "LEFT")
     mainFrame.labelText:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 68, -50)
-    mainFrame.labelText:SetText("No fight recorded yet")
+    mainFrame.labelText:SetText(L["HUD_NO_FIGHT"])
     mainFrame.labelText:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
 
     -- Spec text
@@ -822,7 +830,7 @@ local function CreateMainFrame()
     cogBtn:SetScript("OnEnter", function()
         cogBtn:GetNormalTexture():SetVertexColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
         GameTooltip:SetOwner(cogBtn, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Menu", 0, 0.82, 1)
+        GameTooltip:SetText(L["TT_MENU"], 0, 0.82, 1)
         GameTooltip:Show()
     end)
     cogBtn:SetScript("OnLeave", function()
@@ -841,7 +849,7 @@ local function CreateMainFrame()
     xBtn:SetScript("OnEnter", function()
         xFs:SetTextColor(1, 0.3, 0.3, 1)
         GameTooltip:SetOwner(xBtn, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Hide HUD", 1, 0.3, 0.3)
+        GameTooltip:SetText(L["TT_HIDE_HUD"], 1, 0.3, 0.3)
         GameTooltip:Show()
     end)
     xBtn:SetScript("OnLeave", function()
@@ -857,7 +865,7 @@ local function CreateMainFrame()
     sep:SetColorTexture(C.SEP[1], C.SEP[2], C.SEP[3], C.SEP[4])
 
     -- Review Fight — sits in the middle content area, hidden until a fight completes
-    local reviewBtn = MakeButton(mainFrame, 90, 18, "Review Fight")
+    local reviewBtn = MakeButton(mainFrame, 90, 18, L["BTN_REVIEW_FIGHT"])
     reviewBtn:SetPoint("BOTTOM", mainFrame, "BOTTOM", 0, 30)
     reviewBtn:SetScript("OnClick", function()
         local enc = (MS.Analytics and MS.Analytics.GetLastEncounter
@@ -878,7 +886,7 @@ local function CreateMainFrame()
     mainFrame.reviewBtn = reviewBtn
 
     -- Boss Board button — bottom left, always visible
-    local bbBtn = MakeButton(mainFrame, 108, 22, "Boss Board")
+    local bbBtn = MakeButton(mainFrame, 108, 22, L["BTN_BOSS_BOARD"])
     bbBtn:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 4, 4)
     bbBtn:SetScript("OnClick", function()
         if MS.BossBoard and MS.BossBoard.Toggle then
@@ -887,14 +895,14 @@ local function CreateMainFrame()
     end)
     bbBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("Boss Board", 0, 0.82, 1)
-        GameTooltip:AddLine("Personal all-time boss best scores", 0.8, 0.8, 0.8)
+        GameTooltip:SetText(L["TT_BOSS_BOARD"], 0, 0.82, 1)
+        GameTooltip:AddLine(L["TT_BOSS_BOARD_DESC"], 0.8, 0.8, 0.8)
         GameTooltip:Show()
     end)
     bbBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -- Leaderboard button — always visible in bottom right
-    local lbBtn = MakeButton(mainFrame, 90, 22, "Leaderboard")
+    local lbBtn = MakeButton(mainFrame, 90, 22, L["BTN_LEADERBOARD"])
     lbBtn:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -4, 4)
     lbBtn:SetScript("OnClick", function()
         if MS.Leaderboard and MS.Leaderboard.Toggle then
@@ -903,8 +911,8 @@ local function CreateMainFrame()
     end)
     lbBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("Leaderboard", 0, 0.82, 1)
-        GameTooltip:AddLine("Guild / Party / Friends / Delves", 0.8, 0.8, 0.8)
+        GameTooltip:SetText(L["TT_LEADERBOARD"], 0, 0.82, 1)
+        GameTooltip:AddLine(L["TT_LEADERBOARD_DESC"], 0.8, 0.8, 0.8)
         GameTooltip:Show()
     end)
     lbBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -919,9 +927,9 @@ local function CreateMainFrame()
     local vBarLbl = MakeFont(vBar, 9, "LEFT")
     vBarLbl:SetPoint("LEFT", vBar, "LEFT", 8, 0)
     vBarLbl:SetTextColor(0.40, 1.00, 0.40, 1)
-    vBarLbl:SetText("Verify Mode On")
+    vBarLbl:SetText(L["VERIFY_BAR_LABEL"])
 
-    local vBarBtn = MakeButton(vBar, 84, 18, "View Report")
+    local vBarBtn = MakeButton(vBar, 84, 18, L["BTN_VIEW_REPORT"])
     vBarBtn:SetPoint("RIGHT", vBar, "RIGHT", -4, 0)
     vBarBtn:SetScript("OnClick", function()
         if MS.UI and MS.UI.ToggleVerifyExport then
@@ -944,13 +952,13 @@ local function CreateMainFrame()
     uBarLbl:SetPoint("LEFT", uBar, "LEFT", 6, 0)
     uBarLbl:SetPoint("RIGHT", uBar, "RIGHT", -22, 0)
     uBarLbl:SetTextColor(1.0, 0.85, 0.20, 1)
-    uBarLbl:SetText("New Version Available  (click for details)")
+    uBarLbl:SetText(L["UPDATE_BAR_LABEL"])
 
     uBar:SetScript("OnClick", function() UI.ShowUpdatePopup() end)
     uBar:SetScript("OnEnter", function()
         GameTooltip:SetOwner(uBar, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Update Available", 1.0, 0.85, 0.20)
-        GameTooltip:AddLine("Check Curseforge or Wago for the latest version.", 0.8, 0.8, 0.8)
+        GameTooltip:SetText(L["TT_UPDATE_AVAILABLE"], 1.0, 0.85, 0.20)
+        GameTooltip:AddLine(L["TT_UPDATE_CHECK"], 0.8, 0.8, 0.8)
         GameTooltip:Show()
     end)
     uBar:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -966,7 +974,7 @@ local function CreateMainFrame()
     uBarX:SetScript("OnEnter", function()
         uBarXFs:SetTextColor(1, 0.3, 0.3, 1)
         GameTooltip:SetOwner(uBarX, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Dismiss", 1, 0.3, 0.3)
+        GameTooltip:SetText(L["TT_DISMISS"], 1, 0.3, 0.3)
         GameTooltip:Show()
     end)
     uBarX:SetScript("OnLeave", function()
@@ -1027,19 +1035,19 @@ function UI.ShowMainCtxMenu()
             return item
         end
 
-        mainCtxMenu.lockItem = AddItem("Lock Position", -10, function()
+        mainCtxMenu.lockItem = AddItem(L["CTX_LOCK_POSITION"], -10, function()
             Core.SetSetting("lockWindow", not Core.GetSetting("lockWindow"))
         end, "lockItem")
 
-        AddItem("Grade History",  -34, function() UI.ShowHistory() end)
-        AddItem("Leaderboard",    -58, function() Core.Call(MS.Leaderboard, "Toggle") end)
-        AddItem("Boss Board",     -82, function() Core.Call(MS.BossBoard, "Toggle") end)
-        AddItem("Options",       -106, function() UI.OpenOptions() end)
-        AddItem("My Spell List", -130, function() UI.ShowSpellList() end)
-        AddItem("Help / FAQ",    -154, function() UI.ShowFAQ() end)
-        AddItem("Credits",       -178, function() UI.ShowCredits() end)
-        AddItem("Debug Tools",   -202, function() UI.ShowDebugWindow() end)
-        AddItem("Close HUD",     -226, function()
+        AddItem(L["CTX_GRADE_HISTORY"],  -34, function() UI.ShowHistory() end)
+        AddItem(L["CTX_LEADERBOARD"],    -58, function() Core.Call(MS.Leaderboard, "Toggle") end)
+        AddItem(L["CTX_BOSS_BOARD"],     -82, function() Core.Call(MS.BossBoard, "Toggle") end)
+        AddItem(L["CTX_OPTIONS"],       -106, function() UI.OpenOptions() end)
+        AddItem(L["CTX_MY_SPELL_LIST"], -130, function() UI.ShowSpellList() end)
+        AddItem(L["CTX_HELP_FAQ"],      -154, function() UI.ShowFAQ() end)
+        AddItem(L["CTX_CREDITS"],       -178, function() UI.ShowCredits() end)
+        AddItem(L["CTX_DEBUG_TOOLS"],   -202, function() UI.ShowDebugWindow() end)
+        AddItem(L["CTX_CLOSE_HUD"],     -226, function()
             if mainFrame then mainFrame:Hide() end
         end)
 
@@ -1049,7 +1057,7 @@ function UI.ShowMainCtxMenu()
 
     if mainCtxMenu.lockItem then
         local locked = Core.GetSetting("lockWindow")
-        mainCtxMenu.lockItem.fs:SetText(locked and "Unlock Position" or "Lock Position")
+        mainCtxMenu.lockItem.fs:SetText(locked and L["CTX_UNLOCK_POSITION"] or L["CTX_LOCK_POSITION"])
     end
 
     local x, y = GetCursorPosition()
@@ -1082,7 +1090,7 @@ ShowResultPanel = function(result)
         resultFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
         resultFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
         ApplyBackdrop(resultFrame, C.BG, C.BORDER_GOLD)
-        MakeTitleBar(resultFrame, "Midnight Sensei - Fight Complete")
+        MakeTitleBar(resultFrame, L["TITLE_FIGHT_COMPLETE"])
 
         resultFrame.gradeText = MakeFont(resultFrame, 44, "CENTER")
         resultFrame.gradeText:SetPoint("TOP", resultFrame, "TOP", 0, -40)
@@ -1120,21 +1128,21 @@ ShowResultPanel = function(result)
         resultFrame.feedbackText:SetSpacing(2)
         resultFrame._sc = sc
 
-        local histBtn = MakeButton(resultFrame, 90, 22, "History")
+        local histBtn = MakeButton(resultFrame, 90, 22, L["BTN_HISTORY"])
         histBtn:SetPoint("BOTTOMLEFT", resultFrame, "BOTTOMLEFT", 10, 8)
         histBtn:SetScript("OnClick", function()
             resultFrame:Hide()
             UI.ShowHistory()
         end)
 
-        local lbBtn = MakeButton(resultFrame, 90, 22, "Leaderboard")
+        local lbBtn = MakeButton(resultFrame, 90, 22, L["BTN_LEADERBOARD"])
         lbBtn:SetPoint("BOTTOM", resultFrame, "BOTTOM", 0, 8)
         lbBtn:SetScript("OnClick", function()
             resultFrame:Hide()
             Core.Call(MS.Leaderboard, "Toggle")
         end)
 
-        local closeBtn = MakeButton(resultFrame, 70, 22, "Close")
+        local closeBtn = MakeButton(resultFrame, 70, 22, L["BTN_CLOSE"])
         closeBtn:SetPoint("BOTTOMRIGHT", resultFrame, "BOTTOMRIGHT", -10, 8)
         closeBtn:SetScript("OnClick", function() resultFrame:Hide() end)
 
@@ -1156,8 +1164,8 @@ ShowResultPanel = function(result)
     resultFrame.gradeText:SetText("|cff" .. hex .. (result.finalGrade or "?") .. "|r")
     resultFrame.labelText:SetText(result.gradeLabel or "")
     resultFrame.labelText:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
-    resultFrame.scoreText:SetText("Score: " .. (result.finalScore or 0) ..
-                                  "   Duration: " .. FormatDuration(result.duration))
+    resultFrame.scoreText:SetText(string.format(L["FIGHT_SCORE_DUR"],
+        result.finalScore or 0, FormatDuration(result.duration)))
     resultFrame.specText:SetText((result.specName or "?") .. " " .. (result.className or ""))
 
     local fbLines = {}
@@ -1166,10 +1174,10 @@ ShowResultPanel = function(result)
             table.insert(fbLines, i .. ".  " .. line)
         end
     else
-        table.insert(fbLines, "Clean fight - nothing major to flag.")
+        table.insert(fbLines, L["FIGHT_CLEAN"])
     end
     table.insert(fbLines, " ")
-    table.insert(fbLines, "|cffFFD700Component Scores:|r")
+    table.insert(fbLines, "|cffFFD700" .. L["FIGHT_COMPONENT_SCORES"] .. "|r")
     if result.componentScores then
         for k, v in pairs(result.componentScores) do
             if k ~= "_final" then
@@ -1206,7 +1214,7 @@ function UI.OpenOptions()
         optionsFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
         optionsFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
         ApplyBackdrop(optionsFrame, C.BG, C.BORDER_GOLD)
-        MakeTitleBar(optionsFrame, "Midnight Sensei - Options")
+        MakeTitleBar(optionsFrame, L["TITLE_OPTIONS"])
 
         local function SectionLabel(text, yOff)
             local fs = MakeFont(optionsFrame, 9, "LEFT")
@@ -1259,35 +1267,35 @@ function UI.OpenOptions()
         end
 
         -- ── HUD Visibility ────────────────────────────────────────────────
-        SectionLabel("HUD Visibility:", -38)
+        SectionLabel(L["OPT_HUD_VISIBILITY"], -38)
         optionsFrame.visBtns = RadioGroup({
-            { label = "Always",    key = "always" },
-            { label = "In Combat", key = "combat" },
-            { label = "Hide",      key = "hide"   },
+            { label = L["OPT_VIS_ALWAYS"],    key = "always" },
+            { label = L["OPT_VIS_IN_COMBAT"], key = "combat" },
+            { label = L["OPT_VIS_HIDE"],      key = "hide"   },
         }, "hudVisibility", -54, 82)
 
         -- ── General Behaviour ─────────────────────────────────────────────
-        SectionLabel("Behaviour:", -90)
-        AddToggle("Show post-fight Review button on HUD", "showPostFight",  -106)
-        AddToggle("Lock HUD position",                    "lockWindow",     -130)
-        AddToggle("Encounter condition adjustment",       "encounterAdjust",-154)
-        AddToggle("Debug mode (shows LB rejection msgs)", "debugMode",      -178)
+        SectionLabel(L["OPT_BEHAVIOUR"], -90)
+        AddToggle(L["OPT_SHOW_POST_FIGHT"], "showPostFight",  -106)
+        AddToggle(L["OPT_LOCK_HUD"],        "lockWindow",     -130)
+        AddToggle(L["OPT_ENCOUNTER_ADJUST"],"encounterAdjust",-154)
+        AddToggle(L["OPT_DEBUG_MODE"],      "debugMode",      -178)
 
         -- ── Leaderboard (boss-only is hardcoded, no toggle needed) ──────────
-        SectionLabel("Leaderboard:", -292)
+        SectionLabel(L["OPT_LEADERBOARD"], -292)
         local lbNote = MakeFont(optionsFrame, 9, "LEFT")
         lbNote:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14, -306)
         lbNote:SetPoint("TOPRIGHT", optionsFrame, "TOPRIGHT", -14, -306)
         lbNote:SetWordWrap(true)
         lbNote:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-        lbNote:SetText("Weekly average always counts boss encounters only. Trash pulls and target dummies are never included.")
+        lbNote:SetText(L["OPT_LB_NOTE"])
 
         -- ── Close + Report ────────────────────────────────────────────────
-        local closeBtn = MakeButton(optionsFrame, 60, 22, "Close")
+        local closeBtn = MakeButton(optionsFrame, 60, 22, L["BTN_CLOSE"])
         closeBtn:SetPoint("BOTTOMRIGHT", optionsFrame, "BOTTOM", -4, 10)
         closeBtn:SetScript("OnClick", function() optionsFrame:Hide() end)
 
-        local reportBtn = MakeButton(optionsFrame, 110, 22, "Report Issues")
+        local reportBtn = MakeButton(optionsFrame, 110, 22, L["BTN_REPORT_ISSUES"])
         reportBtn:SetPoint("BOTTOMLEFT", optionsFrame, "BOTTOM", 4, 10)
         reportBtn:SetScript("OnClick", function() UI.ShowReportPopup() end)
     end
@@ -1318,10 +1326,8 @@ local REPORT_URL = "https://github.com/MidnightTim/MidnightSensei/issues"
 -- Register a StaticPopup so the editbox is a native WoW UI element that
 -- automatically handles focus, selection, and copy correctly.
 StaticPopupDialogs["MIDNIGHT_SENSEI_REPORT"] = {
-    text          = "|cff00D1FFMidnight Sensei|r — Report a Bug\n\n" ..
-                    "Copy the link below and paste it into your browser.\n" ..
-                    "|cff888888Ctrl+A to select all, then Ctrl+C to copy.|r",
-    button1       = "Close",
+    text          = L["REPORT_POPUP_TEXT"],
+    button1       = L["REPORT_POPUP_BTN"],
     hasEditBox    = true,
     editBoxWidth  = 320,
     maxLetters    = 0,
@@ -1401,7 +1407,7 @@ function UI.ShowVerifyExport(text)
         title:SetFont("Fonts/FRIZQT__.TTF", 12, "")
         title:SetPoint("CENTER", tBar, "CENTER")
         title:SetTextColor(1.00,0.65,0.00,1)
-        title:SetText("Midnight Sensei — Verify Report")
+        title:SetText(L["TITLE_VERIFY_REPORT"])
 
         local xBtn = CreateFrame("Button", nil, tBar)
         xBtn:SetSize(18,18)
@@ -1420,7 +1426,7 @@ function UI.ShowVerifyExport(text)
         hint:SetPoint("TOPRIGHT", f,"TOPRIGHT", -10,-32)
         hint:SetTextColor(0.55,0.53,0.50,1)
         hint:SetJustifyH("LEFT")
-        hint:SetText("Ctrl+A to select all  ·  Ctrl+C to copy  ·  Paste into a GitHub comment")
+        hint:SetText(L["VERIFY_EXPORT_HINT"])
 
         -- Scrollable editbox
         local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
@@ -1442,14 +1448,14 @@ function UI.ShowVerifyExport(text)
         local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         closeBtn:SetSize(80,22)
         closeBtn:SetPoint("BOTTOM", f,"BOTTOM", 44, 8)
-        closeBtn:SetText("Close")
+        closeBtn:SetText(L["BTN_CLOSE"])
         closeBtn:SetScript("OnClick", function() f:Hide() end)
 
         -- Compare button
         local cmpBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         cmpBtn:SetSize(80,22)
         cmpBtn:SetPoint("BOTTOM", f,"BOTTOM", -44, 8)
-        cmpBtn:SetText("Compare")
+        cmpBtn:SetText(L["BTN_COMPARE"])
         cmpBtn:SetScript("OnClick", function() UI.ShowVerifyCompare() end)
 
         f.editBox = eb
@@ -1546,7 +1552,7 @@ function UI.ShowVerifyCompare()
         title:SetFont("Fonts/FRIZQT__.TTF", 12, "")
         title:SetPoint("CENTER", tBar, "CENTER")
         title:SetTextColor(1.00,0.65,0.00,1)
-        title:SetText("Midnight Sensei — Verify Compare")
+        title:SetText(L["TITLE_VERIFY_COMPARE"])
 
         local xBtn = CreateFrame("Button", nil, tBar)
         xBtn:SetSize(18,18)
@@ -1659,7 +1665,7 @@ function UI.ShowVerifyCompare()
         local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         closeBtn:SetSize(80,22)
         closeBtn:SetPoint("BOTTOM", f,"BOTTOM", 0, 8)
-        closeBtn:SetText("Close")
+        closeBtn:SetText(L["BTN_CLOSE"])
         closeBtn:SetScript("OnClick", function() f:Hide() end)
 
         f.panels = panels
@@ -1742,7 +1748,7 @@ function UI.ShowSpellList()
     spellListFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
     spellListFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
     ApplyBackdrop(spellListFrame, C.BG, C.BORDER_GOLD)
-    MakeTitleBar(spellListFrame, "Midnight Sensei - My Spell List")
+    MakeTitleBar(spellListFrame, L["TITLE_SPELL_LIST"])
 
     -- Spec label
     local specLabel = MakeFont(spellListFrame, 11, "CENTER")
@@ -1756,7 +1762,7 @@ function UI.ShowSpellList()
     sub:SetPoint("TOPLEFT",  spellListFrame, "TOPLEFT",  10, -46)
     sub:SetPoint("TOPRIGHT", spellListFrame, "TOPRIGHT", -10, -46)
     sub:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-    sub:SetText("Spells shown here are what Midnight Sensei is currently monitoring.")
+    sub:SetText(L["SPELL_LIST_SUBTITLE"])
     spellListFrame.sub = sub
 
     -- Scroll frame
@@ -1770,7 +1776,7 @@ function UI.ShowSpellList()
     spellListFrame._sc = sc
 
     -- Close button
-    local closeBtn = MakeButton(spellListFrame, 60, 22, "Close")
+    local closeBtn = MakeButton(spellListFrame, 60, 22, L["BTN_CLOSE"])
     closeBtn:SetPoint("BOTTOM", spellListFrame, "BOTTOM", 0, 8)
     closeBtn:SetScript("OnClick", function() spellListFrame:Hide() end)
 
@@ -1790,7 +1796,7 @@ function UI.RefreshSpellList()
         local lbl = MakeFont(sc, 11, "CENTER")
         lbl:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, -10)
         lbl:SetPoint("TOPRIGHT", sc, "TOPRIGHT",  0, -10)
-        lbl:SetText("No spec detected. Enter a fight first.")
+        lbl:SetText(L["SPELL_LIST_NO_SPEC"])
         lbl:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
         sc:SetHeight(40)
         spellListFrame.specLabel:SetText("")
@@ -1889,7 +1895,7 @@ function UI.RefreshSpellList()
             if not cd.isInterrupt and not cd.isUtility and isActive(cd) then hasCDs = true; break end
         end
         if hasCDs then
-            SectionHeader("Cooldown Spells")
+            SectionHeader(L["SPELL_LIST_SEC_CDS"])
             for _, cd in ipairs(spec.majorCooldowns) do
                 if not cd.isInterrupt and not cd.isUtility and isActive(cd) then
                     rowIdx = rowIdx + 1
@@ -1907,11 +1913,11 @@ function UI.RefreshSpellList()
         end
     end
     if hasInterrupts then
-        SectionHeader("Interrupt & Utility")
+        SectionHeader(L["SPELL_LIST_SEC_INT"])
         for _, cd in ipairs(spec.majorCooldowns) do
             if (cd.isInterrupt or cd.isUtility) and isActive(cd) then
                 rowIdx = rowIdx + 1
-                SpellRow(cd.id, cd.label, "situational", rowIdx)
+                SpellRow(cd.id, cd.label, L["SPELL_LIST_SITUATIONAL"], rowIdx)
             end
         end
     end
@@ -1923,11 +1929,11 @@ function UI.RefreshSpellList()
             if isActive(rs) then hasRS = true; break end
         end
         if hasRS then
-            SectionHeader("Rotational Spells")
+            SectionHeader(L["SPELL_LIST_SEC_ROT"])
             for _, rs in ipairs(spec.rotationalSpells) do
                 if isActive(rs) then
                     rowIdx = rowIdx + 1
-                    SpellRow(rs.id, rs.label, rs.combatGated and "Requires Metamorphosis" or nil, rowIdx)
+                    SpellRow(rs.id, rs.label, rs.combatGated and L["SPELL_LIST_METAMORPH"] or nil, rowIdx)
                 end
             end
         end
@@ -1935,19 +1941,19 @@ function UI.RefreshSpellList()
 
     -- UPTIME BUFFS
     if spec.uptimeBuffs and #spec.uptimeBuffs > 0 then
-        SectionHeader("Uptime Buffs")
+        SectionHeader(L["SPELL_LIST_SEC_UPTIME"])
         for _, ub in ipairs(spec.uptimeBuffs) do
             rowIdx = rowIdx + 1
-            SpellRow(ub.id, ub.label, "target " .. (ub.targetUptime or "?") .. "% uptime", rowIdx)
+            SpellRow(ub.id, ub.label, string.format(L["SPELL_LIST_TARGET_UP"], ub.targetUptime or 0), rowIdx)
         end
     end
 
     -- PROC BUFFS
     if spec.procBuffs and #spec.procBuffs > 0 then
-        SectionHeader("Proc Buffs")
+        SectionHeader(L["SPELL_LIST_SEC_PROCS"])
         for _, pb in ipairs(spec.procBuffs) do
             rowIdx = rowIdx + 1
-            SpellRow(pb.id, pb.label, "spend quickly", rowIdx)
+            SpellRow(pb.id, pb.label, L["SPELL_LIST_SPEND_FAST"], rowIdx)
         end
     end
 
@@ -1983,7 +1989,7 @@ function UI.ShowDebugWindow()
     title:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -12)
     title:SetPoint("TOPRIGHT", f, "TOPRIGHT", -26, -12)
     title:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
-    title:SetText("Midnight Sensei - Debug Tools")
+    title:SetText(L["TITLE_DEBUG_TOOLS"])
 
     -- Close button — use plain "X", not Unicode (FRIZQT__.TTF has no Unicode coverage)
     local x = CreateFrame("Button", nil, f)
@@ -2047,7 +2053,7 @@ function UI.ShowDebugWindow()
         dsc:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
         dsc:SetText(desc)
 
-        local btn = MakeButton(row, 70, 28, "Run")
+        local btn = MakeButton(row, 70, 28, L["DEBUG_BTN_RUN"])
         btn:SetPoint("RIGHT", row, "RIGHT", -6, 0)
         btn:SetScript("OnClick", function()
             f:Hide()
@@ -2117,7 +2123,7 @@ function UI.ShowDebugWindow()
         prompt:SetPoint("TOPLEFT",  d, "TOPLEFT",  12, -85)
         prompt:SetPoint("TOPRIGHT", d, "TOPRIGHT", -12, -85)
         prompt:SetTextColor(0.7, 0.5, 0.5, 1)
-        prompt:SetText("Type  |cffFFFFFFConfirm|r  to enable delete:")
+        prompt:SetText(L["DESTRUCT_CONFIRM_PROMPT"])
 
         local eb = CreateFrame("EditBox", nil, d, "BackdropTemplate")
         eb:SetSize(200, 24)
@@ -2130,7 +2136,7 @@ function UI.ShowDebugWindow()
         ApplyBackdrop(eb, {0.12,0.04,0.04,0.95}, {0.5,0.1,0.1,0.8})
         eb:SetScript("OnEscapePressed", function() eb:SetText("") ; d:Hide() end)
 
-        local cancelBtn = MakeButton(d, 100, 26, "Cancel")
+        local cancelBtn = MakeButton(d, 100, 26, L["BTN_CANCEL"])
         cancelBtn:SetPoint("BOTTOMLEFT", d, "BOTTOMLEFT", 12, 10)
         cancelBtn:SetScript("OnClick", function() eb:SetText("") ; d:Hide() end)
 
@@ -2163,7 +2169,7 @@ function UI.ShowDebugWindow()
     end
 
     -- ── Verify Tools ─────────────────────────────────────────────────────────
-    AddSectionLabel("Verify Tools", {0.00, 1.00, 0.60})
+    AddSectionLabel(L["DEBUG_SEC_VERIFY"], {0.00, 1.00, 0.60})
 
     -- Verify mode toggle row (dynamic label shows current state)
     local vRow = CreateFrame("Frame", nil, f, "BackdropTemplate")
@@ -2174,18 +2180,18 @@ function UI.ShowDebugWindow()
     local vLbl = MakeFont(vRow, 11, "LEFT")
     vLbl:SetPoint("TOPLEFT", vRow, "TOPLEFT", 8, -5)
     vLbl:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
-    vLbl:SetText("Verify Mode")
+    vLbl:SetText(L["DEBUG_BTN_VERIFY_MODE"])
 
     local vDesc = MakeFont(vRow, 9, "LEFT")
     vDesc:SetPoint("BOTTOMLEFT", vRow, "BOTTOMLEFT", 8, 5)
     vDesc:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-    vDesc:SetText("Toggle spell ID capture for /ms verify report")
+    vDesc:SetText(L["DEBUG_BTN_VERIFY_DESC"])
 
     local vState = MakeFont(vRow, 10, "CENTER")
     vState:SetPoint("RIGHT", vRow, "RIGHT", -82, 0)
     vState:SetText(MS.Core.VerifyMode and "|cff00FF00ON|r" or "|cffFF4444OFF|r")
 
-    local vBtn = MakeButton(vRow, 70, 28, "Toggle")
+    local vBtn = MakeButton(vRow, 70, 28, L["DEBUG_BTN_TOGGLE"])
     vBtn:SetPoint("RIGHT", vRow, "RIGHT", -6, 0)
     vBtn:SetScript("OnClick", function()
         RunCmd("verify")
@@ -2193,7 +2199,7 @@ function UI.ShowDebugWindow()
     end)
     btnY = btnY - 48
 
-    AddDebugBtn("Verify Report", "Export spell ID verification report to copyable window", "verify report")
+    AddDebugBtn(L["DEBUG_BTN_VR"], L["DEBUG_BTN_VR_DESC"], "verify report")
 
     -- Auto-enable on login toggle row
     local aRow = CreateFrame("Frame", nil, f, "BackdropTemplate")
@@ -2204,19 +2210,19 @@ function UI.ShowDebugWindow()
     local aLbl = MakeFont(aRow, 11, "LEFT")
     aLbl:SetPoint("TOPLEFT", aRow, "TOPLEFT", 8, -5)
     aLbl:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
-    aLbl:SetText("Auto-enable Verify on Login")
+    aLbl:SetText(L["DEBUG_BTN_AUTO_VERIFY"])
 
     local aDesc = MakeFont(aRow, 9, "LEFT")
     aDesc:SetPoint("BOTTOMLEFT", aRow, "BOTTOMLEFT", 8, 5)
     aDesc:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-    aDesc:SetText("Verify mode turns on automatically after every reload or login")
+    aDesc:SetText(L["DEBUG_BTN_AV_DESC"])
 
     local aState = MakeFont(aRow, 10, "CENTER")
     aState:SetPoint("RIGHT", aRow, "RIGHT", -82, 0)
     local autoOn = MS.Core.GetSetting and MS.Core.GetSetting("verifyAutoEnable")
     aState:SetText(autoOn and "|cff00FF00ON|r" or "|cffFF4444OFF|r")
 
-    local aBtn = MakeButton(aRow, 70, 28, "Toggle")
+    local aBtn = MakeButton(aRow, 70, 28, L["DEBUG_BTN_TOGGLE"])
     aBtn:SetPoint("RIGHT", aRow, "RIGHT", -6, 0)
     aBtn:SetScript("OnClick", function()
         local cur = MS.Core.GetSetting and MS.Core.GetSetting("verifyAutoEnable")
@@ -2226,30 +2232,29 @@ function UI.ShowDebugWindow()
     btnY = btnY - 48
 
     -- ── General debug ────────────────────────────────────────────────────────
-    AddDebugBtn("Version",          "Show addon version from TOC and metadata APIs",        "debug version")
-    AddDebugBtn("Rotation Tracker", "Open the Rotation Tracker window — cast counts, status, and flag explanations for each spell", "debug rotational")
+    AddDebugBtn(L["DEBUG_BTN_VERSION"],    L["DEBUG_BTN_VERSION_DESC"], "debug version")
+    AddDebugBtn(L["DEBUG_BTN_ROT_TRACKER"], L["DEBUG_BTN_RT_DESC"],  "debug rotational")
 
     -- ── Class Debugging ──────────────────────────────────────────────────────
-    AddSectionLabel("Class Debugging", {0.00, 0.82, 1.00})
+    AddSectionLabel(L["DEBUG_SEC_CLASS"], {0.00, 0.82, 1.00})
 
-    AddDebugBtn("Talent Export",        "Export active talent snapshot for spec DB cross-reference",  "debug talents")
-    AddDebugBtn("Spells Export",        "Export full spellbook snapshot for spec DB cross-reference", "debug spells")
+    AddDebugBtn(L["DEBUG_BTN_TALENT_EXP"], L["DEBUG_BTN_TE_DESC"], "debug talents")
+    AddDebugBtn(L["DEBUG_BTN_SPELLS_EXP"], L["DEBUG_BTN_SE_DESC"], "debug spells")
 
     -- ── Recovery Tools ───────────────────────────────────────────────────────
-    AddSectionLabel("Recovery Tools", {1.0, 0.5, 0.0})
+    AddSectionLabel(L["DEBUG_SEC_RECOVERY"], {1.0, 0.5, 0.0})
 
-    AddDebugBtn("Boss Board Ingest",   "Seed Boss Board from encounter history",                      "debug bossboard ingest")
-    AddDebugBtn("Fix Character Name",  "If you renamed your character, run this",                     "debug fixname")
-    AddDebugBtn("Backfill M+ Keys",    "Patch Mythic dungeon history with season best key levels",    "debug backfill keys")
-    AddDebugBtn("Clean Payload",      "Re-broadcast all your best scores with correct format",        "clean payload")
+    AddDebugBtn(L["DEBUG_BTN_BB_INGEST"], L["DEBUG_BTN_BBI_DESC"], "debug bossboard ingest")
+    AddDebugBtn(L["DEBUG_BTN_FIX_NAME"],  L["DEBUG_BTN_FN_DESC"],  "debug fixname")
+    AddDebugBtn(L["DEBUG_BTN_BACKFILL"],  L["DEBUG_BTN_BK_DESC"],  "debug backfill keys")
+    AddDebugBtn(L["DEBUG_BTN_CLEAN"],     L["DEBUG_BTN_CP_DESC"],  "clean payload")
 
-    AddDestructiveBtn("Clear Boss Board",
-        "Permanently wipes all personal boss best records — this cannot be undone",
+    AddDestructiveBtn(L["DEBUG_BTN_CLEAR_BB"], L["DEBUG_BTN_CBB_DESC"],
         function()
             MakeDestructiveDialog(
-                "Clear Boss Board",
-                "This will permanently delete all Boss Board records for this character.\nThis action cannot be undone.",
-                "Delete Boss Board",
+                L["DESTRUCT_CLEAR_BB_TITLE"],
+                L["DESTRUCT_CLEAR_BB_BODY"],
+                L["DESTRUCT_CLEAR_BB_BTN"],
                 function()
                     local cdb = MidnightSenseiCharDB
                     local adb = MidnightSenseiDB
@@ -2268,18 +2273,17 @@ function UI.ShowDebugWindow()
                     if MS.BossBoard and MS.BossBoard.RefreshUI then
                         MS.BossBoard.RefreshUI()
                     end
-                    print("|cffFF4444Midnight Sensei:|r Boss Board cleared.")
+                    print("|cffFF4444Midnight Sensei:|r " .. L["BB_BOSS_BOARD_CLEARED"])
                 end
             )
         end)
 
-    AddDestructiveBtn("Clear Fight History",
-        "Permanently deletes all recorded encounters — this cannot be undone",
+    AddDestructiveBtn(L["DEBUG_BTN_CLEAR_HIST"], L["DEBUG_BTN_CH_DESC"],
         function()
             MakeDestructiveDialog(
-                "Clear Fight History",
-                "This will permanently delete all recorded fight encounters for this character.\nThis action cannot be undone.",
-                "Delete Fight History",
+                L["DESTRUCT_CLEAR_HIST_TITLE"],
+                L["DESTRUCT_CLEAR_HIST_BODY"],
+                L["DESTRUCT_CLEAR_HIST_BTN"],
                 function()
                     if MidnightSenseiCharDB then
                         MidnightSenseiCharDB.encounters = {}
@@ -2307,7 +2311,7 @@ function UI.ShowDebugWindow()
                         if MS.UI.HideMainFrame then MS.UI.HideMainFrame() end
                         if MS.UI.ShowMainFrame then MS.UI.ShowMainFrame() end
                     end
-                    print("|cffFF4444Midnight Sensei:|r Fight history cleared.")
+                    print("|cffFF4444Midnight Sensei:|r " .. L["BB_FIGHT_HIST_CLEARED"])
                 end
             )
         end)
@@ -2331,10 +2335,10 @@ function UI.ShowCredits()
         creditsFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
         creditsFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
         ApplyBackdrop(creditsFrame, C.BG, C.BORDER_GOLD)
-        MakeTitleBar(creditsFrame, "Midnight Sensei - Credits & About")
+        MakeTitleBar(creditsFrame, L["TITLE_CREDITS"])
 
         -- Tab buttons: About | Sources | Changelog
-        local tabs = { "About", "Sources", "Changelog" }
+        local tabs = { L["CREDITS_TAB_ABOUT"], L["CREDITS_TAB_SOURCES"], L["CREDITS_TAB_CHANGELOG"] }
         local tabBtns = {}
         local tabPanels = {}
 
@@ -2371,24 +2375,22 @@ function UI.ShowCredits()
         aboutText:SetText(table.concat({
             "|cff00D1FFMidnight Sensei|r  |cff888888v" .. Core.VERSION .. "|r",
             " ",
-            "|cffFFD700Author:|r  Midnight - Thrall (US)",
+            "|cffFFD700" .. L["CREDITS_AUTHOR"] .. "|r",
             " ",
-            "A combat performance coaching addon for World of Warcraft: Midnight.",
-            "Grades your fights A+ through F across all 13 classes and 40 specs,",
-            "with actionable feedback tailored to your role and spec.",
+            L["CREDITS_ABOUT_TEXT"],
             " ",
-            "|cffFFD700Features:|r",
-            "  - Per-fight grading: cooldown usage, activity, resource management",
-            "  - Talent-aware: only scores abilities you actually have equipped",
-            "  - Boss detection: tracks ENCOUNTER_START/END for real boss fights",
-            "  - Social leaderboard: guild, party, and BNet friends rankings",
-            "  - Weekly reset: aligned to Blizzard's Tuesday 7am PDT reset",
-            "  - Delve tracking: tier-based scoring for solo content",
-            "  - Score sync: syncs across guild members to recover scores after reinstall",
+            "|cffFFD700" .. L["CREDITS_FEATURES"] .. "|r",
+            L["CREDITS_FEAT_GRADING"],
+            L["CREDITS_FEAT_TALENT"],
+            L["CREDITS_FEAT_BOSS"],
+            L["CREDITS_FEAT_SOCIAL"],
+            L["CREDITS_FEAT_WEEKLY"],
+            L["CREDITS_FEAT_DELVE"],
+            L["CREDITS_FEAT_SYNC"],
             " ",
-            "|cffFFD700Contact:|r  MidnightTim on GitHub (MidnightTim/MidnightSensei)",
+            "|cffFFD700" .. L["CREDITS_CONTACT"] .. "|r",
             " ",
-            "|cff666666Midnight Sensei is a community addon, not affiliated with Blizzard.|r",
+            "|cff666666" .. L["CREDITS_DISCLAIMER"] .. "|r",
         }, "\n"))
 
         -- ── Sources panel ─────────────────────────────────────────────────
@@ -2406,8 +2408,8 @@ function UI.ShowCredits()
         sf2:SetScrollChild(sc2)
 
         local srcLines = {
-            "Rotational guidance is informed by the following community resources.",
-            "We gratefully acknowledge their contributions.",
+            L["CREDITS_SOURCES_INTRO"],
+            L["CREDITS_SOURCES_ACK"],
             " ",
         }
         if Core.CREDITS then
@@ -2418,7 +2420,7 @@ function UI.ShowCredits()
                 table.insert(srcLines, " ")
             end
         end
-        table.insert(srcLines, "|cff666666Midnight Sensei is not affiliated with these resources.|r")
+        table.insert(srcLines, "|cff666666" .. L["CREDITS_NOT_AFFILIATED"] .. "|r")
 
         local srcContent = MakeFont(sc2, 10, "LEFT")
         srcContent:SetPoint("TOPLEFT",  sc2, "TOPLEFT",  4, -4)
@@ -2454,7 +2456,7 @@ function UI.ShowCredits()
                 table.insert(clLines, " ")
             end
         else
-            table.insert(clLines, "No changelog available.")
+            table.insert(clLines, L["CREDITS_NO_CHANGELOG"])
         end
 
         local clContent = MakeFont(sc3, 10, "LEFT")
@@ -2468,7 +2470,7 @@ function UI.ShowCredits()
 
         ShowPanel(1)
 
-        local closeBtn = MakeButton(creditsFrame, 60, 22, "Close")
+        local closeBtn = MakeButton(creditsFrame, 60, 22, L["BTN_CLOSE"])
         closeBtn:SetPoint("BOTTOM", creditsFrame, "BOTTOM", 0, 8)
         closeBtn:SetScript("OnClick", function() creditsFrame:Hide() end)
 
@@ -2517,93 +2519,48 @@ local faqFrame = nil
 
 function UI.ShowFAQ()
     local lines = {
-        "|cff00D1FFMidnight Sensei - Help & FAQ|r",
+        "|cff00D1FF" .. L["TITLE_FAQ"] .. "|r",
         " ",
-        "|cffFFD700GETTING STARTED|r",
-        "Type |cffFFFFFF/ms show|r to open the HUD, |cffFFFFFF/ms hide|r to close it.",
-        "The HUD shows your last grade, score, and spec. After a fight you",
-        "will see a |cffFFFFFF>> Review Fight|r button. Right-click the HUD for quick",
-        "access to all features.",
+        "|cffFFD700" .. L["FAQ_HDR_GETTING_STARTED"] .. "|r",
+        L["FAQ_BODY_GETTING_STARTED"],
         " ",
-        "|cffFFD700UNDERSTANDING YOUR GRADE|r",
-        "Grades run from F through A+. Each spec has weighted categories:",
-        "  - Cooldown Usage: did you press your major cooldowns on cooldown?",
-        "  - Rotational Spells: did you use key rotation abilities each fight?",
-        "  - Activity: were you casting consistently? (no long idle gaps)",
-        "  - Resource Mgmt: did you overcap your resource (Rage/Energy/etc)?",
-        "  - Buff Uptime: did you keep your self-buffs active? (specs vary)",
-        "  - Proc Usage: did you consume procs quickly? (Frost DK, Fire Mage...)",
-        "  - Healer Efficiency: how much of your healing was overheal?",
+        "|cffFFD700" .. L["FAQ_HDR_UNDERSTANDING"] .. "|r",
+        L["FAQ_BODY_UNDERSTANDING"],
         " ",
-        "A fight shorter than 15 seconds is not recorded.",
+        L["FAQ_MIN_FIGHT"],
         " ",
-        "|cffFFD700ROTATIONAL SPELL FEEDBACK|r",
-        "In addition to cooldowns, Midnight Sensei tracks whether you used",
-        "key rotational spells each fight (e.g. Implosion, Rake, Obliterate).",
-        "If you never used one in a long enough fight, it will appear in your",
-        "feedback. Talent-gated spells are skipped if you don't have the talent.",
+        "|cffFFD700" .. L["FAQ_HDR_ROTATIONAL"] .. "|r",
+        L["FAQ_BODY_ROTATIONAL"],
         " ",
-        "|cffFFD700VISIBILITY OPTIONS|r",
-        "Open |cffFFFFFF/ms options|r (or right-click HUD -> Options) and set:",
-        "  Always: HUD always visible",
-        "  In Combat: HUD only shows while in combat",
-        "  Hide: HUD hidden (accessible via /ms show)",
+        "|cffFFD700" .. L["FAQ_HDR_VISIBILITY"] .. "|r",
+        L["FAQ_BODY_VIS_INTRO"],
+        L["FAQ_VIS_ALWAYS"],
+        L["FAQ_VIS_COMBAT"],
+        L["FAQ_VIS_HIDE"],
         " ",
-        "|cffFFD700GRADE HISTORY|r",
-        "Type |cffFFFFFF/ms history|r or right-click -> Grade History.",
-        "  - Filter by This Character or All Characters",
-        "  - Sparkline shows your last 20 fights at a glance",
-        "  - Left-click any row to inspect full details and feedback",
-        "  - Right-click any row to delete that entry",
+        "|cffFFD700" .. L["FAQ_HDR_HISTORY"] .. "|r",
+        L["FAQ_BODY_HISTORY"],
         " ",
-        "|cffFFD700LEADERBOARD|r",
-        "Type |cffFFFFFF/ms lb|r to open the social leaderboard.",
-        "After each boss fight your score broadcasts to guild, party, and",
-        "BNet friends who also have Midnight Sensei installed.",
-        "Tabs: Party (session only), Guild (persists across sessions), Friends.",
-        "Guild scores persist between sessions and sync across guild members —",
-        "even if a player is offline you can still see their last recorded score.",
-        "Weekly average counts boss encounters only — trash pulls and target",
-        "dummies are never included in rankings.",
-        "Right-click any guild row to remove a player. They repopulate",
-        "automatically when they next log in or you hit Refresh.",
+        "|cffFFD700" .. L["FAQ_HDR_LEADERBOARD"] .. "|r",
+        L["FAQ_BODY_LEADERBOARD"],
         " ",
-        "Each tab (Dungeons, Raids) shows location info from that content type",
-        "only — an LFR run will never bleed into the Dungeons tab.",
-        "Mythic+ key level is shown where available (e.g. M+15).",
-        "After updating the addon, each player needs to complete one new",
-        "dungeon or raid for their tab location to reflect the correct content.",
-        "Your own entry updates immediately from local history — no new run needed.",
+        L["FAQ_BODY_LB_EXTRA"],
         " ",
-        "|cffFFD700NOTE ON MIDNIGHT 12.0 RESTRICTIONS|r",
-        "Blizzard restricted enemy unit aura reads in Midnight 12.0.",
-        "Target debuffs (Rupture, Flame Shock, etc.) cannot be tracked directly.",
-        "These show in your priorityNotes as guidance but are not scored.",
-        "All player self-buffs, cooldowns, and rotational casts work normally.",
+        "|cffFFD700" .. L["FAQ_HDR_MIDNIGHT_NOTE"] .. "|r",
+        L["FAQ_BODY_MIDNIGHT_NOTE"],
         " ",
-        "|cffFFD700BOSS VS NORMAL COMBAT|r",
-        "Midnight Sensei detects boss encounters via ENCOUNTER_START/END.",
-        "Boss fights show a |cffFF6600[Boss]|r tag in history and encounter detail.",
-        "Filter your history to |cffFFFFFF[Boss] Only|r to review raid/dungeon boss pulls.",
+        "|cffFFD700" .. L["FAQ_HDR_BOSS_COMBAT"] .. "|r",
+        L["FAQ_BODY_BOSS_COMBAT"],
         " ",
-        "|cffFFD700TALENT-AWARE COOLDOWNS|r",
-        "Cooldown scoring only includes spells you have learned.",
-        "If you don't have a talent, it won't be scored against you.",
+        "|cffFFD700" .. L["FAQ_HDR_TALENT_AWARE"] .. "|r",
+        L["FAQ_BODY_TALENT_AWARE"],
         " ",
-        "|cffFFD700ALL COMMANDS|r",
-        "  /ms show         Show the HUD",
-        "  /ms hide         Hide the HUD",
-        "  /ms history      Grade history & trending",
-        "  /ms lb           Social leaderboard",
-        "  /ms lb remove    Remove a player from guild leaderboard",
-        "  /ms options      Settings",
-        "  /ms faq          This panel",
-        "  /ms update       View changelog",
-        "  /ms credits      Credits & about",
-        "  /ms report       Report a bug on GitHub",
-        "  /ms versions     Show addon versions seen this session",
-        "  /ms friend <n>   Query a player's last score directly",
-        "  /ms tracker      Open the Rotation Tracker (cast counts + spell explanations)",
+        "|cffFFD700" .. L["FAQ_HDR_ALL_COMMANDS"] .. "|r",
+        L["FAQ_CMD_SHOW"], L["FAQ_CMD_HIDE"], L["FAQ_CMD_HISTORY"],
+        L["FAQ_CMD_LB"], L["FAQ_CMD_LB_REMOVE"], L["FAQ_CMD_OPTIONS"],
+        L["FAQ_CMD_FAQ"], L["FAQ_CMD_UPDATE"], L["FAQ_CMD_CREDITS"],
+        L["FAQ_CMD_REPORT"], L["FAQ_CMD_VERSIONS"], L["FAQ_CMD_FRIEND"],
+        L["FAQ_CMD_TRACKER"],
     }
 
     if not faqFrame then
@@ -2618,7 +2575,7 @@ function UI.ShowFAQ()
         faqFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
         faqFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
         ApplyBackdrop(faqFrame, C.BG, C.BORDER_GOLD)
-        MakeTitleBar(faqFrame, "Midnight Sensei - Help & FAQ")
+        MakeTitleBar(faqFrame, L["TITLE_FAQ"])
 
         local sf = CreateFrame("ScrollFrame", "MidnightSenseiFAQScroll",
                                faqFrame, "UIPanelScrollFrameTemplate")
@@ -2635,7 +2592,7 @@ function UI.ShowFAQ()
         faqFrame.contentText:SetSpacing(2)
         faqFrame._sc = sc
 
-        local closeBtn = MakeButton(faqFrame, 60, 22, "Close")
+        local closeBtn = MakeButton(faqFrame, 60, 22, L["BTN_CLOSE"])
         closeBtn:SetPoint("BOTTOM", faqFrame, "BOTTOM", 0, 8)
         closeBtn:SetScript("OnClick", function() faqFrame:Hide() end)
     end
@@ -2675,14 +2632,14 @@ function UI.ShowRotationalTracker()
     rotTrackerFrame:SetScript("OnDragStart", function(f) f:StartMoving() end)
     rotTrackerFrame:SetScript("OnDragStop",  function(f) f:StopMovingOrSizing() end)
     ApplyBackdrop(rotTrackerFrame, C.BG, C.BORDER_GOLD)
-    MakeTitleBar(rotTrackerFrame, "Midnight Sensei - Rotation Tracker")
+    MakeTitleBar(rotTrackerFrame, L["TITLE_ROT_TRACKER"])
 
     -- Subtitle
     local sub = MakeFont(rotTrackerFrame, 10, "LEFT")
     sub:SetPoint("TOPLEFT",  rotTrackerFrame, "TOPLEFT",  10, -34)
     sub:SetPoint("TOPRIGHT", rotTrackerFrame, "TOPRIGHT", -10, -34)
     sub:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
-    sub:SetText("Cast counts from your last fight. Each spell shows how many times it was used and why it is tracked.")
+    sub:SetText(L["ROT_TRACKER_SUBTITLE"])
 
     -- Fight duration (top-right)
     local fightInfo = MakeFont(rotTrackerFrame, 10, "RIGHT")
@@ -2704,10 +2661,10 @@ function UI.ShowRotationalTracker()
         fs:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
         fs:SetText(label)
     end
-    ColHdr("SPELL",   36,  220)
-    ColHdr("CASTS",  318,   50, "CENTER")
-    ColHdr("MIN FIGHT", 378, 60, "CENTER")
-    ColHdr("STATUS", 444,   50, "CENTER")
+    ColHdr(L["ROT_COL_SPELL"],     36,  220)
+    ColHdr(L["ROT_COL_CASTS"],    318,   50, "CENTER")
+    ColHdr(L["ROT_COL_MIN_FIGHT"],378,   60, "CENTER")
+    ColHdr(L["ROT_COL_STATUS"],   444,   50, "CENTER")
 
     -- Scroll frame
     local sf = CreateFrame("ScrollFrame", nil, rotTrackerFrame, "UIPanelScrollFrameTemplate")
@@ -2719,7 +2676,7 @@ function UI.ShowRotationalTracker()
     sf:SetScrollChild(sc)
     rotTrackerFrame._sc = sc
 
-    local closeBtn = MakeButton(rotTrackerFrame, 60, 22, "Close")
+    local closeBtn = MakeButton(rotTrackerFrame, 60, 22, L["BTN_CLOSE"])
     closeBtn:SetPoint("BOTTOM", rotTrackerFrame, "BOTTOM", 0, 8)
     closeBtn:SetScript("OnClick", function() rotTrackerFrame:Hide() end)
 
@@ -2740,9 +2697,9 @@ function UI.RefreshRotationalTracker()
 
     -- Update fight duration label
     if dur > 0 then
-        rotTrackerFrame.fightInfo:SetText("Last fight: " .. FormatDuration(dur))
+        rotTrackerFrame.fightInfo:SetText(string.format(L["ROT_TRACKER_LAST_FIGHT"], FormatDuration(dur)))
     else
-        rotTrackerFrame.fightInfo:SetText("No fight recorded yet")
+        rotTrackerFrame.fightInfo:SetText(L["ROT_TRACKER_NO_FIGHT"])
     end
 
     -- Build a lookup: spell ID → spec definition entry (for flags)
@@ -2764,7 +2721,7 @@ function UI.RefreshRotationalTracker()
         local lbl = MakeFont(sc, 11, "CENTER")
         lbl:SetPoint("TOPLEFT",  sc, "TOPLEFT",  0, -20)
         lbl:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, -20)
-        lbl:SetText("|cff888888No fight data yet — run a fight to see tracking results.|r")
+        lbl:SetText("|cff888888" .. L["ROT_TRACKER_NO_DATA"] .. "|r")
         sc:SetHeight(60)
         return
     end
@@ -2812,16 +2769,16 @@ function UI.RefreshRotationalTracker()
         -- Description (line 2) — plain-English explanation of flags
         local parts = {}
         if def.combatGated and def.talentGated then
-            table.insert(parts, "Requires talent; only castable during a transformation window")
+            table.insert(parts, L["ROT_FLAG_COMBAT_TALENT"])
         elseif def.combatGated then
-            table.insert(parts, "Only castable during a transformation window (e.g. Void Metamorphosis)")
+            table.insert(parts, L["ROT_FLAG_COMBAT_ONLY"])
         elseif def.talentGated then
-            table.insert(parts, "Only tracked when this talent is active in your build")
+            table.insert(parts, L["ROT_FLAG_TALENT_ONLY"])
         else
-            table.insert(parts, "Core rotational ability — expected every fight")
+            table.insert(parts, L["ROT_FLAG_CORE"])
         end
         if rs.minFightSeconds and rs.minFightSeconds > 15 then
-            table.insert(parts, "flagged missed only if fight > " .. rs.minFightSeconds .. "s")
+            table.insert(parts, string.format(L["ROT_FLAG_MIN_FIGHT"], rs.minFightSeconds))
         end
 
         local descStr = MakeFont(sc, 9, "LEFT")
@@ -2853,11 +2810,11 @@ function UI.RefreshRotationalTracker()
         if dur == 0 then
             statusStr:SetText("|cff666666—|r")
         elseif rs.useCount > 0 then
-            statusStr:SetText("|cff22EE22CAST|r")
+            statusStr:SetText("|cff22EE22" .. L["ROT_STATUS_CAST"] .. "|r")
         elseif dur >= minSec then
-            statusStr:SetText("|cffFF4444MISSED|r")
+            statusStr:SetText("|cffFF4444" .. L["ROT_STATUS_MISSED"] .. "|r")
         else
-            statusStr:SetText("|cff888888SHORT|r")
+            statusStr:SetText("|cff888888" .. L["ROT_STATUS_SHORT"] .. "|r")
         end
 
         yOff = yOff - ROW_H
@@ -2882,8 +2839,7 @@ function UI.RefreshRotationalTracker()
             noteLbl:SetPoint("TOPLEFT", sc, "TOPLEFT", 6, yOff)
             noteLbl:SetWidth(W - 10)
             noteLbl:SetWordWrap(true)
-            noteLbl:SetText("|cff666666Not tracked this build (talent not taken or replaced): " ..
-                table.concat(excluded, ", ") .. "|r")
+            noteLbl:SetText("|cff666666" .. string.format(L["ROT_NOT_TRACKED"], table.concat(excluded, ", ")) .. "|r")
             yOff = yOff - 26
         end
     end
@@ -2900,9 +2856,9 @@ function UI.RefreshRotationalTracker()
     local legendStr = MakeFont(sc, 9, "LEFT")
     legendStr:SetPoint("TOPLEFT", sc, "TOPLEFT", 6, yOff)
     legendStr:SetWidth(W - 10)
-    legendStr:SetText("|cff22EE22CAST|r  used at least once  " ..
-        "|cffFF4444MISSED|r  fight was long enough but spell was not used  " ..
-        "|cff888888SHORT|r  fight too short to evaluate")
+    legendStr:SetText("|cff22EE22" .. L["ROT_STATUS_CAST"] .. "|r  " .. L["ROT_LEGEND_CAST_DESC"] .. "  " ..
+        "|cffFF4444" .. L["ROT_STATUS_MISSED"] .. "|r  " .. L["ROT_LEGEND_MISSED_DESC"] .. "  " ..
+        "|cff888888" .. L["ROT_STATUS_SHORT"] .. "|r  " .. L["ROT_LEGEND_SHORT_DESC"])
     yOff = yOff - 18
 
     sc:SetHeight(math.abs(yOff) + 10)
@@ -2932,14 +2888,14 @@ function UI.ShowUpdatePopup()
     pop:SetMovable(true)
     pop:SetClampedToScreen(true)
     ApplyBackdrop(pop, C.TITLE_BG, C.BORDER_GOLD)
-    MakeTitleBar(pop, "Midnight Sensei — Update Available")
+    MakeTitleBar(pop, L["TITLE_UPDATE_POPUP"])
 
     local msg = MakeFont(pop, 10, "CENTER")
     msg:SetPoint("CENTER", pop, "CENTER", 0, 4)
     msg:SetWidth(264)
-    msg:SetText("A new version of Midnight Sensei is available.\nCheck |cff00D1FFCurseforge|r or |cff00D1FFWago|r for the latest version.")
+    msg:SetText(L["UPDATE_POPUP_MSG"])
 
-    local closeBtn = MakeButton(pop, 80, 22, "Close")
+    local closeBtn = MakeButton(pop, 80, 22, L["BTN_CLOSE"])
     closeBtn:SetPoint("BOTTOM", pop, "BOTTOM", 0, 8)
     closeBtn:SetScript("OnClick", function() pop:Hide() end)
 
@@ -2955,7 +2911,7 @@ function UI.OnCombatStart()
     f.gradeText:SetText("...")
     f.gradeText:SetTextColor(0.55, 0.55, 0.55, 1)
     f.scoreText:SetText("")
-    f.labelText:SetText("In combat...")
+    f.labelText:SetText(L["HUD_IN_COMBAT"])
     f.labelText:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
     f.reviewBtn:Hide()
     ApplyHudVisibility("combat_start")
@@ -2988,7 +2944,7 @@ function UI.OnCombatEnd(result)
     else
         f.gradeText:SetText("")
         f.scoreText:SetText("")
-        f.labelText:SetText("Fight too short to record")
+        f.labelText:SetText(L["HUD_FIGHT_TOO_SHORT"])
         f.labelText:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
         f.reviewBtn:Hide()
     end
@@ -3056,33 +3012,32 @@ MS.Core.On(MS.Core.EVENTS.SESSION_READY, function()
         local ok = pcall(function()
             if not (Settings and Settings.RegisterVerticalLayoutCategory) then return end
 
-            local category = Settings.RegisterVerticalLayoutCategory("Midnight Sensei")
+            local category = Settings.RegisterVerticalLayoutCategory(L["SETTINGS_CATEGORY"])
             if not category then return end
 
             -- Each "initializer" adds a row to the Settings panel for this addon
             local layout = category:GetLayout()
             if layout and layout.AddInitializer then
                 layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(
-                    "Midnight Sensei v" .. Core.VERSION ..
-                    "  |cff888888Created by Midnight - Thrall (US)|r"))
+                    string.format(L["SETTINGS_HEADER"], Core.VERSION)))
                 layout:AddInitializer(CreateSettingsButtonInitializer(
-                    "Open Options", "Configure HUD, play style, and more",
+                    L["SETTINGS_BTN_OPTIONS"], L["SETTINGS_BTN_OPT_DESC"],
                     function() UI.OpenOptions() end))
                 layout:AddInitializer(CreateSettingsButtonInitializer(
-                    "Grade History", "View fight history and trends",
+                    L["SETTINGS_BTN_HISTORY"], L["SETTINGS_BTN_HIST_DESC"],
                     function() UI.ShowHistory() end))
                 layout:AddInitializer(CreateSettingsButtonInitializer(
-                    "Leaderboard", "Guild / Party / Friends / Delve rankings",
+                    L["SETTINGS_BTN_LB"], L["SETTINGS_BTN_LB_DESC"],
                     function()
                         if MS.Leaderboard and MS.Leaderboard.Toggle then
                             MS.Leaderboard.Toggle()
                         end
                     end))
                 layout:AddInitializer(CreateSettingsButtonInitializer(
-                    "Help & FAQ", "How scoring and grading works",
+                    L["SETTINGS_BTN_FAQ"], L["SETTINGS_BTN_FAQ_DESC"],
                     function() UI.ShowFAQ() end))
                 layout:AddInitializer(CreateSettingsButtonInitializer(
-                    "Credits & About", "Author info and sources",
+                    L["SETTINGS_BTN_CREDITS"], L["SETTINGS_BTN_CRED_DESC"],
                     function() UI.ShowCredits() end))
             end
 
@@ -3095,14 +3050,14 @@ MS.Core.On(MS.Core.EVENTS.SESSION_READY, function()
             pcall(function()
                 if InterfaceOptions_AddCategory then
                     local panel = CreateFrame("Frame")
-                    panel.name = "Midnight Sensei"
+                    panel.name = L["SETTINGS_CATEGORY"]
                     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
                     title:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -16)
-                    title:SetText("Midnight Sensei v" .. Core.VERSION)
+                    title:SetText(L["TITLE_HUD"] .. " v" .. Core.VERSION)
                     local sub = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
                     sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
                     sub:SetTextColor(0.7, 0.7, 0.7, 1)
-                    sub:SetText("Created by Midnight - Thrall (US)  |  /ms for commands")
+                    sub:SetText(L["SETTINGS_LEGACY_SUB"])
                     InterfaceOptions_AddCategory(panel)
                 end
             end)
@@ -3156,11 +3111,11 @@ local function CreateMinimapButton()
             end
         end,
         OnTooltipShow = function(tip)
-            tip:SetText("Midnight Sensei", 1, 0.82, 0)
-            tip:AddLine("Left-click: Toggle HUD", 0.8, 0.8, 0.8)
-            tip:AddLine("Right-click: Leaderboard", 0.8, 0.8, 0.8)
-            tip:AddLine("Ctrl+Right-click: Boss Board", 0.8, 0.8, 0.8)
-            tip:AddLine("Shift+Right-click: Options", 0.8, 0.8, 0.8)
+            tip:SetText(L["MINIMAP_TT_TITLE"], 1, 0.82, 0)
+            tip:AddLine(L["MINIMAP_TT_LEFT"],       0.8, 0.8, 0.8)
+            tip:AddLine(L["MINIMAP_TT_RIGHT"],      0.8, 0.8, 0.8)
+            tip:AddLine(L["MINIMAP_TT_CTRL_RIGHT"], 0.8, 0.8, 0.8)
+            tip:AddLine(L["MINIMAP_TT_SHIFT_RIGHT"],0.8, 0.8, 0.8)
         end,
     })
 

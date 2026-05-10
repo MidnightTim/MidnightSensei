@@ -228,8 +228,9 @@ Core.RegisterSpec(12, {
         majorCooldowns = {
             { id = 1217605, label = "Void Metamorphosis", expectedUses = "on CD — required for Collapsing Star",
               displayOnly = true, altIds = {471306} },  -- shapeshift: fires UPDATE_SHAPESHIFT_FORM not SUCCEEDED; displayOnly for My Spell List
-            { id = 1246167, label = "The Hunt",        expectedUses = "on CD (talent)", talentGated = true },  -- Devourer spec-variant; live-verified SKIP (not talented)
-            { id = 278326,  label = "Consume Magic",  expectedUses = "situational", isInterrupt = true, talentGated = true },  -- nodeID 91006 non-PASSIVE ACTIVE; added 05/06/2026
+            { id = 1246167, label = "The Hunt",       expectedUses = "on CD (talent)", talentGated = true },  -- Devourer spec-variant; live-verified SKIP (not talented)
+            { id = 183752,  label = "Disrupt",        expectedUses = "situational",    isInterrupt = true },  -- melee interrupt; primary and only interrupt
+            { id = 278326,  label = "Consume Magic",  expectedUses = "situational",    isUtility = true, talentGated = true },  -- nodeID 91006; purge — situational utility, not an interrupt
             -- Removed (confirmed PASSIVE): Impending Apocalypse 1227707, Demonsurge 452402, Midnight 1250094
         },
         rotationalSpells = {

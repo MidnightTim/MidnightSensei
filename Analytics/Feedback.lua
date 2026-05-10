@@ -15,6 +15,7 @@
 --------------------------------------------------------------------------------
 
 MidnightSensei                    = MidnightSensei                    or {}
+local L = MidnightSensei.L
 MidnightSensei.Analytics          = MidnightSensei.Analytics          or {}
 MidnightSensei.Analytics.Feedback = MidnightSensei.Analytics.Feedback or {}
 
@@ -114,15 +115,13 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
     if #neverUsed > 0 and duration >= 30 then
         table.sort(neverUsed)
         local ctx    = bossName and (" during " .. bossName) or ""
-        local action = isTank   and "use on tank busters or high damage windows"
-                    or isHealer and "align with high incoming damage windows"
-                    or             "align these with burst windows"
+        local action = isTank   and L["FB_ACTION_TANK"]
+                    or isHealer and L["FB_ACTION_HEALER"]
+                    or             L["FB_ACTION_DPS"]
         if inferSimplified then
-            AddGain(40, "You lost value from unused cooldowns" .. ctx .. ": " ..
-                table.concat(neverUsed, ", ") .. ". Even consistent pressing helps.")
+            AddGain(40, string.format(L["FB_NEVER_PRESSED_SIMP"], ctx, table.concat(neverUsed, ", ")))
         else
-            AddGain(40, "Never pressed" .. ctx .. ": " ..
-                table.concat(neverUsed, ", ") .. " — " .. action .. ".")
+            AddGain(40, string.format(L["FB_NEVER_PRESSED"], ctx, table.concat(neverUsed, ", "), action))
         end
     end
 
@@ -133,16 +132,12 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
         local pct         = math.floor((activeGCDs / math.max(1, targetTotal)) * 100)
         local lost        = targetTotal - activeGCDs
         if inferSimplified then
-            AddGain(30, "Your rotation is consistent, but gaps between casts (" ..
-                pct .. "% activity) are the next thing to tighten up.")
+            AddGain(30, string.format(L["FB_ACTIVITY_SIMPLIFIED"], pct))
         elseif actScore >= 80 then
-            AddGain(15, "Activity at " .. pct .. "% — roughly " .. lost ..
-                " cast(s) left on the table. Queue your next spell before the current one lands.")
+            AddGain(15, string.format(L["FB_ACTIVITY_MODERATE"], pct, lost))
         else
-            local severity = pct < 60 and "significant" or "moderate"
-            AddGain(30, "Activity: " .. activeGCDs .. "/" .. targetTotal ..
-                " GCDs (" .. pct .. "%) — " .. severity .. " downtime, approximately " ..
-                lost .. " casts lost. Find your next spell before the current one finishes.")
+            local severity = pct < 60 and L["FB_DOWNTIME_SIGNIFICANT"] or L["FB_DOWNTIME_MODERATE"]
+            AddGain(30, string.format(L["FB_ACTIVITY_LOW"], activeGCDs, targetTotal, pct, severity, lost))
         end
     end
 
@@ -150,9 +145,7 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
     if #underused > 0 and duration >= 90 then
         table.sort(underused)
         local fightMins = string.format("%.1f", duration / 60)
-        AddGain(20, "Used less than expected in a " .. fightMins .. "min fight: " ..
-            table.concat(underused, ", ") ..
-            " — target 1 use per 2 minutes of fight time.")
+        AddGain(20, string.format(L["FB_UNDERUSED"], fightMins, table.concat(underused, ", ")))
     end
 
     -- ── Rotational spell cast count ─────────────────────────────────────────
@@ -210,17 +203,14 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
         end
         if #unused > 0 then
             table.sort(unused)
-            local context = isTank   and "survival and threat rotation"
-                         or isHealer and "healing throughput"
-                         or             "damage output"
-            AddGain(25, "Rotational spell(s) never used: " ..
-                table.concat(unused, ", ") ..
-                " — these are core to your " .. context .. ".")
+            local context = isTank   and L["FB_ROT_CONTEXT_TANK"]
+                         or isHealer and L["FB_ROT_CONTEXT_HEALER"]
+                         or             L["FB_ROT_CONTEXT_DPS"]
+            AddGain(25, string.format(L["FB_ROT_NEVER_USED"], table.concat(unused, ", "), context))
         end
         if #lowUsed > 0 then
             table.sort(lowUsed)
-            AddGain(10, "Could have cast more: " .. table.concat(lowUsed, ", ") ..
-                " — press these on every available GCD when your primary spenders are on cooldown.")
+            AddGain(10, string.format(L["FB_ROT_LOW_USED"], table.concat(lowUsed, ", ")))
         end
     end
 
@@ -237,10 +227,8 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                     local avgHeld = data.totalActiveTime / data.gained
                     if avgHeld > maxTime * 0.5 then
                         local heldStr  = string.format("%.1f", avgHeld)
-                        local severity = avgHeld > maxTime * 0.8 and "critically delayed" or "delayed"
-                        AddGain(15, (proc.label or "Proc") .. " consumption is " .. severity ..
-                            " — held " .. heldStr .. "s on average (budget: " .. maxTime ..
-                            "s). Consume procs immediately when they appear.")
+                        local severity = avgHeld > maxTime * 0.8 and L["FB_PROC_CRITICALLY"] or L["FB_PROC_DELAYED"]
+                        AddGain(15, string.format(L["FB_PROC_MSG"], proc.label or "Proc", severity, heldStr, maxTime))
                     end
                 end
             end
@@ -250,11 +238,11 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
         local rmScore = scores.resourceMgmt or 100
         if rmScore < 80 then
             local rate = string.format("%.1f", overcapEvents / math.max(1, duration / 60))
-            AddGain(15, "Overcapped " .. (spec.resourceLabel or "resource") .. " " ..
-                overcapEvents .. " time(s) (" .. rate .. "/min) — spend " ..
-                (spec.resourceLabel or "resource") ..
-                " before reaching " .. (spec.overcapAt or 100) ..
-                " to avoid wasted generation.")
+            AddGain(15, string.format(L["FB_OVERCAP"],
+                spec.resourceLabel or "resource",
+                overcapEvents, rate,
+                spec.resourceLabel or "resource",
+                spec.overcapAt or 100))
         end
 
         -- Tank: mitigation uptime
@@ -268,19 +256,13 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                     local apps   = data.appCount or 0
                     local label  = buff.label or "Mitigation"
                     if apps == 0 then
-                        AddGain(35, label .. " was never activated — press it on cooldown " ..
-                            "every time it is available to reduce physical damage taken.")
+                        AddGain(35, string.format(L["FB_MIT_NEVER_ACTIVATED"], label))
                     elseif actual < target * 0.6 then
                         local gap = target - actual
-                        AddGain(30, label .. ": " .. actual .. "% uptime vs " .. target ..
-                            "% target (" .. gap .. "pt gap, " .. apps ..
-                            " application(s)) — you have large windows of unmitigated " ..
-                            "physical damage. Press it the moment it comes off cooldown.")
+                        AddGain(30, string.format(L["FB_MIT_LOW_UPTIME"], label, actual, target, gap, apps))
                     elseif actual < target * 0.8 then
                         local gap = target - actual
-                        AddGain(20, label .. ": " .. actual .. "% uptime vs " .. target ..
-                            "% target (" .. gap .. "pt gap) — small gaps are adding up. " ..
-                            "Use it preemptively on heavy melee sequences, not reactively.")
+                        AddGain(20, string.format(L["FB_MIT_SMALL_GAPS"], label, actual, target, gap))
                     end
                 end
             end
@@ -295,10 +277,10 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                 and data.appCount and data.appCount > 0 then
                     if data.actualPct < data.targetUptime * 0.8 then
                         local gap = data.targetUptime - math.floor(data.actualPct)
-                        AddGain(20, (buff.label or "Buff") .. ": " ..
-                            math.floor(data.actualPct) .. "% uptime vs " ..
-                            data.targetUptime .. "% target (" .. gap ..
-                            "pt gap) — reapply before it expires, not after.")
+                        AddGain(20, string.format(L["FB_BUFF_LOW_UPTIME"],
+                            buff.label or "Buff",
+                            math.floor(data.actualPct),
+                            data.targetUptime, gap))
                     end
                 end
             end
@@ -314,7 +296,7 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                     local data = uptimeData[buff.id]
                     if data and data.actualPct < 5 and duration >= 20 then
                         table.insert(utilityNeverUsed,
-                            (buff.label or "Buff") .. " (group buff — ensure it's active before combat)")
+                            (buff.label or "Buff") .. " " .. L["FB_GROUP_BUFF_NOTE"])
                     end
                 end
             end
@@ -329,30 +311,20 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                 local overpct = (hd.overheal / (hd.done + hd.overheal)) * 100
                 local target  = (spec.healerMetrics and spec.healerMetrics.targetOverheal) or 30
                 if overpct > target + 20 then
-                    AddGain(25, string.format(
-                        "Overheal at %.1f%% (target: <%d%%) — you are spending mana on " ..
-                        "targets that do not need healing. Cast slightly later or " ..
-                        "switch to reactive spells on targets actively taking damage.",
-                        overpct, target))
+                    AddGain(25, string.format(L["FB_OVERHEAL_HIGH"], overpct, target))
                 elseif overpct > target + 10 then
-                    Add(string.format(
-                        "Overheal: %.1f%% (target: <%d%%) — slightly elevated. " ..
-                        "Hold casts on targets above 70%% health and prioritise " ..
-                        "HoTs over direct heals on stable groups.",
-                        overpct, target))
+                    Add(string.format(L["FB_OVERHEAL_ELEVATED"], overpct, target))
                 end
             end
         end
         if actScore < 70 and totalGCDs > 0 then
-            Add("When the group is stable, fill downtime with damage spells " ..
-                "to maintain throughput.")
+            Add(L["FB_HEALER_FILL_DOWNTIME"])
         end
     end
 
     -- ── Behavior tone fallback ───────────────────────────────────────────────
     if inferSimplified and #feedback == 0 then
-        Add("Your rotation is consistent and well-paced. " ..
-            "Tightening burst window timing is the next performance step.")
+        Add(L["FB_SIMPLIFIED_FALLBACK"])
     end
 
     -- ── Nothing flagged ──────────────────────────────────────────────────────
@@ -366,15 +338,14 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
         if allHigh and finalScore >= 95 then
             local nextSteps = {}
             if isTank then
-                table.insert(nextSteps, "pre-position defensives before predictable spike damage")
+                table.insert(nextSteps, L["FB_NEXT_TANK_PREPOS"])
             elseif isHealer then
-                table.insert(nextSteps, "overlap cooldowns with incoming damage casts rather than reacting")
+                table.insert(nextSteps, L["FB_NEXT_HEALER_OVERLAP"])
             else
-                table.insert(nextSteps, "align burst windows with enemy vulnerability phases")
+                table.insert(nextSteps, L["FB_NEXT_DPS_ALIGN"])
             end
-            table.insert(nextSteps, "reduce time between the GCD ending and your next cast to sub-0.2s")
-            Add("Near-perfect execution. The remaining gains are: " ..
-                table.concat(nextSteps, "; ") .. ".")
+            table.insert(nextSteps, L["FB_NEXT_GCD_TIMING"])
+            Add(string.format(L["FB_NEAR_PERFECT"], table.concat(nextSteps, "; ")))
         elseif allHigh then
             local weakest   = nil
             local weakScore = 100
@@ -385,14 +356,13 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                 end
             end
             local catHint = weakest and weakest:gsub("(%l)(%u)", "%1 %2"):lower() or "cooldown timing"
-            Add("Strong execution overall. Your lowest category is " ..
-                catHint .. " — that is where the next points come from.")
+            Add(string.format(L["FB_STRONG_EXECUTION"], catHint))
         elseif cdScore < 80 or mitScore < 80 then
             local hints = {}
             if cdScore < 80 then
                 table.insert(hints, isTank
-                    and "use defensive cooldowns on tank busters"
-                    or  "press major cooldowns more consistently")
+                    and L["FB_HINT_TANK_CDS"]
+                    or  L["FB_HINT_PRESS_CDS"])
             end
             if isTank and mitScore < 80 then
                 local MIT_ABILITY = {
@@ -407,11 +377,11 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
                     mitAbility = (spec.className == "Warrior") and "Shield Block" or "Shield of the Righteous"
                 end
                 mitAbility = mitAbility or "defensive abilities"
-                table.insert(hints, "increase mitigation uptime by pressing " .. mitAbility .. " more frequently")
+                table.insert(hints, string.format(L["FB_HINT_MIT_UPTIME"], mitAbility))
             end
-            Add("Good foundation — focus next on: " .. table.concat(hints, "; ") .. ".")
+            Add(string.format(L["FB_GOOD_FOUNDATION"], table.concat(hints, "; ")))
         else
-            Add("Solid performance — tighten up cooldown timing to push higher.")
+            Add(L["FB_SOLID"])
         end
     end
 
@@ -420,21 +390,17 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
 
     -- Interrupt note always appended last — friendly reminder, never penalised, never buried
     if #interruptNeverUsed > 0 then
-        table.insert(feedback, "Note: " .. table.concat(interruptNeverUsed, ", ") ..
-            " — this is your interrupt. Not used this fight — no penalty.")
+        table.insert(feedback, string.format(L["FB_NOTE_INTERRUPT"], table.concat(interruptNeverUsed, ", ")))
     end
 
     -- Utility note — informational, never penalised (Spellsteal, missing group buffs, etc.)
     if #utilityNeverUsed > 0 then
-        table.insert(feedback, "Note: " .. table.concat(utilityNeverUsed, "; ") ..
-            " — not used or detected this fight. No penalty.")
+        table.insert(feedback, string.format(L["FB_NOTE_UTILITY"], table.concat(utilityNeverUsed, "; ")))
     end
 
     -- Combat utility note — stuns/damages in addition to utility; situational by design
     if #combatUtilityNeverUsed > 0 then
-        table.insert(feedback, "Note: " .. table.concat(combatUtilityNeverUsed, ", ") ..
-            " — stuns and deals damage in addition to utility. Use it where the situation" ..
-            " allows; no penalty for holding it.")
+        table.insert(feedback, string.format(L["FB_NOTE_COMBAT_UTILITY"], table.concat(combatUtilityNeverUsed, ", ")))
     end
 
     return feedback

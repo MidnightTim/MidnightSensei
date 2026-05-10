@@ -6,6 +6,7 @@
 --------------------------------------------------------------------------------
 
 MidnightSensei             = MidnightSensei             or {}
+local L = MidnightSensei.L
 MidnightSensei.Core        = MidnightSensei.Core        or {}
 MidnightSensei.Analytics   = MidnightSensei.Analytics   or {}
 MidnightSensei.UI          = MidnightSensei.UI          or {}
@@ -33,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.4"
+    Core.VERSION = ver or "1.6.5"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -216,19 +217,19 @@ Core.ROLE = { DPS = "DPS", HEALER = "HEALER", TANK = "TANK" }
 -- Grade Definitions  (encouraging labels)
 --------------------------------------------------------------------------------
 Core.GRADES = {
-    { letter = "A+", min = 95, color = {0.20, 0.90, 0.20}, label = "Exceptional"     },
-    { letter = "A",  min = 90, color = {0.30, 0.85, 0.30}, label = "Excellent"       },
-    { letter = "A-", min = 85, color = {0.40, 0.80, 0.35}, label = "Great work"      },
-    { letter = "B+", min = 80, color = {0.50, 0.80, 0.40}, label = "Strong"          },
-    { letter = "B",  min = 75, color = {0.70, 0.80, 0.30}, label = "On track"        },
-    { letter = "B-", min = 70, color = {0.85, 0.80, 0.25}, label = "Solid"           },
-    { letter = "C+", min = 65, color = {0.95, 0.75, 0.20}, label = "Good foundation" },
-    { letter = "C",  min = 60, color = {1.00, 0.70, 0.15}, label = "Room to grow"    },
-    { letter = "C-", min = 55, color = {1.00, 0.60, 0.10}, label = "Keep practicing" },
-    { letter = "D+", min = 50, color = {1.00, 0.50, 0.10}, label = "Building habits" },
-    { letter = "D",  min = 45, color = {1.00, 0.40, 0.10}, label = "Learning curve"  },
-    { letter = "D-", min = 40, color = {1.00, 0.30, 0.10}, label = "Early days"      },
-    { letter = "F",  min = 0,  color = {1.00, 0.20, 0.20}, label = "Fresh start"     },
+    { letter = "A+", min = 95, color = {0.20, 0.90, 0.20}, label = L["GRADE_EXCEPTIONAL"]     },
+    { letter = "A",  min = 90, color = {0.30, 0.85, 0.30}, label = L["GRADE_EXCELLENT"]       },
+    { letter = "A-", min = 85, color = {0.40, 0.80, 0.35}, label = L["GRADE_GREAT_WORK"]      },
+    { letter = "B+", min = 80, color = {0.50, 0.80, 0.40}, label = L["GRADE_STRONG"]          },
+    { letter = "B",  min = 75, color = {0.70, 0.80, 0.30}, label = L["GRADE_ON_TRACK"]        },
+    { letter = "B-", min = 70, color = {0.85, 0.80, 0.25}, label = L["GRADE_SOLID"]           },
+    { letter = "C+", min = 65, color = {0.95, 0.75, 0.20}, label = L["GRADE_GOOD_FOUNDATION"] },
+    { letter = "C",  min = 60, color = {1.00, 0.70, 0.15}, label = L["GRADE_ROOM_TO_GROW"]    },
+    { letter = "C-", min = 55, color = {1.00, 0.60, 0.10}, label = L["GRADE_KEEP_PRACTICING"] },
+    { letter = "D+", min = 50, color = {1.00, 0.50, 0.10}, label = L["GRADE_BUILDING_HABITS"] },
+    { letter = "D",  min = 45, color = {1.00, 0.40, 0.10}, label = L["GRADE_LEARNING_CURVE"]  },
+    { letter = "D-", min = 40, color = {1.00, 0.30, 0.10}, label = L["GRADE_EARLY_DAYS"]      },
+    { letter = "F",  min = 0,  color = {1.00, 0.20, 0.20}, label = L["GRADE_FRESH_START"]     },
 }
 
 function Core.GetGrade(score)
@@ -236,7 +237,7 @@ function Core.GetGrade(score)
     for _, g in ipairs(Core.GRADES) do
         if score >= g.min then return g.letter, g.color, g.label end
     end
-    return "F", {1.00, 0.20, 0.20}, "Fresh start"
+    return "F", {1.00, 0.20, 0.20}, L["GRADE_FRESH_START"]
 end
 
 --------------------------------------------------------------------------------
@@ -291,6 +292,19 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.5",
+        tagline = "Full Localization — German + French + Complete UI String Pass",
+        date    = "May 2026",
+        changes = {
+            "Localization: all UI strings moved to L[\"KEY\"] references — enUS is the baseline fallback, locale files override only their language",
+            "Locale support: enUS (English) + esES (Spanish, added prior to this release) + deDE (German, new) + frFR (French, new)",
+            "New locale: deDE (German) — full translation of all ~350 keys",
+            "New locale: frFR (French) — full translation of all ~350 keys",
+            "DH Devourer: Disrupt (183752) restored as primary interrupt; Consume Magic (278326) reclassified to isUtility talentGated (it is a purge, not an interrupt)",
+            "1.6.3 correction: Consume Magic entry in 1.6.3 was misclassified as isInterrupt — fixed in this release",
+        },
+    },
     {
         version = "1.6.4",
         tagline = "Spec DB additions: Dark Ranger, Rogue, Paladin, Shaman",
@@ -1572,7 +1586,7 @@ local function CheckWeeklyReset()
         cdb.lastWeeklyBucket = current
     elseif cdb.lastWeeklyBucket < current then
         cdb.lastWeeklyBucket = current
-        print("|cff00D1FFMidnight Sensei:|r |cffFFD700Weekly Reset Detected.|r")
+        print("|cff00D1FFMidnight Sensei:|r |cffFFD700" .. L["WEEKLY_RESET_DETECTED"] .. "|r")
     end
 end
 
@@ -1598,14 +1612,12 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         C_Timer.After(1.0, function() Core.MigrateEncounters() end)
         C_Timer.After(5.0, CheckWeeklyReset)
         Core.Emit(Core.EVENTS.SESSION_READY)
-        print("|cff00D1FFMidnight Sensei|r v" .. Core.VERSION ..
-              " loaded.  |cffFFFFFF/ms show|r to open the HUD  ·  |cffFFFFFF/ms help|r for commands.")
+        print("|cff00D1FFMidnight Sensei|r v" .. Core.VERSION .. " " .. L["ADDON_LOADED"])
         -- Level check — delayed so UnitLevel is accurate after world load
         C_Timer.After(2.0, function()
             local level = UnitLevel("player") or 0
             if level > 0 and level < 80 then
-                print("|cffFFAA00Midnight Sensei:|r This addon is designed for level 80+ content." ..
-                      " Fight tracking and grading are |cffFF4444disabled|r until you reach level 80.")
+                print("|cffFFAA00Midnight Sensei:|r " .. L["LEVEL_GATE_WARNING"])
             end
         end)
 
@@ -2116,19 +2128,19 @@ local function MSSlashHandler(msg)
         Call(MS.UI, "HideMainFrame")
     elseif msg == "options" or msg == "config" then Call(MS.UI, "OpenOptions")
     elseif msg == "help"    or msg == "?"      then
-        print("|cff00D1FFMidnight Sensei Commands:|r")
-        print("  /ms show          Show the HUD")
-        print("  /ms hide          Hide the HUD")
-        print("  /ms history       Grade history & trends")
-        print("  /ms lb            Social leaderboard")
-        print("  /ms bossboard     Personal boss best leaderboard  (alias: /ms bb)")
-        print("  /ms options       Settings panel")
-        print("  /ms faq           Help & FAQ panel")
-        print("  /ms credits       Credits & about")
-        print("  /ms report        Report a bug on GitHub")
-        print("  /ms update        Show changelog")
-        print("  /ms versions      Show addon versions seen this session")
-        print("  /ms friend <n>    Query a player's last score directly")
+        print("|cff00D1FF" .. L["SLASH_HELP_HEADER"] .. "|r")
+        print(L["SLASH_HELP_SHOW"])
+        print(L["SLASH_HELP_HIDE"])
+        print(L["SLASH_HELP_HISTORY"])
+        print(L["SLASH_HELP_LB"])
+        print(L["SLASH_HELP_BOSSBOARD"])
+        print(L["SLASH_HELP_OPTIONS"])
+        print(L["SLASH_HELP_FAQ"])
+        print(L["SLASH_HELP_CREDITS"])
+        print(L["SLASH_HELP_REPORT"])
+        print(L["SLASH_HELP_UPDATE"])
+        print(L["SLASH_HELP_VERSIONS"])
+        print(L["SLASH_HELP_FRIEND"])
     elseif msg == "faq"                        then Call(MS.UI, "ShowFAQ")
     elseif msg == "credits"                    then Call(MS.UI, "ShowCredits")
     elseif msg == "report"                     then Call(MS.UI, "ShowReportPopup")
@@ -2138,9 +2150,9 @@ local function MSSlashHandler(msg)
         local db = MidnightSenseiDB and MidnightSenseiDB.leaderboard
         local guild = db and db.guild
         if not guild or not next(guild) then
-            print("|cff00D1FFMidnight Sensei:|r Guild DB is empty.")
+            print("|cff00D1FFMidnight Sensei:|r " .. L["GUILD_DB_EMPTY"])
         else
-            print("|cff00D1FFMidnight Sensei — Guild DB keys:|r")
+            print("|cff00D1FF" .. L["GUILD_DB_KEYS_HEADER"] .. "|r")
             for k, v in pairs(guild) do
                 print(string.format("  |cffFFFFFF%s|r  name=%s  score=%s",
                       k, tostring(v.name), tostring(v.score)))
@@ -2156,13 +2168,13 @@ local function MSSlashHandler(msg)
         local target = msg:sub(8)
         Call(MS.Leaderboard, "QueryFriend", target)
     elseif msg == "friend" then
-        print("|cff00D1FFMidnight Sensei:|r Usage: /ms friend Name  or  /ms friend add Name  or  /ms friend remove Name")
+        print("|cff00D1FFMidnight Sensei:|r " .. L["FRIEND_USAGE"])
     elseif msg:sub(1, 10) == "lb remove " then
         local name = msg:sub(11)
         if name and name ~= "" then
             Call(MS.Leaderboard, "RemoveGuildEntry", name)
         else
-            print("|cff00D1FFMidnight Sensei:|r Usage: /ms lb remove <PlayerName>")
+            print("|cff00D1FFMidnight Sensei:|r " .. L["LB_REMOVE_USAGE"])
         end
     elseif msg == "update" then
         Call(MS.UI, "ShowChangelog")
@@ -2171,11 +2183,11 @@ local function MSSlashHandler(msg)
         local count = 0
         for _ in pairs(Core.seenVersions) do count = count + 1 end
         if count == 0 then
-            print("|cff00D1FFMidnight Sensei:|r No version data yet — versions are collected automatically when players log in or join your group.")
+            print("|cff00D1FFMidnight Sensei:|r " .. L["VERSIONS_NO_DATA"])
             return
         end
-        print("|cff00D1FFMidnight Sensei — Versions seen this session:|r")
-        print("  |cffFFFFFF" .. (UnitName("player") or "You") .. "|r  v" .. Core.VERSION .. "  |cff00FF00(you)|r")
+        print("|cff00D1FF" .. L["VERSIONS_HEADER"] .. "|r")
+        print("  |cffFFFFFF" .. (UnitName("player") or "You") .. "|r  v" .. Core.VERSION .. "  |cff00FF00" .. L["VERSIONS_YOU"] .. "|r")
         local byVersion = {}
         for name, ver in pairs(Core.seenVersions) do
             byVersion[ver] = byVersion[ver] or {}
@@ -2184,7 +2196,7 @@ local function MSSlashHandler(msg)
         for ver, names in pairs(byVersion) do
             table.sort(names)
             local color = (ver == Core.VERSION) and "|cff00FF00" or "|cffFF8800"
-            local flag  = (ver == Core.VERSION) and "" or "  |cffFF8800(outdated)|r"
+            local flag  = (ver == Core.VERSION) and "" or "  |cffFF8800" .. L["VERSIONS_OUTDATED"] .. "|r"
             print("  " .. color .. "v" .. ver .. "|r — " .. table.concat(names, ", ") .. flag)
         end
     elseif msg == "debug updatebanner" then
@@ -2504,7 +2516,7 @@ local function MSSlashHandler(msg)
             C_Timer.After(0.1, function()
                 local current = GetWeekBucket()
                 cdb.lastWeeklyBucket = current
-                print("|cff00D1FFMidnight Sensei:|r |cffFFD700Weekly Reset Detected.|r")
+                print("|cff00D1FFMidnight Sensei:|r |cffFFD700" .. L["WEEKLY_RESET_DETECTED"] .. "|r")
             end)
         end
     elseif msg == "debug version" then

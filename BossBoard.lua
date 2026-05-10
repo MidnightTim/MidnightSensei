@@ -14,6 +14,7 @@
 --------------------------------------------------------------------------------
 
 MidnightSensei           = MidnightSensei           or {}
+local L = MidnightSensei.L
 MidnightSensei.BossBoard = MidnightSensei.BossBoard or {}
 
 local MS        = MidnightSensei
@@ -223,7 +224,7 @@ end)
 function BB.IngestFromHistory()
     local cdb = MidnightSenseiCharDB
     if not cdb then
-        print("|cffFF4444Midnight Sensei:|r No CharDB found.")
+        print("|cffFF4444Midnight Sensei:|r " .. L["BB_NO_CHARDB"])
         return
     end
 
@@ -246,7 +247,7 @@ function BB.IngestFromHistory()
 
     -- Warn if spec still unresolved so the user knows identity may be incomplete
     if fallbackSpec == "?" then
-        print("|cffFFAA00Midnight Sensei Boss Board:|r Could not detect active spec — character/spec fields may be incomplete. Try again after fully loading in.")
+        print("|cffFFAA00Midnight Sensei:|r " .. L["BB_SPEC_NOT_DETECTED"])
     end
 
     local added, updated, skipped = 0, 0, 0
@@ -318,9 +319,7 @@ function BB.IngestFromHistory()
     UpdateSharedSnapshot()
     BB.RefreshUI()
 
-    print(string.format(
-        "|cff00D1FFMidnight Sensei Boss Board:|r Ingest complete — added: %d  updated: %d  skipped: %d",
-        added, updated, skipped))
+    print(string.format(L["BB_INGEST_COMPLETE"], added, updated, skipped))
 end
 
 --------------------------------------------------------------------------------
@@ -331,7 +330,7 @@ end
 function BB.RepairIdentity()
     local cdb = MidnightSenseiCharDB
     if not cdb or not cdb.bests or not cdb.bests.bossBests then
-        print("|cffFF4444Midnight Sensei:|r No bossBests data found.")
+        print("|cffFF4444Midnight Sensei:|r " .. L["BB_NO_BOSSDATA"])
         return
     end
 
@@ -342,7 +341,7 @@ function BB.RepairIdentity()
     local className = Core.ActiveSpec and Core.ActiveSpec.className or "?"
 
     if specName == "?" then
-        print("|cffFFAA00Midnight Sensei Boss Board:|r Spec not detected yet — try again after fully loading in.")
+        print("|cffFFAA00Midnight Sensei:|r " .. L["BB_SPEC_UNRESOLVED"])
         return
     end
 
@@ -358,9 +357,8 @@ function BB.RepairIdentity()
     UpdateSharedSnapshot()
     BB.RefreshUI()
 
-    print(string.format(
-        "|cff00D1FFMidnight Sensei Boss Board:|r Identity repair complete — patched: %d entr%s",
-        patched, patched == 1 and "y" or "ies"))
+    local suffix = patched == 1 and "y" or "ies"
+    print(string.format(L["BB_REPAIR_COMPLETE"], patched, suffix))
 end
 
 --------------------------------------------------------------------------------
@@ -430,15 +428,11 @@ local function ApplyCharNameFix(typedOld, newName, realmName)
     UpdateSharedSnapshot()
     BB.RefreshUI()
 
-    print(string.format(
-        "|cff00D1FFMidnight Sensei:|r Character rename fix complete (%s \226\134\146 %s)",
-        typedOld, newName))
-    print(string.format(
-        "  Grade history / review fights: |cffFFFFFF%d|r encounter%s updated",
-        encCount, encCount == 1 and "" or "s"))
-    print(string.format(
-        "  Boss Board: |cffFFFFFF%d|r entr%s updated; shared snapshot re-keyed",
-        bestCount, bestCount == 1 and "y" or "ies"))
+    print(string.format(L["BB_RENAME_COMPLETE"], typedOld, newName))
+    local encSuffix  = encCount  == 1 and "" or "s"
+    local bestSuffix = bestCount == 1 and "y" or "ies"
+    print(string.format(L["BB_RENAME_ENC_UPDATED"], encCount, encSuffix))
+    print(string.format(L["BB_RENAME_BB_UPDATED"], bestCount, bestSuffix))
 end
 
 function BB.FixCharName()
@@ -446,13 +440,13 @@ function BB.FixCharName()
     local realmName = GetRealmName() or "?"
 
     if newName == "?" then
-        print("|cffFFAA00Midnight Sensei:|r Could not read player name — try again after fully loading in.")
+        print("|cffFFAA00Midnight Sensei:|r " .. L["BB_CANNOT_READ_NAME"])
         return
     end
 
     local cdb = MidnightSenseiCharDB
     if not cdb then
-        print("|cffFF4444Midnight Sensei:|r No CharDB found.")
+        print("|cffFF4444Midnight Sensei:|r " .. L["BB_NO_CHARDB"])
         return
     end
 
@@ -492,7 +486,7 @@ function BB.FixCharName()
         titleFs:SetPoint("TOPLEFT",  d, "TOPLEFT",  0, -14)
         titleFs:SetPoint("TOPRIGHT", d, "TOPRIGHT", -22, -14)
         titleFs:SetTextColor(COLOR.TITLE[1], COLOR.TITLE[2], COLOR.TITLE[3], 1)
-        titleFs:SetText("Fix Character Name")
+        titleFs:SetText(L["FIX_NAME_TITLE"])
 
         local xBtn = CreateFrame("Button", nil, d)
         xBtn:SetSize(20, 20)
@@ -509,7 +503,7 @@ function BB.FixCharName()
         local oldLabel = TF(d, 10, "LEFT")
         oldLabel:SetPoint("TOPLEFT", d, "TOPLEFT", 16, -42)
         oldLabel:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
-        oldLabel:SetText("Old character name (found in your history):")
+        oldLabel:SetText(L["FIX_NAME_OLD_LABEL"])
 
         -- Single-line editable name field
         local eb = CreateFrame("EditBox", nil, d, "BackdropTemplate")
@@ -525,7 +519,7 @@ function BB.FixCharName()
         local newLabel = TF(d, 10, "LEFT")
         newLabel:SetPoint("TOPLEFT", d, "TOPLEFT", 16, -96)
         newLabel:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
-        newLabel:SetText("Will be replaced with (your current character name):")
+        newLabel:SetText(L["FIX_NAME_NEW_LABEL"])
 
         local newText = TF(d, 12, "LEFT")
         newText:SetPoint("TOPLEFT", d, "TOPLEFT", 16, -110)
@@ -553,24 +547,24 @@ function BB.FixCharName()
         confirmBtn:SetPoint("BOTTOMRIGHT", d, "BOTTOMRIGHT", -16, 12)
         BD(confirmBtn, {0.05, 0.18, 0.05, 0.95}, {0.2, 0.6, 0.2, 0.8})
         local cfFs = TF(confirmBtn, 11, "CENTER") ; cfFs:SetPoint("CENTER")
-        cfFs:SetTextColor(0.3, 1, 0.3, 1) ; cfFs:SetText("Confirm Fix")
+        cfFs:SetTextColor(0.3, 1, 0.3, 1) ; cfFs:SetText(L["FIX_NAME_BTN_CONFIRM"])
         confirmBtn:SetScript("OnEnter", function() BD(confirmBtn, {0.08, 0.28, 0.08, 0.95}, {0.2, 0.7, 0.2, 0.9}) end)
         confirmBtn:SetScript("OnLeave", function() BD(confirmBtn, {0.05, 0.18, 0.05, 0.95}, {0.2, 0.6, 0.2, 0.8}) end)
         confirmBtn:SetScript("OnClick", function()
             local typed = eb:GetText():match("^%s*(.-)%s*$")
             errText:Hide()
             if typed == "" then
-                errText:SetText("Please enter the old character name.")
+                errText:SetText(L["FIX_NAME_ERR_EMPTY"])
                 errText:Show()
                 return
             end
             if typed == d._newName then
-                errText:SetText("That name matches your current character — nothing to fix.")
+                errText:SetText(L["FIX_NAME_ERR_SAME"])
                 errText:Show()
                 return
             end
             if not NameExistsInData(typed) then
-                errText:SetText("No history found under \""..typed.."\". Check spelling, capitalization, and any special characters.")
+                errText:SetText(string.format(L["FIX_NAME_ERR_NOT_FOUND"], typed))
                 errText:Show()
                 return
             end
@@ -647,7 +641,7 @@ local function PopulateRows(scrollChild, entries)
     end
 
     if #entries == 0 then
-        scrollChild.emptyLabel:SetText("No boss encounters recorded for this content type yet.")
+        scrollChild.emptyLabel:SetText(L["BB_NO_ENCOUNTERS"])
         scrollChild.emptyLabel:Show()
         scrollChild:SetHeight(60)
         return
@@ -722,13 +716,13 @@ local function PopulateRows(scrollChild, entries)
             if entry.instanceName and entry.instanceName ~= "" then
                 GameTooltip:AddLine(entry.instanceName, 0.8, 0.8, 0.8)
             end
-            GameTooltip:AddLine("Best: " .. (entry.bestGrade or "?") .. "  " .. s, 0.2, 0.9, 0.2)
-            GameTooltip:AddLine("Date: " .. FmtDate(entry.bestTimestamp), 0.6, 0.6, 0.6)
+            GameTooltip:AddLine(string.format(L["BB_TT_BEST"], entry.bestGrade or "?", s), 0.2, 0.9, 0.2)
+            GameTooltip:AddLine(string.format(L["BB_TT_DATE"], FmtDate(entry.bestTimestamp)), 0.6, 0.6, 0.6)
             if (entry.killCount or 0) > 0 then
-                GameTooltip:AddLine("Kills tracked: " .. entry.killCount, 0.6, 0.6, 0.6)
+                GameTooltip:AddLine(string.format(L["BB_TT_KILLS"], entry.killCount), 0.6, 0.6, 0.6)
             end
             if entry.bestFeedback and #entry.bestFeedback > 0 then
-                GameTooltip:AddLine("Click to view feedback", 0.0, 0.82, 1.0)
+                GameTooltip:AddLine(L["BB_TT_CLICK_FEEDBACK"], 0.0, 0.82, 1.0)
             end
             GameTooltip:Show()
         end)
@@ -775,7 +769,9 @@ local function RefreshContent()
 
     -- Entry count in footer
     if bbFrame.countText then
-        bbFrame.countText:SetText(#entries .. " boss" .. (#entries == 1 and "" or "es") .. " recorded")
+        local count  = #entries
+        local suffix = count == 1 and "" or "es"
+        bbFrame.countText:SetText(string.format(L["BB_ENTRY_COUNT"], count, suffix))
     end
 end
 
@@ -810,7 +806,7 @@ local function CreateBossBoardFrame()
     title:SetPoint("LEFT",  tBar, "LEFT",  6, 0)
     title:SetPoint("RIGHT", tBar, "RIGHT", -26, 0)
     title:SetTextColor(COLOR.TITLE[1], COLOR.TITLE[2], COLOR.TITLE[3], 1)
-    title:SetText("Midnight Sensei - Boss Board")
+    title:SetText(L["BB_TITLE"])
 
     local xBtn = CreateFrame("Button", nil, tBar)
     xBtn:SetSize(20, 20)
@@ -824,13 +820,13 @@ local function CreateBossBoardFrame()
     descText:SetPoint("TOPLEFT",  f, "TOPLEFT",  8, -30)
     descText:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -30)
     descText:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
-    descText:SetText("Your all-time highest score per boss in Midnight — click any row to review your best performance feedback")
+    descText:SetText(L["BB_DESCRIPTION"])
 
     -- ── Tab row (y = -44) ────────────────────────────────────────────────────
     local tabDefs = {
-        { key="dungeon", label="Dungeons" },
-        { key="raid",    label="Raids"    },
-        { key="delve",   label="Delves"   },
+        { key="dungeon", label=L["BB_TAB_DUNGEONS"] },
+        { key="raid",    label=L["BB_TAB_RAIDS"]    },
+        { key="delve",   label=L["BB_TAB_DELVES"]   },
     }
     local tabW = math.floor(FW / #tabDefs)
     f.tabBtns = {}
@@ -892,11 +888,11 @@ local function CreateBossBoardFrame()
     end
 
     -- Column widths mirror the row layout above
-    SortHdr("DATE",       "date",  "LEFT",   4,  80)
-    SortHdr("CHARACTER",  "char",  "LEFT",  88, 110)
-    SortHdr("SPEC",       "spec",  "LEFT", 202,  90)
-    SortHdr("DIFF / BOSS","boss",  "LEFT", 296, 240)
-    SortHdr("SCORE",      "score", "RIGHT", -4,  60)
+    SortHdr(L["BB_COL_DATE"],      "date",  "LEFT",   4,  80)
+    SortHdr(L["BB_COL_CHARACTER"], "char",  "LEFT",  88, 110)
+    SortHdr(L["BB_COL_SPEC"],      "spec",  "LEFT", 202,  90)
+    SortHdr(L["BB_COL_DIFF_BOSS"], "boss",  "LEFT", 296, 240)
+    SortHdr(L["BB_COL_SCORE"],     "score", "RIGHT", -4,  60)
 
     -- ── Scroll frame (starts at y = -90) ─────────────────────────────────────
     local sf = CreateFrame("ScrollFrame", "MidnightSenseiBBScroll", f,
@@ -913,7 +909,7 @@ local function CreateBossBoardFrame()
     local footerText = TF(f, 9, "LEFT")
     footerText:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 8, 10)
     footerText:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
-    footerText:SetText("Boss kills only  -  level 80+  -  /ms bossboard")
+    footerText:SetText(L["BB_FOOTER_INFO"])
     f.countText = TF(f, 9, "RIGHT")
     f.countText:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, 10)
     f.countText:SetTextColor(COLOR.TEXT_DIM[1], COLOR.TEXT_DIM[2], COLOR.TEXT_DIM[3], 1)
@@ -1041,10 +1037,7 @@ function BB.CleanupHistory(dryRun)
                 durStr,
                 w.reason))
         end
-        print(string.format(
-            "|cffFFAA00Midnight Sensei Cleanup:|r %d encounter(s) would be marked as wipes. "
-            .. "Run |cffFFFFFF/ms debug cleanup history confirm|r to apply.",
-            #wipes))
+        print(string.format(L["BB_CLEANUP_DRY_HDR"], #wipes))
     else
         -- Silent apply: mark wipes, then selectively correct bossBests only for
         -- bosses where wipes were found.  Never wipe the full bossBests table —
@@ -1094,9 +1087,7 @@ function BB.CleanupHistory(dryRun)
         end
 
         BB.RefreshUI()
-        print(string.format(
-            "|cff00D1FFMidnight Sensei:|r History cleanup — %d legacy wipe(s) corrected; Boss Board updated where history data was available.",
-            #wipes))
+        print(string.format(L["BB_CLEANUP_APPLIED"], #wipes))
     end
 end
 
@@ -1133,7 +1124,7 @@ function BB.RestoreFromSnapshot()
     local cdb = MidnightSenseiCharDB
     local adb = MidnightSenseiDB
     if not cdb or not adb or not adb.bossBoardShared then
-        print("|cffFF4444Midnight Sensei:|r No shared snapshot found.")
+        print("|cffFF4444Midnight Sensei:|r " .. L["BB_NO_SNAPDATA"])
         return
     end
 
@@ -1186,11 +1177,9 @@ function BB.RestoreFromSnapshot()
     UpdateSharedSnapshot()
     BB.RefreshUI()
 
-    print(string.format(
-        "|cff00D1FFMidnight Sensei:|r Snapshot restore complete — recovered: %d  already current: %d",
-        restored, skipped))
+    print(string.format(L["BB_RESTORE_COMPLETE"], restored, skipped))
     if restored > 0 then
-        print("|cffFFAA00Note:|r Restored entries have score/grade/date but no fight feedback or component scores.")
+        print(L["BB_RESTORE_NOTE"])
     end
 end
 
