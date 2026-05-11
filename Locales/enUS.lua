@@ -1,4 +1,4 @@
--- MidnightSensei — Locale: enUS (English)
+﻿-- MidnightSensei — Locale: enUS (English)
 -- Always loaded first. Provides all default strings.
 -- Other locale files override only the keys they supply;
 -- any missing key falls back to these English values.
@@ -27,7 +27,7 @@ L["GRADE_FRESH_START"]       = "Fresh start"
 ---------------------------------------------------------------------------
 -- Addon load / level gate (Core.lua)
 ---------------------------------------------------------------------------
-L["ADDON_LOADED"]            = "loaded.  /ms show to open the HUD  \xC2\xB7  /ms help for commands."
+L["ADDON_LOADED"]            = "loaded.  /ms show to open the HUD  ·  /ms help for commands."
 L["LEVEL_GATE_WARNING"]      = "This addon is designed for level 80+ content. Fight tracking and grading are disabled until you reach level 80."
 L["WEEKLY_RESET_DETECTED"]   = "Weekly Reset Detected."
 
@@ -52,15 +52,15 @@ L["SLASH_HELP_FRIEND"]       = "  /ms friend <n>    Query a player's last score 
 -- Chat status messages (Core.lua)
 ---------------------------------------------------------------------------
 L["GUILD_DB_EMPTY"]          = "Guild DB is empty."
-L["GUILD_DB_KEYS_HEADER"]    = "Midnight Sensei \xe2\x80\x94 Guild DB keys:"
+L["GUILD_DB_KEYS_HEADER"]    = "Midnight Sensei — Guild DB keys:"
 L["FRIEND_USAGE"]            = "Usage: /ms friend Name  or  /ms friend add Name  or  /ms friend remove Name"
 L["LB_REMOVE_USAGE"]         = "Usage: /ms lb remove <PlayerName>"
-L["VERSIONS_HEADER"]         = "Midnight Sensei \xe2\x80\x94 Versions seen this session:"
-L["VERSIONS_NO_DATA"]        = "No version data yet \xe2\x80\x94 versions are collected automatically when players log in or join your group."
+L["VERSIONS_HEADER"]         = "Midnight Sensei — Versions seen this session:"
+L["VERSIONS_NO_DATA"]        = "No version data yet — versions are collected automatically when players log in or join your group."
 L["VERSIONS_YOU"]            = "(you)"
 L["VERSIONS_OUTDATED"]       = "(outdated)"
-L["SILENT_MODE_ON"]          = "Midnight Sensei: Silent mode ON \xe2\x80\x94 all outbound addon messages suppressed."
-L["SILENT_MODE_OFF"]         = "Midnight Sensei: Silent mode OFF \xe2\x80\x94 normal operation resumed."
+L["SILENT_MODE_ON"]          = "Midnight Sensei: Silent mode ON — all outbound addon messages suppressed."
+L["SILENT_MODE_OFF"]         = "Midnight Sensei: Silent mode OFF — normal operation resumed."
 
 ---------------------------------------------------------------------------
 -- Verify mode (Core.lua)
@@ -73,14 +73,14 @@ L["VERIFY_NO_SPEC"]          = "Midnight Sensei: No spec loaded."
 ---------------------------------------------------------------------------
 -- Snapshots (Core.lua)
 ---------------------------------------------------------------------------
-L["TALENT_SNAP_NOT_READY"]   = "Midnight Sensei: No talent snapshot yet \xe2\x80\x94 one is built automatically on login and spec change. If this is your first session, type /reload and try again."
-L["SPELL_SNAP_NOT_READY"]    = "Midnight Sensei: No spell snapshot yet \xe2\x80\x94 one is built automatically on login. If this is your first session, type /reload and try again."
+L["TALENT_SNAP_NOT_READY"]   = "Midnight Sensei: No talent snapshot yet — one is built automatically on login and spec change. If this is your first session, type /reload and try again."
+L["SPELL_SNAP_NOT_READY"]    = "Midnight Sensei: No spell snapshot yet — one is built automatically on login. If this is your first session, type /reload and try again."
 
 ---------------------------------------------------------------------------
 -- BossBoard.lua — window & columns
 ---------------------------------------------------------------------------
 L["BB_TITLE"]                = "Midnight Sensei - Boss Board"
-L["BB_DESCRIPTION"]          = "Your all-time highest score per boss in Midnight \xe2\x80\x94 click any row to review your best performance feedback"
+L["BB_DESCRIPTION"]          = "Your all-time highest score per boss in Midnight — click any row to review your best performance feedback"
 L["BB_TAB_DUNGEONS"]         = "Dungeons"
 L["BB_TAB_RAIDS"]            = "Raids"
 L["BB_TAB_DELVES"]           = "Delves"
@@ -100,20 +100,20 @@ L["BB_TT_CLICK_FEEDBACK"]    = "Click to view feedback"
 ---------------------------------------------------------------------------
 -- BossBoard.lua — status / print messages
 ---------------------------------------------------------------------------
-L["BB_INGEST_COMPLETE"]      = "Boss Board: Ingest complete \xe2\x80\x94 added: %d  updated: %d  skipped: %d"
-L["BB_SPEC_NOT_DETECTED"]    = "Boss Board: Could not detect active spec \xe2\x80\x94 character/spec fields may be incomplete. Try again after fully loading in."
-L["BB_REPAIR_COMPLETE"]      = "Boss Board: Identity repair complete \xe2\x80\x94 patched: %d entr%s"
+L["BB_INGEST_COMPLETE"]      = "Boss Board: Ingest complete — added: %d  updated: %d  skipped: %d"
+L["BB_SPEC_NOT_DETECTED"]    = "Boss Board: Could not detect active spec — character/spec fields may be incomplete. Try again after fully loading in."
+L["BB_REPAIR_COMPLETE"]      = "Boss Board: Identity repair complete — patched: %d entr%s"
 L["BB_NO_BOSSDATA"]          = "No bossBests data found."
-L["BB_SPEC_UNRESOLVED"]      = "Boss Board: Spec not detected yet \xe2\x80\x94 try again after fully loading in."
-L["BB_RENAME_COMPLETE"]      = "Character rename fix complete (%s \xe2\x86\x92 %s)"
+L["BB_SPEC_UNRESOLVED"]      = "Boss Board: Spec not detected yet — try again after fully loading in."
+L["BB_RENAME_COMPLETE"]      = "Character rename fix complete (%s → %s)"
 L["BB_RENAME_ENC_UPDATED"]   = "  Grade history / review fights: %d encounter%s updated"
 L["BB_RENAME_BB_UPDATED"]    = "  Boss Board: %d entr%s updated; shared snapshot re-keyed"
-L["BB_CANNOT_READ_NAME"]     = "Could not read player name \xe2\x80\x94 try again after fully loading in."
+L["BB_CANNOT_READ_NAME"]     = "Could not read player name — try again after fully loading in."
 L["BB_NO_CHARDB"]            = "No CharDB found."
 L["BB_NO_SNAPDATA"]          = "No shared snapshot found."
 L["BB_CLEANUP_DRY_HDR"]      = "Cleanup: %d encounter(s) would be marked as wipes. Run /ms debug cleanup history confirm to apply."
-L["BB_CLEANUP_APPLIED"]      = "History cleanup \xe2\x80\x94 %d legacy wipe(s) corrected; Boss Board updated where history data was available."
-L["BB_RESTORE_COMPLETE"]     = "Snapshot restore complete \xe2\x80\x94 recovered: %d  already current: %d"
+L["BB_CLEANUP_APPLIED"]      = "History cleanup — %d legacy wipe(s) corrected; Boss Board updated where history data was available."
+L["BB_RESTORE_COMPLETE"]     = "Snapshot restore complete — recovered: %d  already current: %d"
 L["BB_RESTORE_NOTE"]         = "Restored entries have score/grade/date but no fight feedback or component scores."
 L["BB_BOSS_BOARD_CLEARED"]   = "Midnight Sensei: Boss Board cleared."
 L["BB_FIGHT_HIST_CLEARED"]   = "Midnight Sensei: Fight history cleared."
@@ -125,7 +125,7 @@ L["FIX_NAME_TITLE"]          = "Fix Character Name"
 L["FIX_NAME_OLD_LABEL"]      = "Old character name (found in your history):"
 L["FIX_NAME_NEW_LABEL"]      = "Will be replaced with (your current character name):"
 L["FIX_NAME_ERR_EMPTY"]      = "Please enter the old character name."
-L["FIX_NAME_ERR_SAME"]       = "That name matches your current character \xe2\x80\x94 nothing to fix."
+L["FIX_NAME_ERR_SAME"]       = "That name matches your current character — nothing to fix."
 L["FIX_NAME_ERR_NOT_FOUND"]  = "No history found under \"%s\". Check spelling, capitalization, and any special characters."
 L["FIX_NAME_BTN_CONFIRM"]    = "Confirm Fix"
 
@@ -134,14 +134,14 @@ L["FIX_NAME_BTN_CONFIRM"]    = "Confirm Fix"
 ---------------------------------------------------------------------------
 L["FRIEND_QUERY_USAGE"]      = "Usage: /ms friend Name  or  /ms friend Name-Realm"
 L["FRIEND_CHECKING"]         = "Checking %s..."
-L["FRIEND_OFFLINE"]          = "%s (Offline) \xe2\x80\x94 Not updated or addon not installed"
-L["FRIEND_CANNOT_REACH"]     = "Could not reach %s \xe2\x80\x94 check the name/realm spelling. Error: %s"
+L["FRIEND_OFFLINE"]          = "%s (Offline) — Not updated or addon not installed"
+L["FRIEND_CANNOT_REACH"]     = "Could not reach %s — check the name/realm spelling. Error: %s"
 L["FRIEND_LIST_FULL"]        = "Friend list is full (%d max). Remove someone first with right-click or /ms friend remove Name."
 L["FRIEND_ALREADY_IN"]       = "%s is already in your friend list."
 L["FRIEND_ADDED"]            = "Added %s to your friend list (%d/%d)."
 L["FRIEND_REMOVED"]          = "Removed %s from your friend list (%d/%d)."
 L["FRIEND_NOT_FOUND"]        = "%s not found in friend list."
-L["FRIEND_ONLINE_UPDATED"]   = "%s (Online) \xe2\x80\x94 Updated"
+L["FRIEND_ONLINE_UPDATED"]   = "%s (Online) — Updated"
 
 ---------------------------------------------------------------------------
 -- UI.lua — window titles
@@ -151,14 +151,14 @@ L["TITLE_GRADE_HISTORY"]     = "Midnight Sensei - Grade History"
 L["TITLE_HUD"]               = "Midnight Sensei"
 L["TITLE_FIGHT_COMPLETE"]    = "Midnight Sensei - Fight Complete"
 L["TITLE_OPTIONS"]           = "Midnight Sensei - Options"
-L["TITLE_VERIFY_REPORT"]     = "Midnight Sensei \xe2\x80\x94 Verify Report"
-L["TITLE_VERIFY_COMPARE"]    = "Midnight Sensei \xe2\x80\x94 Verify Compare"
+L["TITLE_VERIFY_REPORT"]     = "Midnight Sensei — Verify Report"
+L["TITLE_VERIFY_COMPARE"]    = "Midnight Sensei — Verify Compare"
 L["TITLE_SPELL_LIST"]        = "Midnight Sensei - My Spell List"
 L["TITLE_DEBUG_TOOLS"]       = "Midnight Sensei - Debug Tools"
 L["TITLE_CREDITS"]           = "Midnight Sensei - Credits & About"
 L["TITLE_FAQ"]               = "Midnight Sensei - Help & FAQ"
 L["TITLE_ROT_TRACKER"]       = "Midnight Sensei - Rotation Tracker"
-L["TITLE_UPDATE_POPUP"]      = "Midnight Sensei \xe2\x80\x94 Update Available"
+L["TITLE_UPDATE_POPUP"]      = "Midnight Sensei — Update Available"
 
 ---------------------------------------------------------------------------
 -- UI.lua — context menus
@@ -267,13 +267,13 @@ L["BTN_REPORT_ISSUES"]       = "Report Issues"
 ---------------------------------------------------------------------------
 -- UI.lua — bug report popup
 ---------------------------------------------------------------------------
-L["REPORT_POPUP_TEXT"]       = "Midnight Sensei \xe2\x80\x94 Report a Bug\n\nCopy the link below and paste it into your browser.\nCtrl+A to select all, then Ctrl+C to copy."
+L["REPORT_POPUP_TEXT"]       = "Midnight Sensei — Report a Bug\n\nCopy the link below and paste it into your browser.\nCtrl+A to select all, then Ctrl+C to copy."
 L["REPORT_POPUP_BTN"]        = "Close"
 
 ---------------------------------------------------------------------------
 -- UI.lua — verify export
 ---------------------------------------------------------------------------
-L["VERIFY_EXPORT_HINT"]      = "Ctrl+A to select all  \xC2\xB7  Ctrl+C to copy  \xC2\xB7  Paste into a GitHub comment"
+L["VERIFY_EXPORT_HINT"]      = "Ctrl+A to select all  ·  Ctrl+C to copy  ·  Paste into a GitHub comment"
 L["BTN_COMPARE"]             = "Compare"
 
 ---------------------------------------------------------------------------
@@ -306,7 +306,7 @@ L["DEBUG_BTN_AV_DESC"]       = "Verify mode turns on automatically after every r
 L["DEBUG_BTN_VERSION"]       = "Version"
 L["DEBUG_BTN_VERSION_DESC"]  = "Show addon version from TOC and metadata APIs"
 L["DEBUG_BTN_ROT_TRACKER"]   = "Rotation Tracker"
-L["DEBUG_BTN_RT_DESC"]       = "Open the Rotation Tracker window \xe2\x80\x94 cast counts, status, and flag explanations for each spell"
+L["DEBUG_BTN_RT_DESC"]       = "Open the Rotation Tracker window — cast counts, status, and flag explanations for each spell"
 L["DEBUG_BTN_TALENT_EXP"]    = "Talent Export"
 L["DEBUG_BTN_TE_DESC"]       = "Export active talent snapshot for spec DB cross-reference"
 L["DEBUG_BTN_SPELLS_EXP"]    = "Spells Export"
@@ -320,9 +320,9 @@ L["DEBUG_BTN_BK_DESC"]       = "Patch Mythic dungeon history with season best ke
 L["DEBUG_BTN_CLEAN"]         = "Clean Payload"
 L["DEBUG_BTN_CP_DESC"]       = "Re-broadcast all your best scores with correct format"
 L["DEBUG_BTN_CLEAR_BB"]      = "Clear Boss Board"
-L["DEBUG_BTN_CBB_DESC"]      = "Permanently wipes all personal boss best records \xe2\x80\x94 this cannot be undone"
+L["DEBUG_BTN_CBB_DESC"]      = "Permanently wipes all personal boss best records — this cannot be undone"
 L["DEBUG_BTN_CLEAR_HIST"]    = "Clear Fight History"
-L["DEBUG_BTN_CH_DESC"]       = "Permanently deletes all recorded encounters \xe2\x80\x94 this cannot be undone"
+L["DEBUG_BTN_CH_DESC"]       = "Permanently deletes all recorded encounters — this cannot be undone"
 L["DEBUG_BTN_RUN"]           = "Run"
 L["DEBUG_BTN_TOGGLE"]        = "Toggle"
 
@@ -400,8 +400,8 @@ L["FAQ_BODY_UNDERSTANDING"]   = "Grades run from F through A+. Each spec has wei
 L["FAQ_BODY_ROTATIONAL"]      = "In addition to cooldowns, Midnight Sensei tracks whether you used\nkey rotational spells each fight (e.g. Implosion, Rake, Obliterate).\nIf you never used one in a long enough fight, it will appear in your\nfeedback. Talent-gated spells are skipped if you don't have the talent."
 L["FAQ_BODY_VIS_INTRO"]       = "Open |cffFFFFFF/ms options|r (or right-click HUD -> Options) and set:"
 L["FAQ_BODY_HISTORY"]         = "Type |cffFFFFFF/ms history|r or right-click -> Grade History.\n  - Filter by This Character or All Characters\n  - Sparkline shows your last 20 fights at a glance\n  - Left-click any row to inspect full details and feedback\n  - Right-click any row to delete that entry"
-L["FAQ_BODY_LEADERBOARD"]     = "Type |cffFFFFFF/ms lb|r to open the social leaderboard.\nAfter each boss fight your score broadcasts to guild, party, and\nBNet friends who also have Midnight Sensei installed.\nTabs: Party (session only), Guild (persists across sessions), Friends.\nGuild scores persist between sessions and sync across guild members \xe2\x80\x94\neven if a player is offline you can still see their last recorded score.\nWeekly average counts boss encounters only \xe2\x80\x94 trash pulls and target\ndummies are never included in rankings.\nRight-click any guild row to remove a player. They repopulate\nautomatically when they next log in or you hit Refresh."
-L["FAQ_BODY_LB_EXTRA"]        = "Each tab (Dungeons, Raids) shows location info from that content type\nonly \xe2\x80\x94 an LFR run will never bleed into the Dungeons tab.\nMythic+ key level is shown where available (e.g. M+15).\nAfter updating the addon, each player needs to complete one new\ndungeon or raid for their tab location to reflect the correct content.\nYour own entry updates immediately from local history \xe2\x80\x94 no new run needed."
+L["FAQ_BODY_LEADERBOARD"]     = "Type |cffFFFFFF/ms lb|r to open the social leaderboard.\nAfter each boss fight your score broadcasts to guild, party, and\nBNet friends who also have Midnight Sensei installed.\nTabs: Party (session only), Guild (persists across sessions), Friends.\nGuild scores persist between sessions and sync across guild members —\neven if a player is offline you can still see their last recorded score.\nWeekly average counts boss encounters only — trash pulls and target\ndummies are never included in rankings.\nRight-click any guild row to remove a player. They repopulate\nautomatically when they next log in or you hit Refresh."
+L["FAQ_BODY_LB_EXTRA"]        = "Each tab (Dungeons, Raids) shows location info from that content type\nonly — an LFR run will never bleed into the Dungeons tab.\nMythic+ key level is shown where available (e.g. M+15).\nAfter updating the addon, each player needs to complete one new\ndungeon or raid for their tab location to reflect the correct content.\nYour own entry updates immediately from local history — no new run needed."
 L["FAQ_BODY_MIDNIGHT_NOTE"]   = "Blizzard restricted enemy unit aura reads in Midnight 12.0.\nTarget debuffs (Rupture, Flame Shock, etc.) cannot be tracked directly.\nThese show in your priorityNotes as guidance but are not scored.\nAll player self-buffs, cooldowns, and rotational casts work normally."
 L["FAQ_BODY_BOSS_COMBAT"]     = "Midnight Sensei detects boss encounters via ENCOUNTER_START/END.\nBoss fights show a |cffFF6600[Boss]|r tag in history and encounter detail.\nFilter your history to |cffFFFFFF[Boss] Only|r to review raid/dungeon boss pulls."
 L["FAQ_BODY_TALENT_AWARE"]    = "Cooldown scoring only includes spells you have learned.\nIf you don't have a talent, it won't be scored against you."
@@ -410,7 +410,7 @@ L["FAQ_BODY_TALENT_AWARE"]    = "Cooldown scoring only includes spells you have 
 -- UI.lua — rotation tracker
 ---------------------------------------------------------------------------
 L["ROT_TRACKER_SUBTITLE"]    = "Cast counts from your last fight. Each spell shows how many times it was used and why it is tracked."
-L["ROT_TRACKER_NO_DATA"]     = "No fight data yet \xe2\x80\x94 run a fight to see tracking results."
+L["ROT_TRACKER_NO_DATA"]     = "No fight data yet — run a fight to see tracking results."
 L["ROT_TRACKER_LAST_FIGHT"]  = "Last fight: %s"
 L["ROT_TRACKER_NO_FIGHT"]    = "No fight recorded yet"
 L["ROT_COL_SPELL"]           = "SPELL"
@@ -423,7 +423,7 @@ L["ROT_STATUS_SHORT"]        = "SHORT"
 L["ROT_FLAG_COMBAT_TALENT"]  = "Requires talent; only castable during a transformation window"
 L["ROT_FLAG_COMBAT_ONLY"]    = "Only castable during a transformation window (e.g. Void Metamorphosis)"
 L["ROT_FLAG_TALENT_ONLY"]    = "Only tracked when this talent is active in your build"
-L["ROT_FLAG_CORE"]           = "Core rotational ability \xe2\x80\x94 expected every fight"
+L["ROT_FLAG_CORE"]           = "Core rotational ability — expected every fight"
 L["ROT_FLAG_MIN_FIGHT"]      = "flagged missed only if fight > %ds"
 L["ROT_NOT_TRACKED"]         = "Not tracked this build (talent not taken or replaced): %s"
 L["ROT_LEGEND_CAST_DESC"]    = "used at least once"
@@ -458,32 +458,32 @@ L["MINIMAP_TT_SHIFT_RIGHT"]  = "Shift+Right-click: Options"
 -- Analytics/Feedback.lua
 ---------------------------------------------------------------------------
 L["FB_NEVER_PRESSED_SIMP"]   = "You lost value from unused cooldowns%s: %s. Even consistent pressing helps."
-L["FB_NEVER_PRESSED"]        = "Never pressed%s: %s \xe2\x80\x94 %s."
+L["FB_NEVER_PRESSED"]        = "Never pressed%s: %s — %s."
 L["FB_ACTION_TANK"]          = "use on tank busters or high damage windows"
 L["FB_ACTION_HEALER"]        = "align with high incoming damage windows"
 L["FB_ACTION_DPS"]           = "align these with burst windows"
 L["FB_ACTIVITY_SIMPLIFIED"]  = "Your rotation is consistent, but gaps between casts (%d%% activity) are the next thing to tighten up."
-L["FB_ACTIVITY_MODERATE"]    = "Activity at %d%% \xe2\x80\x94 roughly %d cast(s) left on the table. Queue your next spell before the current one lands."
-L["FB_ACTIVITY_LOW"]         = "Activity: %d/%d GCDs (%d%%) \xe2\x80\x94 %s downtime, approximately %d casts lost. Find your next spell before the current one finishes."
+L["FB_ACTIVITY_MODERATE"]    = "Activity at %d%% — roughly %d cast(s) left on the table. Queue your next spell before the current one lands."
+L["FB_ACTIVITY_LOW"]         = "Activity: %d/%d GCDs (%d%%) — %s downtime, approximately %d casts lost. Find your next spell before the current one finishes."
 L["FB_DOWNTIME_SIGNIFICANT"] = "significant"
 L["FB_DOWNTIME_MODERATE"]    = "moderate"
-L["FB_UNDERUSED"]            = "Used less than expected in a %.1fmin fight: %s \xe2\x80\x94 target 1 use per 2 minutes of fight time."
-L["FB_ROT_NEVER_USED"]       = "Rotational spell(s) never used: %s \xe2\x80\x94 these are core to your %s."
+L["FB_UNDERUSED"]            = "Used less than expected in a %.1fmin fight: %s — target 1 use per 2 minutes of fight time."
+L["FB_ROT_NEVER_USED"]       = "Rotational spell(s) never used: %s — these are core to your %s."
 L["FB_ROT_CONTEXT_TANK"]     = "survival and threat rotation"
 L["FB_ROT_CONTEXT_HEALER"]   = "healing throughput"
 L["FB_ROT_CONTEXT_DPS"]      = "damage output"
-L["FB_ROT_LOW_USED"]         = "Could have cast more: %s \xe2\x80\x94 press these on every available GCD when your primary spenders are on cooldown."
+L["FB_ROT_LOW_USED"]         = "Could have cast more: %s — press these on every available GCD when your primary spenders are on cooldown."
 L["FB_PROC_DELAYED"]         = "delayed"
 L["FB_PROC_CRITICALLY"]      = "critically delayed"
-L["FB_PROC_MSG"]             = "%s consumption is %s \xe2\x80\x94 held %.1fs on average (budget: %ds). Consume procs immediately when they appear."
-L["FB_OVERCAP"]              = "Overcapped %s %d time(s) (%.1f/min) \xe2\x80\x94 spend %s before reaching %d to avoid wasted generation."
-L["FB_MIT_NEVER_ACTIVATED"]  = "%s was never activated \xe2\x80\x94 press it on cooldown every time it is available to reduce physical damage taken."
-L["FB_MIT_LOW_UPTIME"]       = "%s: %d%% uptime vs %d%% target (%dpt gap, %d application(s)) \xe2\x80\x94 you have large windows of unmitigated physical damage. Press it the moment it comes off cooldown."
-L["FB_MIT_SMALL_GAPS"]       = "%s: %d%% uptime vs %d%% target (%dpt gap) \xe2\x80\x94 small gaps are adding up. Use it preemptively on heavy melee sequences, not reactively."
-L["FB_BUFF_LOW_UPTIME"]      = "%s: %d%% uptime vs %d%% target (%dpt gap) \xe2\x80\x94 reapply before it expires, not after."
-L["FB_GROUP_BUFF_NOTE"]      = "%s (group buff \xe2\x80\x94 ensure it's active before combat)"
-L["FB_OVERHEAL_HIGH"]        = "Overheal at %.1f%% (target: <%d%%) \xe2\x80\x94 you are spending mana on targets that do not need healing. Cast slightly later or switch to reactive spells on targets actively taking damage."
-L["FB_OVERHEAL_ELEVATED"]    = "Overheal: %.1f%% (target: <%d%%) \xe2\x80\x94 slightly elevated. Hold casts on targets above 70%% health and prioritise HoTs over direct heals on stable groups."
+L["FB_PROC_MSG"]             = "%s consumption is %s — held %.1fs on average (budget: %ds). Consume procs immediately when they appear."
+L["FB_OVERCAP"]              = "Overcapped %s %d time(s) (%.1f/min) — spend %s before reaching %d to avoid wasted generation."
+L["FB_MIT_NEVER_ACTIVATED"]  = "%s was never activated — press it on cooldown every time it is available to reduce physical damage taken."
+L["FB_MIT_LOW_UPTIME"]       = "%s: %d%% uptime vs %d%% target (%dpt gap, %d application(s)) — you have large windows of unmitigated physical damage. Press it the moment it comes off cooldown."
+L["FB_MIT_SMALL_GAPS"]       = "%s: %d%% uptime vs %d%% target (%dpt gap) — small gaps are adding up. Use it preemptively on heavy melee sequences, not reactively."
+L["FB_BUFF_LOW_UPTIME"]      = "%s: %d%% uptime vs %d%% target (%dpt gap) — reapply before it expires, not after."
+L["FB_GROUP_BUFF_NOTE"]      = "%s (group buff — ensure it's active before combat)"
+L["FB_OVERHEAL_HIGH"]        = "Overheal at %.1f%% (target: <%d%%) — you are spending mana on targets that do not need healing. Cast slightly later or switch to reactive spells on targets actively taking damage."
+L["FB_OVERHEAL_ELEVATED"]    = "Overheal: %.1f%% (target: <%d%%) — slightly elevated. Hold casts on targets above 70%% health and prioritise HoTs over direct heals on stable groups."
 L["FB_HEALER_FILL_DOWNTIME"] = "When the group is stable, fill downtime with damage spells to maintain throughput."
 L["FB_SIMPLIFIED_FALLBACK"]  = "Your rotation is consistent and well-paced. Tightening burst window timing is the next performance step."
 L["FB_NEAR_PERFECT"]         = "Near-perfect execution. The remaining gains are: %s."
@@ -491,12 +491,12 @@ L["FB_NEXT_TANK_PREPOS"]     = "pre-position defensives before predictable spike
 L["FB_NEXT_HEALER_OVERLAP"]  = "overlap cooldowns with incoming damage casts rather than reacting"
 L["FB_NEXT_DPS_ALIGN"]       = "align burst windows with enemy vulnerability phases"
 L["FB_NEXT_GCD_TIMING"]      = "reduce time between the GCD ending and your next cast to sub-0.2s"
-L["FB_STRONG_EXECUTION"]     = "Strong execution overall. Your lowest category is %s \xe2\x80\x94 that is where the next points come from."
-L["FB_GOOD_FOUNDATION"]      = "Good foundation \xe2\x80\x94 focus next on: %s."
+L["FB_STRONG_EXECUTION"]     = "Strong execution overall. Your lowest category is %s — that is where the next points come from."
+L["FB_GOOD_FOUNDATION"]      = "Good foundation — focus next on: %s."
 L["FB_HINT_TANK_CDS"]        = "use defensive cooldowns on tank busters"
 L["FB_HINT_PRESS_CDS"]       = "press major cooldowns more consistently"
 L["FB_HINT_MIT_UPTIME"]      = "increase mitigation uptime by pressing %s more frequently"
-L["FB_SOLID"]                = "Solid performance \xe2\x80\x94 tighten up cooldown timing to push higher."
-L["FB_NOTE_INTERRUPT"]       = "Note: %s \xe2\x80\x94 this is your interrupt. Not used this fight \xe2\x80\x94 no penalty."
-L["FB_NOTE_UTILITY"]         = "Note: %s \xe2\x80\x94 not used or detected this fight. No penalty."
-L["FB_NOTE_COMBAT_UTILITY"]  = "Note: %s \xe2\x80\x94 stuns and deals damage in addition to utility. Use it where the situation allows; no penalty for holding it."
+L["FB_SOLID"]                = "Solid performance — tighten up cooldown timing to push higher."
+L["FB_NOTE_INTERRUPT"]       = "Note: %s — this is your interrupt. Not used this fight — no penalty."
+L["FB_NOTE_UTILITY"]         = "Note: %s — not used or detected this fight. No penalty."
+L["FB_NOTE_COMBAT_UTILITY"]  = "Note: %s — stuns and deals damage in addition to utility. Use it where the situation allows; no penalty for holding it."

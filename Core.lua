@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.5"
+    Core.VERSION = ver or "1.6.6"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -198,6 +198,36 @@ function Core.MigrateEncounters()
     -- Leave db.encounters intact — other characters migrate their own slice on login
 end
 
+-- v1.6.5 one-time patch: stored feedback strings generated before the locale
+-- escape fix contain literal "xe2x80x94" etc. instead of the correct characters.
+-- Runs once per character, gated by the v165_escape_fix flag.
+function Core.PatchStoredEscapes()
+    local cdb = MidnightSenseiCharDB
+    if not cdb or cdb.v165_escape_fix then return end
+
+    local function fix(s)
+        if type(s) ~= "string" then return s end
+        s = s:gsub("xe2x80x94", "\226\128\148")  -- — em dash
+        s = s:gsub("xe2x86x92", "\226\134\146")  -- → right arrow
+        s = s:gsub("xC2xB7",    "\194\183")       -- · middle dot
+        return s
+    end
+    local function fixList(t)
+        if type(t) ~= "table" then return end
+        for i, v in ipairs(t) do t[i] = fix(v) end
+    end
+
+    if cdb.encounters then
+        for _, enc in ipairs(cdb.encounters) do fixList(enc.feedback) end
+    end
+    local bests = cdb.bests
+    if bests and bests.bossBests then
+        for _, bb in pairs(bests.bossBests) do fixList(bb.bestFeedback) end
+    end
+
+    cdb.v165_escape_fix = true
+end
+
 function Core.GetSetting(key)
     return MidnightSenseiCharDB and MidnightSenseiCharDB.settings and MidnightSenseiCharDB.settings[key]
 end
@@ -292,6 +322,16 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.6",
+        tagline = "HOTFIX — Critical Locale Escape Sequence Fix + Stored Data Migration",
+        date    = "May 2026",
+        changes = {
+            "CRITICAL: WoW Lua does not support \\xNN hex escape sequences — all four locale files (enUS, esES, deDE, frFR) had broken characters rendering as literal text (e.g. xe2x80x94 instead of —); 656 sequences replaced with literal UTF-8 characters",
+            "Stored data migration: Core.PatchStoredEscapes() runs once on login to repair xe2x80x94 artifacts already saved in encounter history and Boss Board feedback strings",
+            "v1.6.5 distribution files were pulled after this bug was discovered post-release",
+        },
+    },
     {
         version = "1.6.5",
         tagline = "Full Localization — German + French + Complete UI String Pass",
@@ -1610,6 +1650,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         DetectSpec()
         C_Timer.After(3.0, BroadcastVersion)
         C_Timer.After(1.0, function() Core.MigrateEncounters() end)
+        C_Timer.After(1.0, function() Core.PatchStoredEscapes() end)
         C_Timer.After(5.0, CheckWeeklyReset)
         Core.Emit(Core.EVENTS.SESSION_READY)
         print("|cff00D1FFMidnight Sensei|r v" .. Core.VERSION .. " " .. L["ADDON_LOADED"])
