@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.6"
+    Core.VERSION = ver or "1.6.7"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -322,6 +322,15 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.6.7",
+        tagline = "MM Hunter Kill Shot suppress fix — node ID vs spell ID",
+        date    = "May 2026",
+        changes = {
+            "MM Hunter: Kill Shot suppressIfTalent corrected from node ID 94987 to spell ID 466932 (Black Arrow) — IsTalentActive and IsPlayerSpell both operate on spell IDs; the old value never suppressed Kill Shot for Dark Ranger hunters, causing false 'never used Kill Shot' penalties",
+            "MM Hunter: Black Arrow (466932) altIds = {466930} added — 466930 is an alternate cast ID that fires in some combat contexts; ensures the ability registers on both IDs",
+        },
+    },
     {
         version = "1.6.6",
         tagline = "HOTFIX — Critical Locale Escape Sequence Fix + Stored Data Migration",

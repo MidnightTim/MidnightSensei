@@ -150,8 +150,6 @@ Blizzard restricted enemy unit aura reads in Midnight 12.0.
 
 That means Midnight Sensei cannot reliably score enemy target debuffs the same way older versions of the game allowed. Effects such as target-side debuffs may still appear as guidance in notes or priority feedback, but they are **not scored directly** unless the game provides a safe way to track them.
 
-A separate restriction also affects player self-buff aura scanning. Midnight 12.0 blocks spell ID comparisons on aura table data when addon code is active, which caused error spam and made aura-based uptime tracking silently non-functional. As of v1.5.5, self-buff uptime tracking no longer uses aura scanning — it uses cast events instead, which are not affected by this restriction. Player self-buff uptime continues to be scored normally.
-
 What still works normally:
 
 - Player self-buffs
@@ -161,7 +159,7 @@ What still works normally:
 - Proc handling
 - Boss encounter detection
 
-Because of these restrictions, some specs receive neutral handling in places where aura-based tracking would otherwise be required.
+Because of that restriction, some specs receive neutral handling in places where enemy debuff tracking would otherwise be required.
 
 ## How grading works
 
@@ -258,6 +256,7 @@ It is not trying to replace Warcraft Logs or other deep analysis tools. It is tr
 
 ## Recent highlights
 
+<<<<<<< HEAD
 - **Archon.gg adopted as primary rotation source** — spec ability tracking and spell IDs validated against top-ranked Mythic+ parse data for Midnight 12.0; confirmed through live session logs (v1.5.9)
 - **Rogue full spec audit** — all three primary builder IDs (Backstab, Mutilate, Sinister Strike) were wrong in Midnight 12.0 and have been corrected; Envenom, Rupture, and Dispatch also fixed; missing abilities added across all three specs (v1.5.9)
 - **Death Knight full spec audit** — rotation gaps filled across all three specs via Archon.gg: Unholy, Frost, and Blood all received corrections and new ability tracking (v1.5.9)
@@ -266,6 +265,13 @@ It is not trying to replace Warcraft Logs or other deep analysis tools. It is tr
 - **Kill and wipe distinction** — fight history tags boss kills [K] and wipes [W]; averages, bests, and leaderboards use kills only (v1.4.11)
 - **Alt spell ID support** — abilities that fire different combat IDs under hero talent paths are routed to the correct tracking entry via the `altIds` system (v1.4.13+)
 - **Talent-gated spell suppression** — replacement talents automatically suppress the ability they replace so unused CDs are never penalised incorrectly (v1.4.4+)
+=======
+- Kill and wipe tracking — fight history tags boss kills [K] and wipes [W]; averages and bests use kills only
+- Alt spell ID support — abilities that fire different spell IDs under certain hero talent paths are tracked correctly
+- Talent-gated spell suppression — replacement talents automatically suppress the ability they replace so unused CDs are not penalized incorrectly
+- Full spec coverage pass across all 13 classes for Midnight 12.0
+- Built-in aura dump tool (`/ms debug auras`) for spell ID discovery during spec validation
+>>>>>>> parent of e2f1ec2 (docs(readme): update Midnight 12.0 restrictions section and recent highlights for v1.5.5 cast-event uptime rewrite)
 
 ## Reporting issues
 

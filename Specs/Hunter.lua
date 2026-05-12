@@ -46,7 +46,7 @@ Core.RegisterSpec(3, {
     -- Steady Shot (56641) added to rotational — confirmed spell ID; baseline filler
     -- Multi-Shot (257620) added to rotational — confirmed spell ID; AoE filler / Bulletstorm trigger
     -- Double Tap (473370) confirmed PASSIVE nodeID 109938 — not tracked
-    -- Black Arrow (466932) Dark Ranger hero: replaces Kill Shot; suppressIfTalent=94987 on Kill Shot; added 05/09/2026
+    -- Black Arrow (466932) Dark Ranger hero: replaces Kill Shot; suppressIfTalent=466932 on Kill Shot (spell ID, not node ID 94987); added 05/09/2026
     [2] = {
         name = "Marksmanship", role = "DPS",
         resourceType = 3, resourceLabel = "FOCUS", overcapAt = 100,
@@ -63,8 +63,8 @@ Core.RegisterSpec(3, {
             { id = 185358, label = "Arcane Shot",  minFightSeconds = 15 },  -- baseline confirmed spell list; Focus spender
             { id = 56641,  label = "Steady Shot",  minFightSeconds = 15 },  -- confirmed spell ID; baseline filler
             { id = 257620, label = "Multi-Shot",   minFightSeconds = 20, talentGated = true },  -- confirmed spell ID; AoE filler / Bulletstorm trigger
-            { id = 53351,  label = "Kill Shot",    minFightSeconds = 20, talentGated = true, suppressIfTalent = 94987 },  -- execute/opener; Dark Ranger hero replaces with Black Arrow (466932) nodeID 94987
-            { id = 466932, label = "Black Arrow",  minFightSeconds = 20, talentGated = true },  -- Dark Ranger hero replaces Kill Shot; nodeID 94987; usable >80% or <20% health
+            { id = 53351,  label = "Kill Shot",    minFightSeconds = 20, talentGated = true, suppressIfTalent = 466932 },  -- execute/opener; Dark Ranger hero replaces with Black Arrow (466932); suppress by spell ID (node ID 94987 is not a valid suppressIfTalent value)
+            { id = 466932, label = "Black Arrow",  minFightSeconds = 20, talentGated = true, altIds = {466930} },  -- Dark Ranger hero replaces Kill Shot; nodeID 94987; usable >80% or <20% health; 466930 alt fires in some contexts
         },
         priorityNotes = {
             "Aimed Shot on cooldown — primary Focus spender and damage",
