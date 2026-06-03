@@ -31,11 +31,18 @@ local function Clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 local function ScoreCooldownUsage(state, duration)
     local spec       = state.spec
     local cdTracking = state.cdTracking
+    local hm         = state.hardMode
     if not spec or not spec.majorCooldowns or #spec.majorCooldowns == 0 then return 75 end
     if not next(cdTracking) then return 75 end
 
     local totalWeight  = 0
     local earnedWeight = 0
+
+    local baseCredit    = hm and 0.60 or 0.70
+    local bonusCredit   = hm and 0.40 or 0.30
+    local cdInterval    = hm and 90   or 120
+    local healerCredit  = hm and 0.75 or 0.90
+    local shortFloor    = hm and 40   or 50
 
     for _, cd in ipairs(spec.majorCooldowns) do
         local data = cdTracking[cd.id]
@@ -44,23 +51,19 @@ local function ScoreCooldownUsage(state, duration)
             totalWeight = totalWeight + w
 
             if data.useCount > 0 then
-                -- Base 70% credit for at least one use
-                earnedWeight = earnedWeight + w * 0.70
-                -- Bonus: expect 1 use per 120s, prorated for fight length
-                local expectedUses = math.max(1, math.floor(duration / 120))
+                earnedWeight = earnedWeight + w * baseCredit
+                local expectedUses = math.max(1, math.floor(duration / cdInterval))
                 local useRatio     = math.min(data.useCount / expectedUses, 1)
-                earnedWeight = earnedWeight + w * 0.30 * useRatio
+                earnedWeight = earnedWeight + w * bonusCredit * useRatio
             elseif cd.healerConditional and state.fightSuccess then
-                -- Fight-dependent healer CDs (e.g. Spirit Link, Ascendance) that were
-                -- never needed — award 90% credit on a successful (non-wipe) fight.
-                earnedWeight = earnedWeight + w * 0.90
+                earnedWeight = earnedWeight + w * healerCredit
             end
         end
     end
 
     if totalWeight == 0 then return 75 end
     local raw = (earnedWeight / totalWeight) * 100
-    if duration < 60 then raw = math.max(raw, 50) end
+    if duration < 60 then raw = math.max(raw, shortFloor) end
     return raw
 end
 
@@ -72,6 +75,7 @@ end
 local function ScoreDebuffUptime(state, duration)
     local spec = state.spec
     local CL   = state.CL
+    local hm   = state.hardMode
     if not CL or not CL.GetAllUptimes then return 75 end
     if not spec or not spec.uptimeBuffs or #spec.uptimeBuffs == 0 then return 75 end
 
@@ -84,7 +88,8 @@ local function ScoreDebuffUptime(state, duration)
         if data and data.targetUptime and data.targetUptime > 0
         and data.appCount and data.appCount > 0 then
             local ratio = Clamp(data.actualPct / data.targetUptime, 0, 1)
-            totalScore  = totalScore + (math.sqrt(ratio) * 100)
+            -- Normal: forgiving sqrt curve. Hard mode: linear (no forgiveness).
+            totalScore  = totalScore + (hm and ratio or math.sqrt(ratio)) * 100
             count       = count + 1
         end
     end
@@ -100,6 +105,7 @@ end
 local function ScoreProcUsage(state)
     local spec = state.spec
     local CL   = state.CL
+    local hm   = state.hardMode
     if not CL or not CL.GetAllProcs then return 75 end
     if not spec or not spec.procBuffs or #spec.procBuffs == 0 then return 75 end
 
@@ -114,8 +120,9 @@ local function ScoreProcUsage(state)
         if data and data.gained and data.gained > 0 then
             local maxTime   = proc.maxStackTime or 10
             local avgHeld   = data.totalActiveTime / data.gained
-            -- Perfect = avgHeld <= 25% of window; Poor = avgHeld >= 100%
-            local holdRatio = Clamp(avgHeld / maxTime, 0, 1)
+            -- Hard mode: full penalty once held past 60% of window (÷0.6 scales it up).
+            local window    = hm and (maxTime * 0.6) or maxTime
+            local holdRatio = Clamp(avgHeld / window, 0, 1)
             totalScore = totalScore + (1 - holdRatio) * 100
             count      = count + 1
         end
@@ -133,12 +140,13 @@ local function ScoreActivity(state, duration)
     local spec       = state.spec
     local totalGCDs  = state.totalGCDs
     local activeGCDs = state.activeGCDs
+    local hm         = state.hardMode
     if totalGCDs == 0 then return 50 end
 
-    local targetGPM = 40
+    local targetGPM = hm and 46 or 40
     if spec then
-        if spec.role == Core.ROLE.HEALER then targetGPM = 25
-        elseif spec.role == Core.ROLE.TANK then targetGPM = 30 end
+        if spec.role == Core.ROLE.HEALER then targetGPM = hm and 30 or 25
+        elseif spec.role == Core.ROLE.TANK then targetGPM = hm and 35 or 30 end
     end
     local targetTotal = (duration / 60) * targetGPM
     return Clamp((activeGCDs / math.max(1, targetTotal)) * 100, 0, 100)
@@ -151,10 +159,13 @@ end
 --------------------------------------------------------------------------------
 local function ScoreResourceMgmt(state, duration)
     local overcapEvents   = state.overcapEvents
-    local toleratedEvents = math.max(1, math.floor(duration / 60) * 1)
+    local hm              = state.hardMode
+    local toleranceInterval = hm and 90 or 60
+    local maxPenaltyFactor  = hm and 0.65 or 0.50
+    local toleratedEvents = math.max(1, math.floor(duration / toleranceInterval))
     if overcapEvents == 0 then return 100 end
     local penalty = Clamp(overcapEvents / toleratedEvents, 0, 1)
-    return (1 - penalty * 0.5) * 100
+    return (1 - penalty * maxPenaltyFactor) * 100
 end
 
 --------------------------------------------------------------------------------

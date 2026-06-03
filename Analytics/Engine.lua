@@ -89,6 +89,7 @@ local function BuildState()
         -- fightSuccess: true for non-boss content (survived = success); for boss
         -- encounters, reflects whether BOSS_END fired with success=1 before fight end.
         fightSuccess       = (currentBossContext == nil) or bossKillSuccess,
+        hardMode           = Core.GetSetting("hardMode") == true,
         CL                 = MS.CombatLog,
     }
 end

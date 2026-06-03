@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.6.7"
+    Core.VERSION = ver or "1.7.0"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -165,8 +165,8 @@ function Core.InitSavedVariables()
     def("anchorY",          -200)
     def("lockWindow",       false)
     def("minimumFight",     15)
-    def("encounterAdjust",  true)
     def("debugMode",        false)
+    def("hardMode",         false)
     def("verifyAutoEnable", false)
 end
 
@@ -322,6 +322,18 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.7.0",
+        tagline = "Hard Mode scoring toggle + HUD polish",
+        date    = "June 2026",
+        changes = {
+            "New: Hard Mode toggle — accessible from the HUD context menu (cog icon); tightens scoring across all components for players who want a greater challenge",
+            "Hard Mode: context menu shows a live left/right slider; the title bar turns red when active; menu stays open when toggled so you can flip it mid-session",
+            "Vengeance DH: Sigil of Flame (204596) added to rotation tracking — 30s CD, Fire damage DoT + Fury generation; was not previously tracked",
+            "HUD: boss fight label now shows boss name and grade on separate lines — long boss names no longer overflow the frame",
+            "Options: removed non-functional 'Encounter condition adjustment' toggle",
+        },
+    },
     {
         version = "1.6.7",
         tagline = "MM Hunter Kill Shot suppress fix — node ID vs spell ID",
@@ -2584,6 +2596,76 @@ local function MSSlashHandler(msg)
         else
             print("  GetAddOnMetadata: unavailable")
         end
+    elseif msg == "debug meter" then
+        -- Probes the Blizzard built-in damage meter API surface. Run after a
+        -- fight ends. Output shown in a copy-pasteable pop-out window.
+        local lines = {}
+        local function L2(s) lines[#lines+1] = s end
+
+        L2("Midnight Sensei — Built-in Meter API Probe")
+        L2(string.rep("-", 52))
+
+        -- 1. Known Blizzard namespaces that might expose fight stats
+        L2("Namespace existence:")
+        local namespaces = {
+            "C_CombatSummary", "C_DamageTracker", "C_CombatLog",
+            "C_Scoreboard", "C_ChallengeMode", "C_RatingInfo",
+        }
+        for _, ns in ipairs(namespaces) do
+            L2(string.format("  %-26s = %s", ns, tostring(_G[ns] ~= nil)))
+        end
+
+        -- 2. Known Blizzard globals/frames for the built-in meter UI
+        L2("")
+        L2("Global frame/table presence:")
+        local globals = {
+            "DamageMeterFrame", "CombatDetailsSummary", "ScoreboardFrame",
+            "EncounterSummaryFrame",
+        }
+        for _, g in ipairs(globals) do
+            L2(string.format("  %-30s = %s", g, tostring(_G[g] ~= nil)))
+        end
+
+        -- 3. C_CombatSummary deep probe (most likely candidate)
+        L2("")
+        L2("C_CombatSummary methods:")
+        local cs = C_CombatSummary
+        if cs then
+            local found = false
+            for k, v in pairs(cs) do
+                L2(string.format("  %s (%s)", tostring(k), type(v)))
+                found = true
+            end
+            if not found then L2("  (table exists but is empty)") end
+        else
+            L2("  nil — not available")
+        end
+
+        -- 4. C_ChallengeMode — M+ timed segment stats
+        L2("")
+        L2("C_ChallengeMode.GetCompletionInfo:")
+        if C_ChallengeMode and C_ChallengeMode.GetCompletionInfo then
+            local ok, r = pcall(C_ChallengeMode.GetCompletionInfo)
+            L2("  ok=" .. tostring(ok) .. "  result=" .. tostring(r))
+        else
+            L2("  not available")
+        end
+
+        -- 5. Last stored encounter meter fields
+        L2("")
+        L2("Last stored encounter — meter fields:")
+        local cdb = MidnightSenseiCharDB
+        if cdb and cdb.encounters and #cdb.encounters > 0 then
+            local last = cdb.encounters[#cdb.encounters]
+            L2(string.format("  meterDamage=%s  meterDPS=%s", tostring(last.meterDamage), tostring(last.meterDPS)))
+            L2(string.format("  meterHealing=%s  meterHPS=%s", tostring(last.meterHealing), tostring(last.meterHPS)))
+            L2(string.format("  meterDamageTaken=%s  meterSource=%s", tostring(last.meterDamageTaken), tostring(last.meterSource)))
+        else
+            L2("  no encounters stored yet")
+        end
+
+        Call(MS.UI, "ShowMeterProbe", table.concat(lines, "\n"))
+
     elseif msg == "clean payload" then
         -- ── PILOT RECOVERY TOOL — REMOVE BEFORE PUBLIC RELEASE ──────────────
         -- Rebuilds and re-broadcasts all local encounters in the current payload

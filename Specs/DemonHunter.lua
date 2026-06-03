@@ -134,6 +134,7 @@ Core.RegisterSpec(12, {
             [232893]=true,  -- Felblade
             [202138]=true,  -- Sigil of Chains
             [207407]=true,  -- Soul Carver
+            [204596]=true,  -- Sigil of Flame
         },
         majorCooldowns = {
             -- 191427 Metamorphosis removed — shapeshifting spell, UPDATE_SHAPESHIFT_FORM not SUCCEEDED
@@ -157,6 +158,7 @@ Core.RegisterSpec(12, {
             { id = 189110, label = "Infernal Strike",  minFightSeconds = 15 },                                         -- live-verified x5; gap-closer with charges
             { id = 232893, label = "Felblade",        minFightSeconds = 15, talentGated = true, altIds = {213243} },   -- non-PASSIVE ACTIVE nodeID 108722; 213243 is spec-variant ID
             { id = 207407, label = "Soul Carver",     minFightSeconds = 20, talentGated = true },                         -- burst damage + Soul Fragment generation
+            { id = 204596, label = "Sigil of Flame",  minFightSeconds = 15 },                                            -- 30s CD; Fire damage DoT + 25 Fury; use on CD
         },
         tankMetrics = { targetMitigationUptime = 50 },
         priorityNotes = {

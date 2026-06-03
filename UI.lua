@@ -735,10 +735,11 @@ local function PopulateHudFromResult(result)
         mainFrame.gradeText:SetTextColor(gc[1], gc[2], gc[3], 1)
         mainFrame.scoreText:SetText(tostring(result.finalScore or 0))
         mainFrame.scoreText:SetTextColor(gc[1], gc[2], gc[3], 1)
-        local bossTag = (result.isBoss and result.bossName)
-            and ("|cffFF6600[Boss] " .. result.bossName .. "|r  ")
-            or ""
-        mainFrame.labelText:SetText(bossTag .. (result.gradeLabel or ""))
+        if result.isBoss and result.bossName then
+            mainFrame.labelText:SetText("|cffFF6600[Boss] " .. result.bossName .. "|r\n" .. (result.gradeLabel or ""))
+        else
+            mainFrame.labelText:SetText(result.gradeLabel or "")
+        end
         mainFrame.labelText:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
         mainFrame.reviewBtn:Show()
     else
@@ -781,11 +782,13 @@ local function CreateMainFrame()
     titleStrip:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -2, -2)
     titleStrip:SetHeight(20)
     titleStrip:SetColorTexture(0.10, 0.10, 0.16, 0.95)
+    mainFrame.titleStrip = titleStrip
 
     local titleText = MakeFont(mainFrame, 10, "CENTER")
     titleText:SetPoint("TOP", mainFrame, "TOP", 0, -6)
     titleText:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
     titleText:SetText(L["TITLE_HUD"])
+    mainFrame.titleText = titleText
 
     -- Grade (large, left)
     mainFrame.gradeText = MakeFont(mainFrame, 32, "CENTER")
@@ -803,12 +806,14 @@ local function CreateMainFrame()
     -- Label (encouraging text / status)
     mainFrame.labelText = MakeFont(mainFrame, 9, "LEFT")
     mainFrame.labelText:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 68, -50)
+    mainFrame.labelText:SetWidth(186)
+    mainFrame.labelText:SetWordWrap(true)
     mainFrame.labelText:SetText(L["HUD_NO_FIGHT"])
     mainFrame.labelText:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
 
-    -- Spec text
+    -- Spec text (shifted down one line to accommodate 2-line boss label)
     mainFrame.specText = MakeFont(mainFrame, 9, "LEFT")
-    mainFrame.specText:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 68, -62)
+    mainFrame.specText:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 68, -74)
     mainFrame.specText:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
     mainFrame.specText:SetText(Core.GetSpecInfoString())
 
@@ -1039,25 +1044,69 @@ function UI.ShowMainCtxMenu()
             Core.SetSetting("lockWindow", not Core.GetSetting("lockWindow"))
         end, "lockItem")
 
-        AddItem(L["CTX_GRADE_HISTORY"],  -34, function() UI.ShowHistory() end)
-        AddItem(L["CTX_LEADERBOARD"],    -58, function() Core.Call(MS.Leaderboard, "Toggle") end)
-        AddItem(L["CTX_BOSS_BOARD"],     -82, function() Core.Call(MS.BossBoard, "Toggle") end)
-        AddItem(L["CTX_OPTIONS"],       -106, function() UI.OpenOptions() end)
-        AddItem(L["CTX_MY_SPELL_LIST"], -130, function() UI.ShowSpellList() end)
-        AddItem(L["CTX_HELP_FAQ"],      -154, function() UI.ShowFAQ() end)
-        AddItem(L["CTX_CREDITS"],       -178, function() UI.ShowCredits() end)
-        AddItem(L["CTX_DEBUG_TOOLS"],   -202, function() UI.ShowDebugWindow() end)
-        AddItem(L["CTX_CLOSE_HUD"],     -226, function()
+        mainCtxMenu.hardModeItem = AddItem("Hard Mode", -34, nil, "hardModeItem")
+
+        -- Texture-based slider track + thumb (right side of item, no Unicode)
+        local hmTrackBg = mainCtxMenu.hardModeItem:CreateTexture(nil, "BACKGROUND")
+        hmTrackBg:SetSize(32, 12)
+        hmTrackBg:SetPoint("RIGHT", mainCtxMenu.hardModeItem, "RIGHT", -4, 0)
+        mainCtxMenu.hmTrackBg = hmTrackBg
+
+        local hmThumb = mainCtxMenu.hardModeItem:CreateTexture(nil, "OVERLAY")
+        hmThumb:SetSize(12, 8)
+        mainCtxMenu.hmThumb = hmThumb
+
+        -- Override OnClick so the menu stays open while toggling
+        mainCtxMenu.hardModeItem:SetScript("OnClick", function()
+            Core.SetSetting("hardMode", not Core.GetSetting("hardMode"))
+            UI.RefreshHardModeTheme()
+            -- Refresh slider in-place without closing
+            local hmOn = Core.GetSetting("hardMode")
+            mainCtxMenu.hmThumb:ClearAllPoints()
+            if hmOn then
+                mainCtxMenu.hmTrackBg:SetColorTexture(0.35, 0.06, 0.06, 0.95)
+                mainCtxMenu.hmThumb:SetColorTexture(0.95, 0.20, 0.20, 1)
+                mainCtxMenu.hmThumb:SetPoint("RIGHT", mainCtxMenu.hmTrackBg, "RIGHT", -2, 0)
+            else
+                mainCtxMenu.hmTrackBg:SetColorTexture(0.18, 0.18, 0.18, 0.95)
+                mainCtxMenu.hmThumb:SetColorTexture(0.45, 0.45, 0.45, 1)
+                mainCtxMenu.hmThumb:SetPoint("LEFT", mainCtxMenu.hmTrackBg, "LEFT", 2, 0)
+            end
+        end)
+
+        AddItem(L["CTX_GRADE_HISTORY"],  -58, function() UI.ShowHistory() end)
+        AddItem(L["CTX_LEADERBOARD"],    -82, function() Core.Call(MS.Leaderboard, "Toggle") end)
+        AddItem(L["CTX_BOSS_BOARD"],    -106, function() Core.Call(MS.BossBoard, "Toggle") end)
+        AddItem(L["CTX_OPTIONS"],       -130, function() UI.OpenOptions() end)
+        AddItem(L["CTX_MY_SPELL_LIST"], -154, function() UI.ShowSpellList() end)
+        AddItem(L["CTX_HELP_FAQ"],      -178, function() UI.ShowFAQ() end)
+        AddItem(L["CTX_CREDITS"],       -202, function() UI.ShowCredits() end)
+        AddItem(L["CTX_DEBUG_TOOLS"],   -226, function() UI.ShowDebugWindow() end)
+        AddItem(L["CTX_CLOSE_HUD"],     -250, function()
             if mainFrame then mainFrame:Hide() end
         end)
 
-        mainCtxMenu:SetSize(164, 254)
+        mainCtxMenu:SetSize(164, 278)
         mainCtxMenu:SetScript("OnHide", CloseAllMenus)
     end
 
     if mainCtxMenu.lockItem then
         local locked = Core.GetSetting("lockWindow")
         mainCtxMenu.lockItem.fs:SetText(locked and L["CTX_UNLOCK_POSITION"] or L["CTX_LOCK_POSITION"])
+    end
+
+    if mainCtxMenu.hardModeItem and mainCtxMenu.hmThumb and mainCtxMenu.hmTrackBg then
+        local hmOn = Core.GetSetting("hardMode")
+        mainCtxMenu.hmThumb:ClearAllPoints()
+        if hmOn then
+            mainCtxMenu.hmTrackBg:SetColorTexture(0.35, 0.06, 0.06, 0.95)
+            mainCtxMenu.hmThumb:SetColorTexture(0.95, 0.20, 0.20, 1)
+            mainCtxMenu.hmThumb:SetPoint("RIGHT", mainCtxMenu.hmTrackBg, "RIGHT", -2, 0)
+        else
+            mainCtxMenu.hmTrackBg:SetColorTexture(0.18, 0.18, 0.18, 0.95)
+            mainCtxMenu.hmThumb:SetColorTexture(0.45, 0.45, 0.45, 1)
+            mainCtxMenu.hmThumb:SetPoint("LEFT", mainCtxMenu.hmTrackBg, "LEFT", 2, 0)
+        end
     end
 
     local x, y = GetCursorPosition()
@@ -1278,14 +1327,13 @@ function UI.OpenOptions()
         SectionLabel(L["OPT_BEHAVIOUR"], -90)
         AddToggle(L["OPT_SHOW_POST_FIGHT"], "showPostFight",  -106)
         AddToggle(L["OPT_LOCK_HUD"],        "lockWindow",     -130)
-        AddToggle(L["OPT_ENCOUNTER_ADJUST"],"encounterAdjust",-154)
-        AddToggle(L["OPT_DEBUG_MODE"],      "debugMode",      -178)
+        AddToggle(L["OPT_DEBUG_MODE"],      "debugMode",      -154)
 
         -- ── Leaderboard (boss-only is hardcoded, no toggle needed) ──────────
-        SectionLabel(L["OPT_LEADERBOARD"], -292)
+        SectionLabel(L["OPT_LEADERBOARD"], -178)
         local lbNote = MakeFont(optionsFrame, 9, "LEFT")
-        lbNote:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14, -306)
-        lbNote:SetPoint("TOPRIGHT", optionsFrame, "TOPRIGHT", -14, -306)
+        lbNote:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 14, -192)
+        lbNote:SetPoint("TOPRIGHT", optionsFrame, "TOPRIGHT", -14, -192)
         lbNote:SetWordWrap(true)
         lbNote:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
         lbNote:SetText(L["OPT_LB_NOTE"])
@@ -1476,6 +1524,87 @@ function UI.ToggleVerifyExport()
     elseif MS.Core and MS.Core.SlashHandler then
         MS.Core.SlashHandler("verify report")
     end
+end
+
+--------------------------------------------------------------------------------
+-- Meter Probe Window
+-- Copy-pasteable pop-out for /ms debug meter output.
+--------------------------------------------------------------------------------
+local meterProbeFrame = nil
+
+function UI.ShowMeterProbe(text)
+    if not meterProbeFrame then
+        local f = CreateFrame("Frame", "MidnightSenseiMeterProbe", UIParent, "BackdropTemplate")
+        f:SetSize(520, 380)
+        f:SetPoint("CENTER")
+        f:SetFrameStrata("HIGH")
+        f:SetMovable(true)
+        f:SetClampedToScreen(true)
+        f:EnableMouse(true)
+        ApplyBackdrop(f, {0.06,0.06,0.10,0.97}, C.BORDER_GOLD)
+
+        -- Title bar / drag handle
+        local tBar = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        tBar:SetPoint("TOPLEFT",  f, "TOPLEFT",  0, 0)
+        tBar:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
+        tBar:SetHeight(26)
+        ApplyBackdrop(tBar, C.TITLE_BG, C.BORDER_GOLD)
+        tBar:EnableMouse(true)
+        tBar:RegisterForDrag("LeftButton")
+        tBar:SetScript("OnDragStart", function() f:StartMoving() end)
+        tBar:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
+
+        local title = MakeFont(tBar, 12, "CENTER")
+        title:SetPoint("CENTER", tBar, "CENTER")
+        title:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
+        title:SetText("Midnight Sensei — Meter API Probe")
+
+        local xBtn = CreateFrame("Button", nil, tBar)
+        xBtn:SetSize(18, 18)
+        xBtn:SetPoint("RIGHT", tBar, "RIGHT", -4, 0)
+        local xFs = xBtn:CreateFontString(nil, "OVERLAY")
+        xFs:SetFont("Fonts/FRIZQT__.TTF", 11, "")
+        xFs:SetPoint("CENTER")
+        xFs:SetText("X")
+        xFs:SetTextColor(1, 0.4, 0.4, 1)
+        xBtn:SetScript("OnClick", function() f:Hide() end)
+
+        -- Hint
+        local hint = MakeFont(f, 9, "LEFT")
+        hint:SetPoint("TOPLEFT",  f, "TOPLEFT",   10, -32)
+        hint:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, -32)
+        hint:SetTextColor(C.TEXT_DIM[1], C.TEXT_DIM[2], C.TEXT_DIM[3], 1)
+        hint:SetText("Click inside and Ctrl-A to select all, then Ctrl-C to copy.")
+
+        -- Scrollable EditBox
+        local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT",     f, "TOPLEFT",    10, -46)
+        sf:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -28, 36)
+
+        local eb = CreateFrame("EditBox", nil, sf)
+        eb:SetMultiLine(true)
+        eb:SetFontObject(ChatFontNormal)
+        eb:SetWidth(sf:GetWidth())
+        eb:SetAutoFocus(false)
+        eb:SetTextInsets(4, 4, 4, 4)
+        eb:EnableMouse(true)
+        eb:SetScript("OnEscapePressed", function() f:Hide() end)
+        sf:SetScrollChild(eb)
+
+        local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        closeBtn:SetSize(80, 22)
+        closeBtn:SetPoint("BOTTOM", f, "BOTTOM", 0, 8)
+        closeBtn:SetText(L["BTN_CLOSE"])
+        closeBtn:SetScript("OnClick", function() f:Hide() end)
+
+        f.editBox = eb
+        meterProbeFrame = f
+    end
+
+    meterProbeFrame.editBox:SetText(text or "")
+    meterProbeFrame.editBox:SetFocus()
+    meterProbeFrame.editBox:HighlightText()
+    meterProbeFrame:Show()
 end
 
 --------------------------------------------------------------------------------
@@ -2934,10 +3063,11 @@ function UI.OnCombatEnd(result)
         f.gradeText:SetTextColor(gc[1] or 0.6, gc[2] or 0.6, gc[3] or 0.6, 1)
         f.scoreText:SetText(tostring(result.finalScore or 0))
         f.scoreText:SetTextColor(gc[1] or 0.6, gc[2] or 0.6, gc[3] or 0.6, 1)
-        local bossTag = (result.isBoss and result.bossName)
-            and ("|cffFF6600[Boss] " .. result.bossName .. "|r  ")
-            or ""
-        f.labelText:SetText(bossTag .. (result.gradeLabel or ""))
+        if result.isBoss and result.bossName then
+            f.labelText:SetText("|cffFF6600[Boss] " .. result.bossName .. "|r\n" .. (result.gradeLabel or ""))
+        else
+            f.labelText:SetText(result.gradeLabel or "")
+        end
         f.labelText:SetTextColor(C.ACCENT[1], C.ACCENT[2], C.ACCENT[3], 1)
         f.specText:SetText(Core.GetSpecInfoString())
         f.reviewBtn:Show()
@@ -2957,6 +3087,19 @@ function UI.UpdateVerifyBar()
     local on = MS.Core and MS.Core.VerifyMode or false
     if mainFrame.verifyBar then
         mainFrame.verifyBar:SetShown(on)
+    end
+end
+
+function UI.RefreshHardModeTheme()
+    if not mainFrame or not mainFrame.titleStrip or not mainFrame.titleText then return end
+    if Core.GetSetting("hardMode") then
+        mainFrame.titleStrip:SetColorTexture(0.30, 0.05, 0.05, 0.97)
+        mainFrame.titleText:SetTextColor(1.00, 0.35, 0.35, 1)
+        ApplyBackdrop(mainFrame, C.BG, {0.85, 0.15, 0.15, 0.90})
+    else
+        mainFrame.titleStrip:SetColorTexture(0.10, 0.10, 0.16, 0.95)
+        mainFrame.titleText:SetTextColor(C.TITLE[1], C.TITLE[2], C.TITLE[3], 1)
+        ApplyBackdrop(mainFrame, C.BG, C.BORDER)
     end
 end
 
@@ -2994,6 +3137,13 @@ MS.Core.On(MS.Core.EVENTS.SPEC_CHANGED, function(spec)
     end
 end)
 
+-- Settings change: refresh hard mode theme instantly when toggled
+MS.Core.On(MS.Core.EVENTS.SETTINGS_CHANGED, function(key)
+    if key == "hardMode" then
+        UI.RefreshHardModeTheme()
+    end
+end)
+
 -- On session ready: populate HUD from last saved encounter (current session or DB)
 MS.Core.On(MS.Core.EVENTS.SESSION_READY, function()
     local f = CreateMainFrame()
@@ -3003,6 +3153,7 @@ MS.Core.On(MS.Core.EVENTS.SESSION_READY, function()
     end
     PopulateHudFromResult(lastEnc)
     f.specText:SetText(Core.GetSpecInfoString())
+    UI.RefreshHardModeTheme()
     if HudVisibility() == "always" then f:Show() end
 
     -- Register with WoW's built-in Options / Settings panel.
