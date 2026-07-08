@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.7.1"
+    Core.VERSION = ver or "1.7.2"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -322,6 +322,15 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.7.2",
+        tagline = "Elemental Shaman: Earth Shock and Tempest tracking fixes",
+        date    = "July 2026",
+        changes = {
+            "Elemental Shaman: Earth Shock is now suppressed from tracking when Elemental Blast is talented - players using Elemental Blast no longer receive false feedback about Earth Shock",
+            "Elemental Shaman: Tempest (id 452201) added as an alternate cast ID for Lightning Bolt - Stormkeeper-proc Tempest casts now count toward Lightning Bolt in rotation tracking",
+        },
+    },
     {
         version = "1.7.1",
         tagline = "TOC interface bump for patch 12.0.7",

@@ -22,6 +22,8 @@ Core.RegisterSpec(7, {
     -- Added:    Spiritwalker's Grace (79206) to majorCooldowns as isUtility — nodeID 103584; 2 min CD; 100% adoption
     -- Added:    Wind Rush Totem (192077) to majorCooldowns as isUtility — nodeID 103627; talentGated; 94% adoption
     -- Tempest (454009) — confirmed PASSIVE nodeID 94892; not tracked
+    -- Tempest (452201) — DIFFERENT ID; this is the Stormkeeper-empowered Lightning Bolt/Chain Lightning cast
+    --   event in Midnight 12.0. Fires UNIT_SPELLCAST_SUCCEEDED. Tracked via altIds={452201} on Lightning Bolt.
     -- Lightning Capacitor, Inferno Arc, Primal Elementalist — confirmed PASSIVE; not tracked
     -- Not added: Lava Surge (77756) to procBuffs — confirmed in Elemental Spell List as player aura
     --            but needs in-game C_UnitAuras.GetPlayerAuraBySpellID verification before adding
@@ -42,13 +44,13 @@ Core.RegisterSpec(7, {
         -- not detectable via C_UnitAuras.GetPlayerAuraBySpellID.
         uptimeBuffs = {},
         rotationalSpells = {
-            { id = 188196, label = "Lightning Bolt",  minFightSeconds = 15 },                          -- confirmed spell list; primary filler
+            { id = 188196, label = "Lightning Bolt",  minFightSeconds = 15, altIds = {452201} },        -- confirmed spell list; primary filler; 452201 = Stormkeeper-empowered cast (Tempest morph)
             { id = 51505,  label = "Lava Burst",      minFightSeconds = 15 },                          -- non-PASSIVE ACTIVE nodeID 103598; cast ID confirmed in-game
             { id = 462620, label = "Earthquake",      minFightSeconds = 30, talentGated = true, altIds = {61882, 61982} },  -- altIds: classic cast IDs per Archon (May 2026); both added per mismatch policy
             { id = 117014, label = "Elemental Blast", minFightSeconds = 20, talentGated = true },      -- non-PASSIVE ACTIVE nodeID 80984
             { id = 188443, label = "Chain Lightning",  minFightSeconds = 15 },                          -- primary AoE filler; empowered by Stormkeeper; id=188443 confirmed; previously tracked, re-added May 2026
             { id = 470057, label = "Voltaic Blaze",   minFightSeconds = 20, talentGated = true },      -- nodeID 81007; Flame Shock replacement for Elemental — DoT applicator
-            { id = 8042,   label = "Earth Shock",    minFightSeconds = 15, hasCombatValue = true, isUtility = true },  -- Maelstrom spender; situational — bonus credit, never penalised
+            { id = 8042,   label = "Earth Shock",    minFightSeconds = 15, hasCombatValue = true, isUtility = true, suppressIfTalent = 117014 },  -- Maelstrom spender; suppressed when Elemental Blast (117014) is talented
             -- Flame Shock (470411) removed — Enhancement only in Midnight 12.0; Voltaic Blaze replaces it for Elemental
             -- Tempest (454009) removed — confirmed PASSIVE nodeID 94892
         },
