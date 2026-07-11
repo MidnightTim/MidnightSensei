@@ -86,11 +86,11 @@ Core.RegisterSpec(7, {
         name = "Enhancement", role = "DPS",
         resourceType = 11, resourceLabel = "MAELSTROM", overcapAt = 140,
         majorCooldowns = {
-            { id = 384352, label = "Doom Winds",    expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 80959
+            { id = 384352, label = "Doom Winds",    expectedUses = "burst windows",  talentGated = true, suppressIfTalent = 114051 },  -- non-PASSIVE ACTIVE nodeID 80959; suppressed when Ascendance (114051) is talented (choice node; Ascendance replaces Doom Winds on action bar)
+            { id = 114051, label = "Ascendance",    expectedUses = "on CD",          talentGated = true },  -- confirmed in tree (choice node with Doom Winds); nodeID 92219; 2 min CD; fires UNIT_SPELLCAST_SUCCEEDED (07/11/2026 in-game verified)
             { id = 197214, label = "Sundering",     expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 80975
             { id = 444995, label = "Surging Totem", expectedUses = "on CD (talent)", talentGated = true },  -- non-PASSIVE ACTIVE nodeID 94877
             -- Feral Spirit (51533/469314) removed — PASSIVE
-            -- Ascendance (114051) removed — not in Enhancement talent tree
             -- Primordial Wave (375982) removed — not in Midnight 12.0
         },
         uptimeBuffs = {},

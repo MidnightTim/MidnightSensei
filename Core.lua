@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.7.2"
+    Core.VERSION = ver or "1.7.4"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -322,6 +322,22 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.7.4",
+        tagline = "Enhancement Shaman: Ascendance added as tracked major cooldown",
+        date    = "July 2026",
+        changes = {
+            "Enhancement Shaman: Ascendance (id 114051) added to cooldown tracking - 2 min CD transformation ability; confirmed as choice node with Doom Winds; players using Ascendance now receive cooldown usage feedback",
+        },
+    },
+    {
+        version = "1.7.3",
+        tagline = "Enhancement Shaman: Doom Winds suppressed when Ascendance is talented",
+        date    = "July 2026",
+        changes = {
+            "Enhancement Shaman: Doom Winds is now suppressed from tracking when Ascendance is talented - Ascendance replaces Doom Winds on the action bar and triggers it automatically; players no longer receive false Doom Winds feedback",
+        },
+    },
     {
         version = "1.7.2",
         tagline = "Elemental Shaman: Earth Shock and Tempest tracking fixes",
