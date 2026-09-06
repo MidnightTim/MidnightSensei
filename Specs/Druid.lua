@@ -17,7 +17,7 @@ Core.RegisterSpec(11, {
         resourceType = 8, resourceLabel = "ASTRAL POWER", overcapAt = 90,
         majorCooldowns = {
             { id = 194223, label = "Celestial Alignment",          expectedUses = "on CD",          talentGated = true, suppressIfTalent = 102560 },  -- CA build; suppress when Incarnation taken (CA is a prereq node — IsTalentActive returns true on both builds)
-            -- 383410 (Orbital Strike) removed — PASSIVE modifier to Incarnation, never fires UNIT_SPELLCAST_SUCCEEDED
+            -- Orbital Strike: confirmed PASSIVE 09/06/2026 via in-game tooltip; correct current ID is 390378, not the old 383410 recorded here — not tracked either way
             { id = 102560, label = "Incarnation: Chosen of Elune", expectedUses = "on CD (talent)", talentGated = true },  -- Incarnation build; confirmed fires UNIT_SPELLCAST_SUCCEEDED (verify 2x)
             { id = 205636, label = "Force of Nature",              expectedUses = "on CD (talent)",  talentGated = true, isUtility = true, hasCombatValue = true },  -- treants root + damage; optional — not widely used on cooldown
             { id = 391528, label = "Convoke the Spirits",         expectedUses = "burst windows",   talentGated = true },  -- nodeID 88206 non-PASSIVE ACTIVE; added May 2026
@@ -49,7 +49,13 @@ Core.RegisterSpec(11, {
     },
 
     -- Feral (PASSIVE audit — April 2026; May 2026 Archon sweep)
-    -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
+    -- Incarnation: Avatar of Ashamane (102543) ADDED 09/06/2026 — confirmed active talent via
+    --   in-game tooltip (Rank 0/1, "Replaces Berserk", 2 min CD); prior "not in tree" finding was
+    --   wrong or predated the finalized tree. Berserk (106951) updated with suppressIfTalent.
+    --   Also shares nodeID 82114 with Convoke the Spirits (391528) below — same choice-node pattern
+    --   already coded for Guardian's Incarnation/Convoke pair — so mutual suppressIfTalent applied
+    --   here too. This part is inferred from the node-ID match, not directly user-confirmed;
+    --   verify in-game if this turns out wrong.
     -- Predatory Swiftness (69369) removed from procBuffs — not in talent tree or spell list, VERIFY never confirmed
     -- Frantic Frenzy (1243807) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82111, confirmed spell list
     -- Feral Frenzy (274837) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82112, confirmed spell list
@@ -62,12 +68,12 @@ Core.RegisterSpec(11, {
         resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
         majorCooldowns = {
             { id = 5217,   label = "Tiger's Fury",       expectedUses = "on CD"          },  -- non-PASSIVE ACTIVE nodeID 82124
-            { id = 106951, label = "Berserk",             expectedUses = "burst windows"  },  -- non-PASSIVE ACTIVE nodeID 82101
-            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst windows",  talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82114
+            { id = 106951, label = "Berserk",             expectedUses = "burst windows",  suppressIfTalent = 102543 },  -- non-PASSIVE ACTIVE nodeID 82101; replaced on the bar when Incarnation: Avatar of Ashamane is talented
+            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst windows",  talentGated = true, suppressIfTalent = 102543 },  -- non-PASSIVE ACTIVE nodeID 82114; choice node with Incarnation: Avatar of Ashamane
+            { id = 102543, label = "Incarnation: Avatar of Ashamane", expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 391528 },  -- nodeID 82114; choice node with Convoke; replaces Berserk on the bar; ADDED 09/06/2026
             { id = 1243807, label = "Frantic Frenzy", expectedUses = "on CD (talent)", talentGated = true, altIds = {1244079} },         -- non-PASSIVE ACTIVE nodeID 82111; replaces Feral Frenzy; altId 1244079 per Archon (May 2026)
             { id = 274837,  label = "Feral Frenzy",  expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 1243807 },  -- non-PASSIVE ACTIVE nodeID 82112; suppress when Frantic Frenzy taken (Frantic replaces Feral — IsTalentActive returns true on both)
             { id = 61336,   label = "Survival Instincts", expectedUses = "situational", isUtility = true },  -- confirmed id=61336; reactive personal defensive — tracked but never penalised
-            -- Incarnation: Avatar of Ashamane (102543) removed — not in Feral talent tree
         },
         uptimeBuffs = {},
         rotationalSpells = {
@@ -83,7 +89,7 @@ Core.RegisterSpec(11, {
             "Ferocious Bite on Apex Predator's Craving procs — highest priority",
             "Maintain Rip at 4+ combo points with Tiger's Fury active when possible",
             "Ferocious Bite at 5 CP with Berserk active, 4 CP without",
-            "Sync Berserk and Convoke the Spirits with Tiger's Fury for burst",
+            "Sync Berserk (or Incarnation: Avatar of Ashamane) and Convoke the Spirits with Tiger's Fury for burst",
             "Tiger's Fury on cooldown — Energy refill and damage buff",
             "Maintain Rake — refresh in pandemic, prioritise Tiger's Fury snapshots",
             "Shred to generate combo points — primary filler",
@@ -144,8 +150,13 @@ Core.RegisterSpec(11, {
     },
 
     -- Restoration (PASSIVE audit — April 2026; May 2026 Archon sweep)
-    -- Incarnation: Tree of Life (33891) removed — not in Restoration talent tree
-    -- Flourish (197721) removed — not in Restoration talent tree or spell list
+    -- Incarnation: Tree of Life (33891) ADDED 09/06/2026 — confirmed active talent via in-game
+    --   tooltip (Rank 0/1, situational, 3 min CD); prior "not in tree" finding was wrong or predated
+    --   the finalized tree. Shares nodeID 82064 with Convoke the Spirits below — same choice-node
+    --   pattern already coded for Guardian's Incarnation/Convoke pair — mutual suppressIfTalent
+    --   applied here too, inferred from the node-ID match; verify in-game if this turns out wrong.
+    -- Flourish (197721): confirmed PASSIVE 09/06/2026 via in-game tooltip (extends HoT duration
+    --   via Tranquility) — not tracked; ID unchanged from what was already recorded.
     -- Wild Growth moved from majorCooldowns to rotational — it's a maintenance spell, not a burst CD
     -- Convoke the Spirits (391528) added as talentGated CD — non-PASSIVE ACTIVE nodeID 82064
     -- Ironbark (102342) added to majorCooldowns — non-PASSIVE ACTIVE nodeID 82082; external defensive
@@ -164,9 +175,8 @@ Core.RegisterSpec(11, {
             { id = 102342, label = "Ironbark",            expectedUses = "tank busters",         healerConditional = true              },  -- non-PASSIVE ACTIVE nodeID 82082
             { id = 132158, label = "Nature's Swiftness",  expectedUses = "emergency instant",    healerConditional = true              },  -- non-PASSIVE ACTIVE nodeID 82050
             { id = 29166,  label = "Innervate",           expectedUses = "mana recovery",        healerConditional = true, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82244
-            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst throughput",     healerConditional = true, talentGated = true },  -- non-PASSIVE ACTIVE nodeID 82064
-            -- Incarnation: Tree of Life (33891) removed — not in talent tree
-            -- Flourish (197721) removed — not in talent tree or spell list
+            { id = 391528, label = "Convoke the Spirits", expectedUses = "burst throughput",     healerConditional = true, talentGated = true, suppressIfTalent = 33891 },  -- non-PASSIVE ACTIVE nodeID 82064; choice node with Incarnation: Tree of Life
+            { id = 33891,  label = "Incarnation: Tree of Life", expectedUses = "situational", healerConditional = true, talentGated = true, suppressIfTalent = 391528 },  -- nodeID 82064; choice node with Convoke; ADDED 09/06/2026
         },
         rotationalSpells = {
             { id = 774,   label = "Rejuvenation",  minFightSeconds = 20 },  -- non-PASSIVE ACTIVE nodeID 82217
@@ -186,7 +196,7 @@ Core.RegisterSpec(11, {
             "Ironbark on the tank for heavy physical damage",
             "Innervate during heavy casting phases to recover mana when talented",
             "Tranquility for heavy sustained raid damage — hold for peak damage",
-            "Convoke the Spirits for burst throughput when talented",
+            "Convoke the Spirits (or Incarnation: Tree of Life) for burst throughput when talented",
         },
         scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },
         sourceNote = "Midnight 12.0 verified against full Restoration Druid talent tree snapshot v1.4.3 119 nodes (April 2026); May 2026 Archon sweep",

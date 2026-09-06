@@ -4,7 +4,9 @@ Core.RegisterSpec(10, {
     className = "Monk",
 
     -- Brewmaster (Midnight 12.0 PASSIVE audit — April 2026; May 2026 Archon sweep)
-    -- Celestial Brew (322507) removed — not in Brewmaster talent tree or spell list
+    -- Celestial Brew (322507) ADDED 09/06/2026 — confirmed active talent (Rank 0/1, 1.5 min CD
+    --   absorb shield); prior "not in tree" note was wrong or predated the finalized tree; expected
+    --   to be used regularly, not held.
     -- Exploding Keg (325153) added to majorCooldowns — nodeID 101197 non-PASSIVE ACTIVE
     -- Black Ox Brew (115399) added to majorCooldowns talentGated — May 2026; Spell ID confirmed in-game tooltip;
     --   2 min CD; refills Energy + all Purifying Brew charges + 1 Celestial Brew/Infusion charge; expected on longer fights
@@ -27,7 +29,7 @@ Core.RegisterSpec(10, {
             { id = 116705,  label = "Spear Hand Strike", expectedUses = "situational",  isInterrupt = true },  -- nodeID 101152 non-PASSIVE ACTIVE
             { id = 322960,  label = "Fortifying Brew: Determination", expectedUses = "emergency", talentGated = true, healerConditional = true },  -- enhanced Fortifying Brew; major personal defensive CD
             { id = 116847,  label = "Rushing Jade Wind",  expectedUses = "situational",  talentGated = true, isUtility = true, altIds = {148187} },
-            -- Celestial Brew (322507) removed — not in talent tree or spell list
+            { id = 322507,  label = "Celestial Brew",     expectedUses = "on CD (talent)", talentGated = true },  -- 1.5 min CD absorb shield; expected regularly, not held; ADDED 09/06/2026
         },
         uptimeBuffs = {},
         rotationalSpells = {
@@ -48,6 +50,7 @@ Core.RegisterSpec(10, {
             "Invoke Niuzao for heavy sustained damage phases",
             "Black Ox Brew on cooldown when talented — immediately resets Purifying Brew charges for stagger clearing",
             "Exploding Keg and Celestial Infusion on cooldown",
+            "Celestial Brew on cooldown when talented — regular absorb shield, not just for emergencies",
             "Fortifying Brew for true emergencies",
         },
         scoreWeights = { cooldownUsage = 30, mitigationUptime = 35, activity = 20, resourceMgmt = 15 },
@@ -56,7 +59,9 @@ Core.RegisterSpec(10, {
 
     -- Mistweaver (Midnight 12.0 PASSIVE audit — April 2026)
     -- Verified against v1.4.3 talent snapshot (124 nodes, descriptions) — FLAGGED: 0
-    -- Invoke Yu'lon (322118) removed — not in Mistweaver talent tree or spell list
+    -- Invoke Yu'lon (322118) ADDED 09/06/2026 — confirmed active talent, choice node with
+    --   Invoke Chi-Ji at the same node; prior "not in tree" note was wrong or predated the
+    --   finalized tree. Mutual suppressIfTalent added both directions.
     -- Invoke Chi-Ji (325197) added to majorCooldowns — nodeID 101129 non-PASSIVE ACTIVE
     -- Life Cocoon (116849) added to majorCooldowns — nodeID 101096 non-PASSIVE ACTIVE
     -- Celestial Conduit (443028) added to majorCooldowns — nodeID 110067 non-PASSIVE ACTIVE
@@ -73,7 +78,8 @@ Core.RegisterSpec(10, {
             { id = 115310, label = "Revival",           expectedUses = "raid emergency",   healerConditional = true        },  -- nodeID 101131 non-PASSIVE ACTIVE
             { id = 116680, label = "Thunder Focus Tea", expectedUses = "on CD"                                             },  -- nodeID 101133 non-PASSIVE ACTIVE
             { id = 115294, label = "Mana Tea",          expectedUses = "mana recovery",  altIds = {115869}              },  -- confirmed spell ID; use on cooldown to sustain mana
-            { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE",    healerConditional = true        },  -- nodeID 101129 non-PASSIVE ACTIVE
+            { id = 325197, label = "Invoke Chi-Ji",     expectedUses = "sustained AoE",    healerConditional = true, talentGated = true, suppressIfTalent = 322118 },  -- nodeID 101129 non-PASSIVE ACTIVE; choice node with Invoke Yu'lon
+            { id = 322118, label = "Invoke Yu'lon, the Jade Serpent", expectedUses = "sustained AoE", healerConditional = true, talentGated = true, suppressIfTalent = 325197 },  -- choice node with Invoke Chi-Ji; ADDED 09/06/2026
             { id = 116849, label = "Life Cocoon",       expectedUses = "tank emergencies",  healerConditional = true        },  -- nodeID 101096 non-PASSIVE ACTIVE
             { id = 399491, label = "Sheilun's Gift",    expectedUses = "on CD"                                             },  -- nodeID 101120 non-PASSIVE ACTIVE; draws in mist clouds for burst heal
             { id = 443028, label = "Celestial Conduit", expectedUses = "on CD (talent)",   talentGated = true              },  -- nodeID 110067 non-PASSIVE ACTIVE
@@ -95,7 +101,7 @@ Core.RegisterSpec(10, {
             "Mana Tea on cooldown — mana recovery, do not let charges sit",
             "Sheilun's Gift on cooldown — draws in mist clouds for burst healing",
             "Life Cocoon on the tank for heavy damage",
-            "Invoke Chi-Ji for sustained AoE healing phases",
+            "Invoke Chi-Ji or Invoke Yu'lon (whichever is talented) for sustained AoE healing phases",
             "Revival for emergency full-group healing — do not hold it",
         },
         scoreWeights = { cooldownUsage = 25, efficiency = 30, activity = 25, responsiveness = 20 },

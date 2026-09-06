@@ -5,7 +5,8 @@ Core.RegisterSpec(3, {
 
     -- Beast Mastery (Midnight 12.0 PASSIVE audit — April 2026)
     -- Call of the Wild (359844) removed — not in BM talent tree or spell list
-    -- Thrill of the Hunt (246152) removed from procBuffs — not in talent tree or spell list
+    -- Thrill of the Hunt: confirmed PASSIVE 09/06/2026 via in-game tooltip (Rank 0/2, Barbed/Cobra
+    --   Shot crit chance). Correct current ID is 1265051, not the old 246152 recorded here — not tracked either way.
     -- Counter Shot (147362) added as isInterrupt — nodeID 102292 non-PASSIVE ACTIVE
     -- Cobra Shot (193455) added to rotational — nodeID 102354 non-PASSIVE ACTIVE; primary filler/Focus dump
     -- Black Arrow (466930) added to rotational — nodeID 109961 non-PASSIVE ACTIVE; new Midnight ability
@@ -40,7 +41,8 @@ Core.RegisterSpec(3, {
     },
 
     -- Marksmanship (Midnight 12.0 PASSIVE audit — April 2026)
-    -- Precise Shots (342776) removed from procBuffs — not in MM talent tree or spell list
+    -- Precise Shots: confirmed PASSIVE 09/06/2026 via in-game tooltip (Rank 1/1, empowers next
+    --   Arcane Shot/Multi-Shot). Correct current ID is 260240, not the old 342776 recorded here — not tracked either way.
     -- Counter Shot (147362) added as isInterrupt — nodeID 102402 non-PASSIVE ACTIVE
     -- Arcane Shot (185358) added to rotational — baseline confirmed spell list; primary Focus spender
     -- Steady Shot (56641) added to rotational — confirmed spell ID; baseline filler
@@ -56,7 +58,7 @@ Core.RegisterSpec(3, {
             { id = 260243, label = "Volley",          expectedUses = "AoE on CD"         },  -- nodeID 103956 non-PASSIVE ACTIVE
             { id = 147362, label = "Counter Shot",    expectedUses = "situational",      isInterrupt = true },  -- nodeID 102402 non-PASSIVE ACTIVE
             { id = 212431, label = "Explosive Shot",  expectedUses = "on CD (talent)",   talentGated = true },  -- nodeID 110575 non-PASSIVE; Shrapnel Shot (473520) and Precision Detonation (471369) are PASSIVE modifiers
-            -- Precise Shots (342776) removed — not in talent tree or spell list
+            -- Precise Shots (260240) — confirmed PASSIVE 09/06/2026; not tracked
         },
         rotationalSpells = {
             { id = 19434,  label = "Aimed Shot",   minFightSeconds = 20 },  -- nodeID 103982 non-PASSIVE ACTIVE

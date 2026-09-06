@@ -55,6 +55,10 @@ Core.RegisterSpec(4, {
     -- Dispatch: reverted 196819 → 2098 — session log confirms 2098 fires (196819 correction was wrong)
     -- Sinister Strike: corrected 1752 → 193315 — session log confirmed
     -- Pistol Shot (185763) added to rotational — confirmed Outlaw spell list; builder/proc spender
+    -- Thistle Tea (1298826) ADDED 09/06/2026 — same node (90756) as Assassination's Thistle Tea,
+    --   but a DIFFERENT spell ID: Outlaw/Subtlety's version is manually cast (no auto-drink-at-low-
+    --   energy clause), unlike Assassination's 381623 which auto-triggers below 30 energy. Confirmed
+    --   via in-game tooltip; expected to be used regularly, not held.
     [2] = {
         name = "Outlaw", role = "DPS",
         resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
@@ -68,6 +72,7 @@ Core.RegisterSpec(4, {
             { id = 1766,    label = "Kick",             expectedUses = "situational",    isInterrupt = true },
             { id = 31224,   label = "Cloak of Shadows", expectedUses = "situational",   isUtility = true   },  -- added 05/06/2026; cross-spec
             { id = 14185,   label = "Preparation",      expectedUses = "situational (boss fights)", isUtility = true, talentGated = true, altIds = {1277933} },  -- CD reset utility; added 05/06/2026
+            { id = 1298826, label = "Thistle Tea",      expectedUses = "on CD (3 charges)", talentGated = true },  -- nodeID 90756; manual-cast variant (not auto-drink like Assassination's 381623); ADDED 09/06/2026
         },
         rotationalSpells = {
             { id = 193315, label = "Sinister Strike",  minFightSeconds = 15 },  -- session log confirmed (was 1752)
@@ -83,6 +88,7 @@ Core.RegisterSpec(4, {
             "Dispatch at 5+ combo points — primary finisher",
             "Killing Spree for burst when talented",
             "Blade Flurry for any 2+ target situation",
+            "Thistle Tea on cooldown when talented — regular Energy refill, not just emergencies",
         },
         scoreWeights = { cooldownUsage = 35, activity = 35, resourceMgmt = 20, procUsage = 10 },
         sourceNote = "Midnight 12.0 verified against full Outlaw talent tree snapshot v1.4.3 102 nodes (April 2026)",
@@ -100,6 +106,9 @@ Core.RegisterSpec(4, {
     -- Secret Technique (280719) added to majorCooldowns talentGated — session log confirmed; guide showed 280720 (off by one)
     -- Black Powder (319175) added to rotational — baseline Subtlety AoE finisher; top M+ ability (29% damage)
     -- Unseen Blade (441144) + Coup de Grace (441776) — both passive Trickster procs; not tracked
+    -- Thistle Tea (1298826) ADDED 09/06/2026 — same node (90756) as Assassination's Thistle Tea,
+    --   but manually cast (no auto-drink-at-low-energy clause). Confirmed via in-game tooltip;
+    --   expected to be used regularly, not held.
     [3] = {
         name = "Subtlety", role = "DPS",
         resourceType = 4, resourceLabel = "ENERGY", overcapAt = 100,
@@ -110,6 +119,7 @@ Core.RegisterSpec(4, {
             { id = 280719, label = "Secret Technique", expectedUses = "on CD (talent)", talentGated = true },  -- session log confirmed (guide showed 280720)
             { id = 1766,   label = "Kick",             expectedUses = "situational",    isInterrupt = true },
             { id = 31224,  label = "Cloak of Shadows", expectedUses = "situational",   isUtility = true   },  -- added 05/06/2026; cross-spec
+            { id = 1298826, label = "Thistle Tea",     expectedUses = "on CD (3 charges)", talentGated = true },  -- nodeID 90756; manual-cast variant (not auto-drink like Assassination's 381623); ADDED 09/06/2026
         },
         uptimeBuffs = {},
         rotationalSpells = {
@@ -128,6 +138,7 @@ Core.RegisterSpec(4, {
             "Eviscerate at 5+ combo points — primary finisher",
             "Goremaw's Bite on cooldown when talented",
             "Shuriken Storm as AoE builder at 3+ targets",
+            "Thistle Tea on cooldown when talented — regular Energy refill, not just emergencies",
         },
         scoreWeights = { cooldownUsage = 35, activity = 40, resourceMgmt = 25 },
         sourceNote = "Midnight 12.0 verified against full Subtlety talent tree snapshot v1.4.3 105 nodes (April 2026)",

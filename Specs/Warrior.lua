@@ -5,7 +5,10 @@ Core.RegisterSpec(1, {
 
     -- Arms (Midnight 12.0 PASSIVE audit — April 2026)
     -- Verified against v1.4.3 talent snapshot (99 nodes, descriptions)
-    -- Bladestorm (227847) removed — not in Arms talent tree; only in Fury spell list
+    -- Bladestorm (227847) RESTORED 09/06/2026 — choice node 90441 with Ravager (228920);
+    --   confirmed active via in-game tooltip (Rank 1/1, 1.5 min CD). Prior "not in Arms
+    --   talent tree" note from the v1.4.3 snapshot audit was incorrect or predated the
+    --   finalized tree. Mutual suppressIfTalent added both directions.
     -- Warbreaker (262161) removed — not in Arms talent tree or spell list
     -- Avatar (107574) confirmed non-PASSIVE ACTIVE nodeID 110176
     -- Ravager (228920) added as talentGated CD — nodeID 90441 non-PASSIVE ACTIVE
@@ -23,13 +26,13 @@ Core.RegisterSpec(1, {
         resourceType = 1, resourceLabel = "RAGE", overcapAt = 100,
         majorCooldowns = {
             { id = 107574, label = "Avatar",     expectedUses = "on CD", talentGated = true },  -- nodeID 110176 non-PASSIVE ACTIVE; class talent
-            { id = 228920, label = "Ravager",    expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 90441 non-PASSIVE ACTIVE
+            { id = 228920, label = "Ravager",    expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 227847 },  -- nodeID 90441 non-PASSIVE ACTIVE; choice node with Bladestorm
+            { id = 227847, label = "Bladestorm", expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 228920 },  -- nodeID 90441 non-PASSIVE ACTIVE; choice node with Ravager; RESTORED 09/06/2026
             { id = 436358, label = "Demolish",   expectedUses = "on CD (talent)", talentGated = true },  -- nodeID 94818 non-PASSIVE ACTIVE
             { id = 46968,  label = "Shockwave",     expectedUses = "situational",    talentGated = true, isUtility = true, hasCombatValue = true },  -- AoE stun + damage; aimed/held for packs — never penalised
             { id = 118038, label = "Die by the Sword", expectedUses = "situational",    isUtility = true    },  -- confirmed id=118038; personal defensive — tracked, never penalised
             { id = 97462,  label = "Rallying Cry",     expectedUses = "situational",    isUtility = true, talentGated = true },  -- confirmed id=97462; party HP utility; talent gated (May 2026)
             { id = 1277297, label = "Ignore Pain",    expectedUses = "physical hits",   talentGated = true },  -- absorb shield for Arms; Midnight 12.0 class talent; proactive mitigation
-            -- Bladestorm (227847) removed — not in Arms talent tree
             -- Warbreaker (262161) removed — not in Arms talent tree or spell list
         },
         uptimeBuffs = {},
@@ -48,7 +51,7 @@ Core.RegisterSpec(1, {
             "Overpower on cooldown — free proc-based filler",
             "Execute during execute phase — replaces Mortal Strike below 20%",
             "Cleave on cooldown when talented — AoE filler",
-            "Avatar and Ravager for burst — align with Colossus Smash",
+            "Avatar and Ravager/Bladestorm (whichever is talented) for burst — align with Colossus Smash",
             "Shockwave on cooldown when talented — AoE stun and damage",
             "Die by the Sword situationally — personal defensive, no penalty for unused",
             "Pool Rage for Colossus Smash windows — avoid overcapping at 100",
@@ -71,6 +74,9 @@ Core.RegisterSpec(1, {
     -- Whirlwind added to rotational — two combat cast IDs confirmed: 199667 (primary) and 190411 (altId)
     -- Execute (280735) added to rotational — confirmed combat cast ID; Improved Execute (316402) is PASSIVE
     -- Enrage uptime buff: 184362 retained (VERIFY — spell list shows 184361; 184362 may be enhanced version)
+    -- Ravager (228920) / Bladestorm (227847) ADDED 09/06/2026 — choice node pair, same as Arms;
+    --   never previously added to Fury at all (not a stale removal, just missed). User confirmed
+    --   live in-game. Mutual suppressIfTalent added both directions.
     -- Flags: Battlefield Commander/Deep Wounds — Grants/Causes = effect descriptions only
     [2] = {
         name = "Fury", role = "DPS",
@@ -85,6 +91,8 @@ Core.RegisterSpec(1, {
             { id = 97462,  label = "Rallying Cry",         expectedUses = "situational",    isUtility = true, talentGated = true },  -- confirmed id=97462; party HP utility; talent gated (May 2026)
             { id = 184364, label = "Enraged Regeneration", expectedUses = "situational",    healerConditional = true, talentGated = true },  -- confirmed id=184364; personal healing CD; talent gated (May 2026)
             { id = 107570, label = "Storm Bolt",          expectedUses = "situational",    isUtility = true, hasCombatValue = true, talentGated = true },  -- class talent; AoE stun + damage; added 05/06/2026
+            { id = 228920, label = "Ravager",    expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 227847 },  -- choice node with Bladestorm; ADDED 09/06/2026
+            { id = 227847, label = "Bladestorm", expectedUses = "on CD (talent)", talentGated = true, suppressIfTalent = 228920 },  -- choice node with Ravager; ADDED 09/06/2026
             -- Onslaught (315720) removed — not in Fury talent tree or spell list
         },
         uptimeBuffs = {
@@ -107,7 +115,7 @@ Core.RegisterSpec(1, {
             "Execute during execute phase — high priority below 20% HP",
             "Maintain Rend for the DoT when talented",
             "Recklessness to align with Enrage and trinkets for burst",
-            "Odyn's Fury, Avatar, Champion's Spear on cooldown when talented",
+            "Odyn's Fury, Avatar, Champion's Spear, and Ravager/Bladestorm (whichever is talented) on cooldown when talented",
             "Shockwave and Demolish inside burst windows when talented",
         },
         scoreWeights = { cooldownUsage = 30, mitigationUptime = 25, activity = 25, resourceMgmt = 20 },

@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.7.4"
+    Core.VERSION = ver or "1.7.6"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -322,6 +322,28 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.7.6",
+        tagline = "Cooldown tracking gaps closed across 6 classes",
+        date    = "September 2026",
+        changes = {
+            "-- Warrior",
+            "Arms: Bladestorm now tracked as a cooldown (choice talent alongside Ravager)",
+            "Fury: Ravager and Bladestorm now tracked as cooldowns (choice talent pair) - previously neither was tracked for this spec",
+            "-- Priest",
+            "Discipline: Power Word: Barrier now tracked as a cooldown",
+            "-- Monk",
+            "Brewmaster: Celestial Brew now tracked as a cooldown",
+            "Mistweaver: Invoke Yu'lon, the Jade Serpent now tracked as a cooldown (choice talent alongside Invoke Chi-Ji)",
+            "-- Evoker",
+            "Augmentation: Timelessness now tracked as a cooldown",
+            "-- Druid",
+            "Feral: Incarnation: Avatar of Ashamane now tracked as a cooldown (choice talent alongside Convoke the Spirits; replaces Berserk)",
+            "Restoration: Incarnation: Tree of Life now tracked as a cooldown (choice talent alongside Convoke the Spirits)",
+            "-- Rogue",
+            "Outlaw and Subtlety: Thistle Tea now tracked as a cooldown",
+        },
+    },
     {
         version = "1.7.4",
         tagline = "Enhancement Shaman: Ascendance added as tracked major cooldown",

@@ -4,7 +4,9 @@ Core.RegisterSpec(5, {
     className = "Priest",
 
     -- Discipline (Midnight 12.0 PASSIVE audit — April 2026)
-    -- Power Word: Barrier (62618) removed — not in Discipline talent tree or spell list
+    -- Power Word: Barrier (62618) ADDED 09/06/2026 — confirmed active talent (Rank 0/1, 3 min CD
+    --   raid barrier); prior "not in tree" note was wrong or predated the finalized tree.
+    -- Inner Focus (390693) and Holy Ray (372969) confirmed PASSIVE 09/06/2026 via in-game tooltip.
     -- Evangelism ID corrected 246287 → 472433 — nodeID 82577 non-PASSIVE ACTIVE
     -- Rapture (47536) removed — not in Discipline talent tree or spell list
     -- Schism (204263) removed — not in Discipline talent tree or spell list
@@ -27,7 +29,7 @@ Core.RegisterSpec(5, {
             { id = 73325,  label = "Leap of Faith",     expectedUses = "situational",    isUtility = true, talentGated = true },  -- grip utility; added 05/06/2026; cross-spec with Holy
             { id = 586,    label = "Fade",               expectedUses = "situational",    isUtility = true, talentGated = true },  -- threat drop + movement; added 05/06/2026
             { id = 19236,  label = "Desperate Prayer",  expectedUses = "defensive",      healerConditional = true, talentGated = true },  -- personal defensive; added 05/06/2026
-            -- Power Word: Barrier (62618) removed — not in talent tree
+            { id = 62618,  label = "Power Word: Barrier", expectedUses = "situational",  isUtility = true, talentGated = true },  -- 3 min CD raid-wide 20% DR barrier; ADDED 09/06/2026
             -- Rapture (47536) removed — not in talent tree or spell list
             -- Schism (204263) removed — not in talent tree or spell list
         },
@@ -50,6 +52,7 @@ Core.RegisterSpec(5, {
             "Pain Suppression for tank busters",
             "Power Infusion during peak damage windows",
             "Ultimate Penitence as major ramp cooldown",
+            "Power Word: Barrier for predictable heavy raid-wide damage when talented",
         },
         scoreWeights = { cooldownUsage = 30, efficiency = 25, activity = 25, responsiveness = 20 },
         sourceNote = "Midnight 12.0 verified against full Discipline talent tree snapshot v1.4.3 111 nodes (April 2026)",

@@ -111,6 +111,10 @@ Core.RegisterSpec(13, {
     -- Rescue (370665) added to majorCooldowns as isUtility talentGated — 1 min CD; movement + self/ally cleanse; all specs
     -- Cauterizing Flame (374251) added to majorCooldowns as isUtility — regular spell; all specs; id confirmed in-game
     -- Expunge (365585) added to majorCooldowns as isUtility — id confirmed; altId 360823=Naturalize replaces it when talented
+    -- Timelessness (412710) ADDED 09/06/2026 — confirmed active talent (Rank 0/1; enchants an ally,
+    --   reducing their threat 30% for 1.1hr). Ally-targeted like Rescue, but the cast still fires
+    --   UNIT_SPELLCAST_SUCCEEDED on the caster — same detection mechanism, should track fine.
+    --   Verify with /ms verify on next use since this was never tracked before at all.
     -- Confirmed PASSIVE (May 2026): Fate Mirror, Duplicate (Apex Talent), Imminent Destruction,
     --   Ricocheting Pyroblast, Defy Fate, Stretch Time — none tracked
     [3] = {
@@ -128,6 +132,7 @@ Core.RegisterSpec(13, {
             { id = 374251, label = "Cauterizing Flame", expectedUses = "situational",      isUtility = true,                    },  -- confirmed id=374251; tracked, never penalised
             { id = 365585, label = "Expunge",           expectedUses = "situational",      isUtility = true, altIds = {360823}  },  -- 365585 confirmed; 360823=Naturalize (replaces Expunge when talented); tracked, never penalised
             { id = 406732, label = "Spatial Paradox",  expectedUses = "situational",      isUtility = true, talentGated = true },  -- Aug class talent; added 05/06/2026
+            { id = 412710, label = "Timelessness",     expectedUses = "situational",      isUtility = true, talentGated = true },  -- ally-targeted threat reduction; cast fires on caster same as Rescue; ADDED 09/06/2026
         },
         uptimeBuffs = {
             { id = 395152, label = "Ebon Might", targetUptime = 70, castSpellId = 395152, buffDuration = 10 },  -- 10s base duration; recast every ~30s
