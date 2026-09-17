@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.7.6"
+    Core.VERSION = ver or "1.7.7"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -322,6 +322,15 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.7.7",
+        tagline = "Unholy Death Knight: Death Strike no longer penalised as unused",
+        date    = "September 2026",
+        changes = {
+            "-- Death Knight",
+            "Unholy: Death Strike is now treated as an optional survival cooldown instead of an expected part of the core rotation - it's available but not something you're expected to press regularly, so not using it no longer counts against your score",
+        },
+    },
     {
         version = "1.7.6",
         tagline = "Cooldown tracking gaps closed across 6 classes",

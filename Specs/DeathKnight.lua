@@ -114,7 +114,9 @@ Core.RegisterSpec(6, {
     -- Festering Strike: corrected 85092 → 316239 → 85948 — 85948 is what fires in UNIT_SPELLCAST_SUCCEEDED; 316239 kept as altId (talent-modified variant)
     -- Putrefy (1247378) added to rotational — nodeID 108129 non-PASSIVE ACTIVE; confirmed spell list
     -- Festering Scythe (458128) added to rotational talentGated — Rider of the Apocalypse hero spec; rotational not a CD
-    -- Death Strike (49998) added to rotational talentGated — survival/self-heal Runic Power spender; session log x3
+    -- Death Strike (49998) reclassified to isUtility 09/06/2026 (bug report) — available but not expected
+    --   in the core rotation; survival/self-heal spender, optional filler, never penalised for non-use.
+    --   Was previously scored as expected-in-rotation, which was wrong.
     -- Death and Decay (43265) added to rotational talentGated — AoE situational; session log x2
     -- Epidemic (207317) added to rotational — baseline AoE Runic Power spender; not talent-gated
     -- Necrotic Coil (1242174) added to rotational talentGated — Forbidden Knowledge talent (nodeID 110354); replaces Death Coil during 30s AotD window
@@ -136,7 +138,7 @@ Core.RegisterSpec(6, {
             { id = 55090,   label = "Scourge Strike",   minFightSeconds = 15 },  -- nodeID 76190 non-PASSIVE ACTIVE; wound popper
             { id = 47541,   label = "Death Coil",       minFightSeconds = 20 },  -- confirmed spell list; Runic Power dump
             { id = 1247378, label = "Putrefy",          minFightSeconds = 20, talentGated = true },  -- nodeID 108129 non-PASSIVE ACTIVE
-            { id = 49998,   label = "Death Strike",     minFightSeconds = 30, talentGated = true },  -- survival/self-heal RP spender; session log x3
+            { id = 49998,   label = "Death Strike",     minFightSeconds = 30, talentGated = true, isUtility = true },  -- survival/self-heal RP spender; optional filler, never penalised (bug report 09/06/2026)
             { id = 43265,   label = "Death and Decay",  minFightSeconds = 30, talentGated = true },  -- AoE situational; session log x2
             { id = 458128,  label = "Festering Scythe", minFightSeconds = 20, talentGated = true },  -- Rider of the Apocalypse hero spec; rotational not a CD
             { id = 207317,  label = "Epidemic",         minFightSeconds = 20 },                      -- baseline AoE Runic Power spender; not talent-gated
