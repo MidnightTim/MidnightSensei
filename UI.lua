@@ -3080,6 +3080,17 @@ function UI.OnCombatEnd(result)
     end
     ApplyHudVisibility("combat_end")
     UI.RefreshHistory()
+
+    -- If the Fight Complete popup was left open from a previous fight, refresh it
+    -- with the new result instead of leaving it frozen on stale data. Only refresh
+    -- when there's a real result — a too-short trash pull shouldn't blank out a
+    -- meaningful result the player is still reviewing.
+    if result then
+        local rf = _G["MidnightSenseiResult"]
+        if rf and rf:IsShown() then
+            ShowResultPanel(result)
+        end
+    end
 end
 
 function UI.UpdateVerifyBar()

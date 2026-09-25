@@ -169,6 +169,7 @@ Core.On(Core.EVENTS.COMBAT_START, function()
                         combatGated     = rs.combatGated or false,
                         cdSec           = rs.cdSec or nil,
                         orGroup         = rs.orGroup or nil,
+                        isUtility       = rs.isUtility or false,
                     }
                 end
             end

@@ -176,27 +176,34 @@ function Feedback.Generate(scores, duration, inferSimplified, state)
         local unused  = {}
         local lowUsed = {}
         for id, rs in pairs(rotationalTracking) do
-            if rs.useCount == 0 and duration >= rs.minFightSeconds then
-                if rs.orGroup then
-                    if orGroupUsed[rs.orGroup] then
-                        -- a sibling was cast — not a miss
-                    elseif not orGroupReported[rs.orGroup] then
-                        -- neither cast — report once as combined "Wrath / Starfire"
-                        orGroupReported[rs.orGroup] = true
-                        local labels = orGroupLabels[rs.orGroup]
-                        table.insert(unused, table.concat(labels, " / "))
+            -- isUtility rotational spells (e.g. optional filler like Resto Shaman's
+            -- Lava Burst, or Unholy DK's Death Strike) are tracked for informational
+            -- purposes only — never penalised, never listed as "never used" or "low
+            -- used". Matches the isUtility exclusion already applied to majorCooldowns
+            -- in Scoring.lua's ScoreCooldownUsage.
+            if not rs.isUtility then
+                if rs.useCount == 0 and duration >= rs.minFightSeconds then
+                    if rs.orGroup then
+                        if orGroupUsed[rs.orGroup] then
+                            -- a sibling was cast — not a miss
+                        elseif not orGroupReported[rs.orGroup] then
+                            -- neither cast — report once as combined "Wrath / Starfire"
+                            orGroupReported[rs.orGroup] = true
+                            local labels = orGroupLabels[rs.orGroup]
+                            table.insert(unused, table.concat(labels, " / "))
+                        end
+                    else
+                        table.insert(unused, rs.label)
                     end
-                else
-                    table.insert(unused, rs.label)
-                end
-            elseif rs.useCount > 0 then
-                local cdSec = rs.cdSec
-                if cdSec and cdSec > 0 and duration >= rs.minFightSeconds then
-                    local potential = math.max(1, math.floor(duration / cdSec))
-                    local missed    = potential - rs.useCount
-                    if missed >= 2 then
-                        table.insert(lowUsed, rs.label ..
-                            " (" .. rs.useCount .. "/" .. potential .. ")")
+                elseif rs.useCount > 0 then
+                    local cdSec = rs.cdSec
+                    if cdSec and cdSec > 0 and duration >= rs.minFightSeconds then
+                        local potential = math.max(1, math.floor(duration / cdSec))
+                        local missed    = potential - rs.useCount
+                        if missed >= 2 then
+                            table.insert(lowUsed, rs.label ..
+                                " (" .. rs.useCount .. "/" .. potential .. ")")
+                        end
                     end
                 end
             end

@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.7.7"
+    Core.VERSION = ver or "1.7.8"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -322,6 +322,17 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.7.8",
+        tagline = "Optional-spell tracking fixed for 8 abilities across 6 classes + Fight Complete popup refresh",
+        date    = "September 2026",
+        changes = {
+            "-- Cooldown and rotation tracking",
+            "Fixed a bug where optional/situational spells could still be flagged as \"never used\" in the Fight Complete feedback even when correctly marked as optional - this affected: Unholy Death Knight's Death Strike, Feral Druid's Chomp, Windwalker Monk's Strike of the Windlord, Protection Paladin's Hammer of the Righteous, Holy Priest's Holy Word: Chastise, Elemental Shaman's Earth Shock, Restoration Shaman's Lava Burst, and Affliction Warlock's Agony - none of these will be counted against your score anymore if you skip them",
+            "-- UI",
+            "The Fight Complete window now updates automatically if you leave it open across multiple fights, instead of getting stuck showing an older fight's results",
+        },
+    },
     {
         version = "1.7.7",
         tagline = "Unholy Death Knight: Death Strike no longer penalised as unused",
