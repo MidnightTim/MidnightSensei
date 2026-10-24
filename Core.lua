@@ -34,7 +34,7 @@ do
         local ok, v = pcall(GetAddOnMetadata, "MidnightSensei", "Version")
         if ok and v and v ~= "" then ver = v end
     end
-    Core.VERSION = ver or "1.7.8"
+    Core.VERSION = ver or "1.7.9"
 end
 Core.DISPLAY_NAME = "Midnight Sensei"   -- always use this in UI strings
 Core.TAGLINE      = "Combat performance coaching for all 13 classes - grade your fights A+ to F."
@@ -322,6 +322,14 @@ Core.CREDITS = {
 }
 
 Core.CHANGELOG = {
+    {
+        version = "1.7.9",
+        tagline = "TOC interface bump for patch 12.0.8",
+        date    = "October 2026",
+        changes = {
+            "Compatibility: updated TOC interface version to 120105 for World of Warcraft patch 12.0.8 - no gameplay changes",
+        },
+    },
     {
         version = "1.7.8",
         tagline = "Optional-spell tracking fixed for 8 abilities across 6 classes + Fight Complete popup refresh",
